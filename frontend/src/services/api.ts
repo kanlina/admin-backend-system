@@ -87,36 +87,6 @@ class ApiService {
     return response.data;
   }
 
-  // 文章相关
-  async getPosts(params?: any): Promise<ApiResponse<any[]>> {
-    const response = await this.api.get('/posts', { params });
-    return response.data;
-  }
-
-  async getPostById(id: string): Promise<ApiResponse<any>> {
-    const response = await this.api.get(`/posts/${id}`);
-    return response.data;
-  }
-
-  async createPost(data: any): Promise<ApiResponse<any>> {
-    const response = await this.api.post('/posts', data);
-    return response.data;
-  }
-
-  async updatePost(id: string, data: any): Promise<ApiResponse<any>> {
-    const response = await this.api.put(`/posts/${id}`, data);
-    return response.data;
-  }
-
-  async deletePost(id: string): Promise<ApiResponse<any>> {
-    const response = await this.api.delete(`/posts/${id}`);
-    return response.data;
-  }
-
-  async getPostStats(): Promise<ApiResponse<any>> {
-    const response = await this.api.get('/posts/stats');
-    return response.data;
-  }
 
   // 标签相关
   async getTags(params?: any): Promise<ApiResponse<any[]>> {

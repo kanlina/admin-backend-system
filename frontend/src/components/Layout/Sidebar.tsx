@@ -3,7 +3,6 @@ import { Layout, Menu } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
-  FileTextOutlined, 
   TagsOutlined,
   BarChartOutlined,
   SettingOutlined
@@ -23,11 +22,6 @@ const Sidebar: React.FC = () => {
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: '仪表盘',
-    },
-    {
-      key: '/posts',
-      icon: <FileTextOutlined />,
-      label: '文章管理',
     },
     {
       key: '/tags',

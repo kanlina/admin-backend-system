@@ -16,23 +16,6 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface CreatePostRequest {
-  title: string;
-  content: string;
-  summary?: string;
-  cover?: string;
-  status?: string;
-  tagIds?: string[];
-}
-
-export interface UpdatePostRequest {
-  title?: string;
-  content?: string;
-  summary?: string;
-  cover?: string;
-  status?: string;
-  tagIds?: string[];
-}
 
 export interface CreateTagRequest {
   name: string;

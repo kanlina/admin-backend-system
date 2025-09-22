@@ -5,9 +5,18 @@ import { UpdateUserRequest, PaginationQuery, ApiResponse } from '../types';
 const userService = new UserService();
 
 export class UserController {
-  async getUsers(req: Request<{}, ApiResponse, {}, PaginationQuery>, res: Response<ApiResponse>) {
+  async getUsers(req: Request<{}, ApiResponse, {}, any>, res: Response<ApiResponse>) {
     try {
-      const result = await userService.getUsers(req.query);
+      // 转换查询参数类型
+      const query: PaginationQuery = {
+        page: req.query.page ? Number(req.query.page) : undefined,
+        limit: req.query.limit ? Number(req.query.limit) : undefined,
+        search: req.query.search as string,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      };
+      
+      const result = await userService.getUsers(query);
       
       res.json({
         success: true,

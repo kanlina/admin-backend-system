@@ -34,9 +34,18 @@ export class TagController {
     }
   }
 
-  async getTags(req: Request<{}, ApiResponse, {}, PaginationQuery>, res: Response<ApiResponse>) {
+  async getTags(req: Request<{}, ApiResponse, {}, any>, res: Response<ApiResponse>) {
     try {
-      const result = await tagService.getTags(req.query);
+      // 转换查询参数类型
+      const query: PaginationQuery = {
+        page: req.query.page ? Number(req.query.page) : undefined,
+        limit: req.query.limit ? Number(req.query.limit) : undefined,
+        search: req.query.search as string,
+        sortBy: req.query.sortBy as string,
+        sortOrder: req.query.sortOrder as 'asc' | 'desc',
+      };
+      
+      const result = await tagService.getTags(query);
       
       res.json({
         success: true,

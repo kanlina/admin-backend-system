@@ -17,7 +17,7 @@ export const generateToken = (user: User): string => {
     role: user.role,
   };
 
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 };
 
 export const verifyToken = (token: string): JwtPayload => {

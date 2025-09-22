@@ -8,7 +8,6 @@ import AppLayout from './components/Layout/AppLayout';
 import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import Dashboard from './pages/Dashboard';
-import Posts from './pages/Posts';
 import Users from './pages/Users';
 import Tags from './pages/Tags';
 
@@ -44,13 +43,6 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } />
             
-            <Route path="/posts" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Posts />
-                </AppLayout>
-              </ProtectedRoute>
-            } />
             
             <Route path="/tags" element={
               <ProtectedRoute>

@@ -13,25 +13,6 @@ export class TagService {
   async getTagById(id: string): Promise<Tag | null> {
     return prisma.tag.findUnique({
       where: { id },
-      include: {
-        posts: {
-          include: {
-            post: {
-              select: {
-                id: true,
-                title: true,
-                status: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            posts: true,
-          },
-        },
-      },
     });
   }
 
@@ -56,7 +37,8 @@ export class TagService {
 
   async getTags(query: PaginationQuery) {
     const { page = 1, limit = 10, search, sortBy = 'createdAt', sortOrder = 'desc' } = query;
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * Number(limit);
+    const limitNum = Number(limit);
 
     const where = search
       ? {
@@ -68,15 +50,8 @@ export class TagService {
       prisma.tag.findMany({
         where,
         skip,
-        take: limit,
+        take: limitNum,
         orderBy: { [sortBy]: sortOrder },
-        include: {
-          _count: {
-            select: {
-              posts: true,
-            },
-          },
-        },
       }),
       prisma.tag.count({ where }),
     ]);
@@ -85,9 +60,9 @@ export class TagService {
       tags,
       pagination: {
         page,
-        limit,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }
@@ -95,31 +70,13 @@ export class TagService {
   async getAllTags(): Promise<Tag[]> {
     return prisma.tag.findMany({
       orderBy: { name: 'asc' },
-      include: {
-        _count: {
-          select: {
-            posts: true,
-          },
-        },
-      },
     });
   }
 
   async getPopularTags(limit: number = 10): Promise<Tag[]> {
     return prisma.tag.findMany({
-      orderBy: {
-        posts: {
-          _count: 'desc',
-        },
-      },
+      orderBy: { name: 'asc' },
       take: limit,
-      include: {
-        _count: {
-          select: {
-            posts: true,
-          },
-        },
-      },
     });
   }
 }

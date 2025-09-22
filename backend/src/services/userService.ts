@@ -20,22 +20,6 @@ export class UserService {
   async getUserById(id: string): Promise<User | null> {
     return prisma.user.findUnique({
       where: { id },
-      include: {
-        posts: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            createdAt: true,
-          },
-        },
-        _count: {
-          select: {
-            posts: true,
-            comments: true,
-          },
-        },
-      },
     });
   }
 
@@ -70,7 +54,8 @@ export class UserService {
 
   async getUsers(query: PaginationQuery) {
     const { page = 1, limit = 10, search, sortBy = 'createdAt', sortOrder = 'desc' } = query;
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * Number(limit);
+    const limitNum = Number(limit);
 
     const where = search
       ? {
@@ -85,7 +70,7 @@ export class UserService {
       prisma.user.findMany({
         where,
         skip,
-        take: limit,
+        take: limitNum,
         orderBy: { [sortBy]: sortOrder },
         select: {
           id: true,
@@ -96,12 +81,6 @@ export class UserService {
           isActive: true,
           createdAt: true,
           updatedAt: true,
-          _count: {
-            select: {
-              posts: true,
-              comments: true,
-            },
-          },
         },
       }),
       prisma.user.count({ where }),
@@ -111,9 +90,9 @@ export class UserService {
       users,
       pagination: {
         page,
-        limit,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limitNum),
       },
     };
   }

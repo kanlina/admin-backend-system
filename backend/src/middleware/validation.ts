@@ -48,22 +48,6 @@ export const validateRegister = [
     .withMessage('密码必须包含大小写字母和数字'),
 ];
 
-export const validatePost = [
-  body('title')
-    .notEmpty()
-    .withMessage('标题不能为空')
-    .isLength({ min: 1, max: 100 })
-    .withMessage('标题长度必须在1-100个字符之间'),
-  body('content')
-    .notEmpty()
-    .withMessage('内容不能为空')
-    .isLength({ min: 10 })
-    .withMessage('内容长度至少10个字符'),
-  body('summary')
-    .optional()
-    .isLength({ max: 200 })
-    .withMessage('摘要长度不能超过200个字符'),
-];
 
 export const validateTag = [
   body('name')

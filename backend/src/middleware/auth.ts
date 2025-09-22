@@ -41,7 +41,7 @@ export const authenticateToken = async (
       });
     }
 
-    req.user = user;
+    req.user = user as any;
     next();
   } catch (error) {
     return res.status(401).json({

@@ -1,21 +1,6 @@
 version: '3.8'
 
 services:
-  # 数据库服务
-  database:
-    image: postgres:15-alpine
-    container_name: admin-backend-db
-    environment:
-      POSTGRES_DB: admin_backend
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - admin-network
-
   # 后端服务
   backend:
     build:
@@ -24,13 +9,11 @@ services:
     container_name: admin-backend-api
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://admin:admin123@database:5432/admin_backend
+      DATABASE_URL: mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23zo.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin?ssl=true
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
       PORT: 3001
     ports:
       - "3001:3001"
-    depends_on:
-      - database
     networks:
       - admin-network
     volumes:

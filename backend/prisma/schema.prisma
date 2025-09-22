@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -21,46 +21,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // 关联关系
-  posts     Post[]
-  comments  Comment[]
-
   @@map("users")
-}
-
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  summary   String?
-  cover     String?
-  status    String   @default("DRAFT")
-  views     Int      @default(0)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 关联关系
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  comments  Comment[]
-  tags      PostTag[]
-
-  @@map("posts")
-}
-
-model Comment {
-  id        String   @id @default(cuid())
-  content   String
-  postId    String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // 关联关系
-  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
 }
 
 model Tag {
@@ -70,21 +31,7 @@ model Tag {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // 关联关系
-  posts     PostTag[]
-
   @@map("tags")
-}
-
-model PostTag {
-  postId String
-  tagId  String
-
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([postId, tagId])
-  @@map("post_tags")
 }
 
 model SystemConfig {

@@ -8,7 +8,6 @@ import path from 'path';
 // 导入路由
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
-import postRoutes from './routes/posts';
 import tagRoutes from './routes/tags';
 
 // 加载环境变量
@@ -58,7 +57,6 @@ app.get('/health', (req, res) => {
 // API 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/posts', postRoutes);
 app.use('/api/tags', tagRoutes);
 
 // 404 处理

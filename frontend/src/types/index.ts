@@ -9,33 +9,6 @@ export interface User {
   updatedAt: string;
 }
 
-export interface Post {
-  id: string;
-  title: string;
-  content: string;
-  summary?: string;
-  cover?: string;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  views: number;
-  authorId: string;
-  createdAt: string;
-  updatedAt: string;
-  author: {
-    id: string;
-    username: string;
-    avatar?: string;
-  };
-  tags: Array<{
-    tag: {
-      id: string;
-      name: string;
-      color?: string;
-    };
-  }>;
-  _count: {
-    comments: number;
-  };
-}
 
 export interface Tag {
   id: string;
@@ -43,24 +16,8 @@ export interface Tag {
   color?: string;
   createdAt: string;
   updatedAt: string;
-  _count: {
-    posts: number;
-  };
 }
 
-export interface Comment {
-  id: string;
-  content: string;
-  postId: string;
-  authorId: string;
-  createdAt: string;
-  updatedAt: string;
-  author: {
-    id: string;
-    username: string;
-    avatar?: string;
-  };
-}
 
 export interface LoginRequest {
   username: string;
@@ -99,14 +56,6 @@ export interface PaginationQuery {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface CreatePostRequest {
-  title: string;
-  content: string;
-  summary?: string;
-  cover?: string;
-  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  tagIds?: string[];
-}
 
 export interface CreateTagRequest {
   name: string;

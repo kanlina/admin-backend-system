@@ -289,4 +289,4 @@ jobs:
               exit 1
             fi
             
-            echo "🎉 Deployment to production environment completed successfully!"
+            echo "🎉 Deployment to production environment completed successfully!!"

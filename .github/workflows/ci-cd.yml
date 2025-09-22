@@ -1,0 +1,292 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: kanlina/admin-backend-system-backend
+  FRONTEND_IMAGE_NAME: kanlina/admin-backend-system-frontend
+
+jobs:
+  # 后端构建和测试
+  backend-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm run test
+
+      - name: Build backend
+        run: |
+          cd backend
+          npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract backend metadata
+        id: backend-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          tags: |
+            type=raw,value={{branch}}-{{sha}}
+            type=raw,value={{branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push backend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.backend-meta.outputs.tags }}
+          labels: ${{ steps.backend-meta.outputs.labels }}
+
+  # 前端构建和测试
+  frontend-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm run test
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract frontend metadata
+        id: frontend-meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+          tags: |
+            type=raw,value={{branch}}-{{sha}}
+            type=raw,value={{branch}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push frontend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.frontend-meta.outputs.tags }}
+          labels: ${{ steps.frontend-meta.outputs.labels }}
+
+  # 开发环境部署
+  deploy-dev:
+    needs: [backend-build, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Deploy to development server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script: |
+            set -e
+            
+            echo "=== Deploying Admin Backend System to Development ==="
+            
+            # 进入项目目录
+            cd /www/wwwroot/admin-backend-system
+            
+            # 创建开发环境必要的目录
+            echo "Creating development environment directories..."
+            mkdir -p /var/log/admin-backend-dev
+            mkdir -p /var/uploads/admin-backend-dev
+            mkdir -p /var/app-logs/admin-backend-dev
+            chmod 755 /var/log/admin-backend-dev
+            chmod 755 /var/uploads/admin-backend-dev
+            chmod 755 /var/app-logs/admin-backend-dev
+            chown -R root:root /var/log/admin-backend-dev
+            chown -R root:root /var/uploads/admin-backend-dev
+            chown -R root:root /var/app-logs/admin-backend-dev
+            
+            echo "✅ Directories created successfully"
+            
+            # 强制更新代码
+            echo "🔄 Updating repository..."
+            git fetch origin
+            git reset --hard origin/develop
+            git clean -fd
+            
+            # 登录到GHCR
+            echo "🔐 Logging in to GHCR..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u kanlina --password-stdin
+            
+            # 拉取最新镜像
+            echo "📥 Pulling latest images..."
+            docker pull ghcr.io/kanlina/admin-backend-system-backend:develop
+            docker pull ghcr.io/kanlina/admin-backend-system-frontend:develop
+            
+            # 停止现有容器
+            echo "🛑 Stopping existing containers..."
+            docker-compose -f docker-compose.dev.yml down || true
+            
+            # 启动新容器
+            echo "🚀 Starting new containers..."
+            docker-compose -f docker-compose.dev.yml up -d
+            
+            # 等待服务启动
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+            
+            # 健康检查
+            echo "🔍 Performing health checks..."
+            if curl -f http://localhost:3001/health; then
+              echo "✅ Backend health check passed"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+            
+            if curl -f http://localhost:3000; then
+              echo "✅ Frontend health check passed"
+            else
+              echo "❌ Frontend health check failed"
+              exit 1
+            fi
+            
+            echo "🎉 Deployment to development environment completed successfully!"
+
+  # 生产环境部署
+  deploy-prod:
+    needs: [backend-build, frontend-build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          script: |
+            set -e
+            
+            echo "=== Deploying Admin Backend System to Production ==="
+            
+            # 进入项目目录
+            cd /www/wwwroot/admin-backend-system
+            
+            # 创建生产环境必要的目录
+            echo "Creating production environment directories..."
+            mkdir -p /var/log/admin-backend-prod
+            mkdir -p /var/uploads/admin-backend-prod
+            mkdir -p /var/app-logs/admin-backend-prod
+            chmod 755 /var/log/admin-backend-prod
+            chmod 755 /var/uploads/admin-backend-prod
+            chmod 755 /var/app-logs/admin-backend-prod
+            chown -R root:root /var/log/admin-backend-prod
+            chown -R root:root /var/uploads/admin-backend-prod
+            chown -R root:root /var/app-logs/admin-backend-prod
+            
+            echo "✅ Directories created successfully"
+            
+            # 强制更新代码
+            echo "🔄 Updating repository..."
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+            
+            # 登录到GHCR
+            echo "🔐 Logging in to GHCR..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u kanlina --password-stdin
+            
+            # 拉取最新镜像
+            echo "📥 Pulling latest images..."
+            docker pull ghcr.io/kanlina/admin-backend-system-backend:main
+            docker pull ghcr.io/kanlina/admin-backend-system-frontend:main
+            
+            # 停止现有容器
+            echo "🛑 Stopping existing containers..."
+            docker-compose -f docker-compose.prod.yml down || true
+            
+            # 启动新容器
+            echo "🚀 Starting new containers..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # 等待服务启动
+            echo "⏳ Waiting for services to start..."
+            sleep 30
+            
+            # 健康检查
+            echo "🔍 Performing health checks..."
+            if curl -f http://localhost:3001/health; then
+              echo "✅ Backend health check passed"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+            
+            if curl -f http://localhost:3000; then
+              echo "✅ Frontend health check passed"
+            else
+              echo "❌ Frontend health check failed"
+              exit 1
+            fi
+            
+            echo "🎉 Deployment to production environment completed successfully!"

@@ -198,23 +198,46 @@ jobs:
             
             # 等待服务启动
             echo "⏳ Waiting for services to start..."
-            sleep 30
+            sleep 60
             
-            # 健康检查
+            # 健康检查 - 重试机制
             echo "🔍 Performing health checks..."
-            if curl -f http://localhost:3001/health; then
-              echo "✅ Backend health check passed"
-            else
-              echo "❌ Backend health check failed"
-              exit 1
-            fi
             
-            if curl -f http://localhost:3000; then
-              echo "✅ Frontend health check passed"
-            else
-              echo "❌ Frontend health check failed"
-              exit 1
-            fi
+            # 后端健康检查（重试5次）
+            for i in {1..5}; do
+              echo "Backend health check attempt $i/5..."
+              if curl -f http://admin-backend-api-dev:3001/health; then
+                echo "✅ Backend health check passed"
+                break
+              else
+                echo "❌ Backend health check failed, retrying in 30 seconds..."
+                if [ $i -eq 5 ]; then
+                  echo "❌ Backend health check failed after 5 attempts"
+                  echo "📋 Checking container logs..."
+                  docker logs admin-backend-api-dev --tail 50
+                  exit 1
+                fi
+                sleep 30
+              fi
+            done
+            
+            # 前端健康检查（重试3次）
+            for i in {1..3}; do
+              echo "Frontend health check attempt $i/3..."
+              if curl -f http://admin-backend-web-dev:3000; then
+                echo "✅ Frontend health check passed"
+                break
+              else
+                echo "❌ Frontend health check failed, retrying in 15 seconds..."
+                if [ $i -eq 3 ]; then
+                  echo "❌ Frontend health check failed after 3 attempts"
+                  echo "📋 Checking container logs..."
+                  docker logs admin-backend-web-dev --tail 50
+                  exit 1
+                fi
+                sleep 15
+              fi
+            done
             
             echo "🎉 Deployment to development environment completed successfully!"
 
@@ -283,22 +306,45 @@ jobs:
             
             # 等待服务启动
             echo "⏳ Waiting for services to start..."
-            sleep 30
+            sleep 60
             
-            # 健康检查
+            # 健康检查 - 重试机制
             echo "🔍 Performing health checks..."
-            if curl -f http://localhost:3001/health; then
-              echo "✅ Backend health check passed"
-            else
-              echo "❌ Backend health check failed"
-              exit 1
-            fi
             
-            if curl -f http://localhost:3000; then
-              echo "✅ Frontend health check passed"
-            else
-              echo "❌ Frontend health check failed"
-              exit 1
-            fi
+            # 后端健康检查（重试5次）
+            for i in {1..5}; do
+              echo "Backend health check attempt $i/5..."
+              if curl -f http://admin-backend-api-prod:3001/health; then
+                echo "✅ Backend health check passed"
+                break
+              else
+                echo "❌ Backend health check failed, retrying in 30 seconds..."
+                if [ $i -eq 5 ]; then
+                  echo "❌ Backend health check failed after 5 attempts"
+                  echo "📋 Checking container logs..."
+                  docker logs admin-backend-api-prod --tail 50
+                  exit 1
+                fi
+                sleep 30
+              fi
+            done
             
-            echo "🎉 Deployment to production environment completed successfully!!"
+            # 前端健康检查（重试3次）
+            for i in {1..3}; do
+              echo "Frontend health check attempt $i/3..."
+              if curl -f http://admin-backend-web-prod:3000; then
+                echo "✅ Frontend health check passed"
+                break
+              else
+                echo "❌ Frontend health check failed, retrying in 15 seconds..."
+                if [ $i -eq 3 ]; then
+                  echo "❌ Frontend health check failed after 3 attempts"
+                  echo "📋 Checking container logs..."
+                  docker logs admin-backend-web-prod --tail 50
+                  exit 1
+                fi
+                sleep 15
+              fi
+            done
+            
+            echo "🎉 Deployment to production environment completed successfully!"

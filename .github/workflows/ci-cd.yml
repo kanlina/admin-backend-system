@@ -167,11 +167,17 @@ jobs:
             
             echo "✅ Directories created successfully"
             
-            # 强制更新代码
-            echo "🔄 Updating repository..."
-            git fetch origin
-            git reset --hard origin/develop
-            git clean -fd
+            # 检查并初始化 Git 仓库
+            echo "🔄 Checking Git repository..."
+            if [ ! -d ".git" ]; then
+              echo "📥 Cloning repository..."
+              git clone https://github.com/kanlina/admin-backend-system.git .
+            else
+              echo "🔄 Updating repository..."
+              git fetch origin
+              git reset --hard origin/develop
+              git clean -fd
+            fi
             
             # 登录到GHCR
             echo "🔐 Logging in to GHCR..."
@@ -246,11 +252,17 @@ jobs:
             
             echo "✅ Directories created successfully"
             
-            # 强制更新代码
-            echo "🔄 Updating repository..."
-            git fetch origin
-            git reset --hard origin/main
-            git clean -fd
+            # 检查并初始化 Git 仓库
+            echo "🔄 Checking Git repository..."
+            if [ ! -d ".git" ]; then
+              echo "📥 Cloning repository..."
+              git clone https://github.com/kanlina/admin-backend-system.git .
+            else
+              echo "🔄 Updating repository..."
+              git fetch origin
+              git reset --hard origin/main
+              git clean -fd
+            fi
             
             # 登录到GHCR
             echo "🔐 Logging in to GHCR..."

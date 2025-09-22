@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 数据库服务
+  database:
+    image: postgres:15-alpine
+    container_name: admin-backend-db
+    environment:
+      POSTGRES_DB: admin_backend
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - admin-network
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: admin-backend-api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://admin:admin123@database:5432/admin_backend
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - database
+    networks:
+      - admin-network
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: admin-backend-web
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - admin-network
+
+volumes:
+  postgres_data:
+
+networks:
+  admin-network:
+    driver: bridge

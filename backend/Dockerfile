@@ -27,8 +27,8 @@ RUN npx prisma generate
 RUN npm run build
 
 # 创建非 root 用户
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs
+RUN useradd -r -u 1001 -g nodejs nodejs
 
 # 创建上传目录
 RUN mkdir -p uploads && chown -R nodejs:nodejs uploads

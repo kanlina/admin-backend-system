@@ -1,6 +1,12 @@
 # 使用 Node.js 18 官方镜像
 FROM node:18-alpine
 
+# 安装必要的系统依赖（包括SSL库）
+RUN apk add --no-cache \
+    openssl \
+    libssl1.1 \
+    ca-certificates
+
 # 设置工作目录
 WORKDIR /app
 
@@ -13,8 +19,8 @@ RUN npm ci --only=production
 # 复制源代码
 COPY . .
 
-# 生成 Prisma 客户端
-RUN npx prisma generate
+# 生成 Prisma 客户端（指定平台）
+RUN npx prisma generate --generator client
 
 # 构建应用
 RUN npm run build

@@ -1,25 +1,31 @@
-# Docker Compose file for development environment
+version: '3.8'
 
 services:
-  # 后端服务
   backend:
     image: ghcr.io/kanlina/admin-backend-system-backend:develop
     container_name: admin-backend-api-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23zo.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - JWT_EXPIRES_IN=7d
+      - UPLOAD_DIR=/app/uploads
+      - MAX_FILE_SIZE=10485760
     ports:
       - "3001:3001"
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23zo.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin?ssl=true
-      JWT_SECRET: dev-jwt-secret-key
-      PORT: 3001
-      # 开发环境Node.js参数
-      NODE_OPTIONS: "--max-old-space-size=512"
     volumes:
-      - /var/log/admin-backend-dev:/app/logs
       - /var/uploads/admin-backend-dev:/app/uploads
-      - /var/app-logs/admin-backend-dev:/var/log/admin-backend-dev
-    restart: unless-stopped
-    # 开发环境资源限制
+      - /var/log/admin-backend-dev:/app/logs
+    networks:
+      - admin-backend-system_default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
@@ -28,39 +34,32 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 15s
-      retries: 10
-      start_period: 60s
 
-  # 前端服务
   frontend:
     image: ghcr.io/kanlina/admin-backend-system-frontend:develop
     container_name: admin-backend-web-dev
-    ports:
-      - "3000:80"
-    environment:
-      VITE_API_URL: http://localhost:3001/api
     restart: unless-stopped
-    # 开发环境资源限制
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/log/admin-backend-dev:/var/log/nginx
+    networks:
+      - admin-backend-system_default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     deploy:
       resources:
         limits:
           memory: 256M
-          cpus: '0.5'
+          cpus: '0.25'
         reservations:
           memory: 128M
-          cpus: '0.25'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+          cpus: '0.1'
 
-# 开发环境日志和文件目录
-# 应用日志目录: /var/log/admin-backend-dev
-# 应用内部日志目录: /var/app-logs/admin-backend-dev
-# 上传文件目录: /var/uploads/admin-backend-dev
+networks:
+  admin-backend-system_default:
+    driver: bridge

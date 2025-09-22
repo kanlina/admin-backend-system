@@ -7,7 +7,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3002/api',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -124,6 +124,12 @@ class ApiService {
     const response = await this.api.get('/tags/popular', { 
       params: { limit } 
     });
+    return response.data;
+  }
+
+  // 内转数据相关
+  async getInternalTransferData(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/internal-transfer-data', { params });
     return response.data;
   }
 }

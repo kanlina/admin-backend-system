@@ -9,6 +9,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import tagRoutes from './routes/tags';
+import internalTransferRoutes from './routes/internalTransfer';
 
 // 加载环境变量
 dotenv.config();
@@ -58,6 +59,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api', internalTransferRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {

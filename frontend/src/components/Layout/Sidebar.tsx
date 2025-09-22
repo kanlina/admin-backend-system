@@ -3,9 +3,13 @@ import { Layout, Menu } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
-  TagsOutlined,
   BarChartOutlined,
-  SettingOutlined
+  SettingOutlined,
+  MonitorOutlined,
+  SwapOutlined,
+  FileTextOutlined,
+  CreditCardOutlined,
+  ToolOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,9 +28,31 @@ const Sidebar: React.FC = () => {
       label: '仪表盘',
     },
     {
-      key: '/tags',
-      icon: <TagsOutlined />,
-      label: '标签管理',
+      key: 'data-monitor',
+      icon: <MonitorOutlined />,
+      label: '数据监控',
+      children: [
+        {
+          key: '/data-monitor/internal-transfer',
+          icon: <SwapOutlined />,
+          label: '内转数据',
+        },
+        {
+          key: '/data-monitor/adjust-data',
+          icon: <ToolOutlined />,
+          label: 'Adjust数据',
+        },
+        {
+          key: '/data-monitor/page-data',
+          icon: <FileTextOutlined />,
+          label: '页面数据',
+        },
+        {
+          key: '/data-monitor/post-loan',
+          icon: <CreditCardOutlined />,
+          label: '贷后数据',
+        },
+      ],
     },
     ...(user?.role === 'ADMIN' ? [
       {

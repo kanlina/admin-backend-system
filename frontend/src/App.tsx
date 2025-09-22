@@ -9,7 +9,10 @@ import LoginForm from './components/Auth/LoginForm';
 import RegisterForm from './components/Auth/RegisterForm';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
-import Tags from './pages/Tags';
+import InternalTransferData from './pages/InternalTransferData';
+import AdjustData from './pages/AdjustData';
+import PageData from './pages/PageData';
+import PostLoanData from './pages/PostLoanData';
 
 // 配置 dayjs 中文
 import dayjs from 'dayjs';
@@ -44,10 +47,35 @@ const App: React.FC = () => {
             } />
             
             
-            <Route path="/tags" element={
+            {/* 数据监控路由 */}
+            <Route path="/data-monitor/internal-transfer" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <Tags />
+                  <InternalTransferData />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/data-monitor/adjust-data" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <AdjustData />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/data-monitor/page-data" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PageData />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/data-monitor/post-loan" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PostLoanData />
                 </AppLayout>
               </ProtectedRoute>
             } />

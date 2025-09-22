@@ -22,7 +22,7 @@ app.use(helmet());
 // CORS 配置
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.com'] 
+    ? ['http://147.139.188.108:3000', 'https://your-frontend-domain.com'] 
     : ['http://localhost:3000', 'http://localhost:5173'],
   credentials: true,
 }));

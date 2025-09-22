@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Table, Tag, Button, Space } from 'antd';
+import { Row, Col, Card, Statistic, Table, Tag } from 'antd';
 import { 
   UserOutlined, 
-  TagsOutlined, 
-  PlusOutlined
+  TagsOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import { apiService } from '../services/api';
-import { User } from '../types';
+import type { User } from '../types';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     users: { totalUsers: 0, activeUsers: 0, adminUsers: 0 }

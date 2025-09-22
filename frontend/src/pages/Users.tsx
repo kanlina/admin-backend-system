@@ -15,14 +15,13 @@ import {
   Col
 } from 'antd';
 import { 
-  PlusOutlined, 
   EditOutlined, 
   DeleteOutlined, 
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
 import { apiService } from '../services/api';
-import { User, UpdateUserRequest } from '../types';
+import type { User, UpdateUserRequest } from '../types';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -161,7 +160,7 @@ const Users: React.FC = () => {
       title: '用户名',
       dataIndex: 'username',
       key: 'username',
-      render: (text: string, record: User) => (
+      render: (text: string) => (
         <Space>
           <UserOutlined />
           {text}
@@ -203,7 +202,7 @@ const Users: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record: User) => (
+      render: (_: any, record: User) => (
         <Space>
           <Button 
             type="link" 

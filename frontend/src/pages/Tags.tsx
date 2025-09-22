@@ -20,7 +20,7 @@ import {
   SearchOutlined
 } from '@ant-design/icons';
 import { apiService } from '../services/api';
-import { Tag as TagType, CreateTagRequest } from '../types';
+import type { Tag as TagType, CreateTagRequest } from '../types';
 import dayjs from 'dayjs';
 
 const Tags: React.FC = () => {
@@ -178,7 +178,7 @@ const Tags: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_, record: TagType) => (
+      render: (_: any, record: TagType) => (
         <Space>
           <Button 
             type="link" 

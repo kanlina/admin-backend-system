@@ -190,11 +190,11 @@ jobs:
             
             # 停止现有容器
             echo "🛑 Stopping existing containers..."
-            docker-compose -f docker-compose.dev.yml down || true
+            docker compose -f docker-compose.dev.yml down || true
             
             # 启动新容器
             echo "🚀 Starting new containers..."
-            docker-compose -f docker-compose.dev.yml up -d
+            docker compose -f docker-compose.dev.yml up -d
             
             # 等待服务启动
             echo "⏳ Waiting for services to start..."
@@ -275,11 +275,11 @@ jobs:
             
             # 停止现有容器
             echo "🛑 Stopping existing containers..."
-            docker-compose -f docker-compose.prod.yml down || true
+            docker compose -f docker-compose.prod.yml down || true
             
             # 启动新容器
             echo "🚀 Starting new containers..."
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d
             
             # 等待服务启动
             echo "⏳ Waiting for services to start..."

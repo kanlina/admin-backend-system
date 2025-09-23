@@ -9,6 +9,10 @@ services:
       - NODE_ENV=development
       - PORT=3001
       - DATABASE_URL=mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin
+      - DB_HOST=rm-d9j40fh5e5ny3vr23zo.mysql.ap-southeast-5.rds.aliyuncs.com
+      - DB_PORT=3306
+      - DB_USER=pk_credit_core_pro_user
+      - DB_PASSWORD=qie7rjuzn5nvs35t3znhdk7lamsgh0@
       - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
       - JWT_EXPIRES_IN=7d
       - UPLOAD_DIR=/app/uploads

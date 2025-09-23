@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Space, message } from 'antd';
-import { SwapOutlined } from '@ant-design/icons';
+import { SwapOutlined, EyeOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -42,21 +42,23 @@ const InternalTransferData: React.FC = () => {
     total: 0,
     totalPages: 0
   });
+  const [showChart, setShowChart] = useState(true); // 控制图表显示
 
 
   useEffect(() => {
     fetchData();
   }, [pagination.current, pagination.pageSize]);
 
-  useEffect(() => {
-    fetchChartData();
-  }, [dateRange]);
+  // 移除时间选择后自动触发查询，改为手动控制
+  // useEffect(() => {
+  //   fetchChartData();
+  // }, [dateRange]);
 
-  const fetchData = async () => {
+  const fetchData = async (resetPagination = false) => {
     setLoading(true);
     try {
       const params: any = {
-        page: pagination.current,
+        page: resetPagination ? 1 : pagination.current,
         pageSize: pagination.pageSize
       };
       
@@ -65,6 +67,8 @@ const InternalTransferData: React.FC = () => {
         params.startDate = dateRange[0].format('YYYY-MM-DD');
         params.endDate = dateRange[1].format('YYYY-MM-DD');
       }
+
+      console.log('获取表格数据参数:', params);
 
       const response = await apiService.getInternalTransferData(params);
       
@@ -84,6 +88,11 @@ const InternalTransferData: React.FC = () => {
           pageSize: paginationInfo.limit,
           total: paginationInfo.total,
           totalPages: paginationInfo.totalPages
+        });
+        
+        console.log('表格数据加载成功:', {
+          dataCount: formattedData.length,
+          pagination: paginationInfo
         });
         
         message.success('数据加载成功');
@@ -135,6 +144,67 @@ const InternalTransferData: React.FC = () => {
     } finally {
       setChartLoading(false);
     }
+  };
+
+  // 下载当前数据
+  const downloadData = () => {
+    try {
+      const csvData = chartData.map(item => ({
+        date: item.date,
+        register: item.注册人数,
+        realNameAuth: item.实名认证完成人数,
+        creditInfo: item.获取个信人数,
+        infoPush: item.个人信息推送成功人数,
+        creditSuccess: item.授信成功人数,
+        loanSuccess: item.借款成功人数,
+      }));
+
+      const headers = [
+        t('internalTransfer.downloadHeaders.date'),
+        t('internalTransfer.downloadHeaders.register'),
+        t('internalTransfer.downloadHeaders.realNameAuth'),
+        t('internalTransfer.downloadHeaders.creditInfo'),
+        t('internalTransfer.downloadHeaders.infoPush'),
+        t('internalTransfer.downloadHeaders.creditSuccess'),
+        t('internalTransfer.downloadHeaders.loanSuccess')
+      ];
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => [
+          row.date,
+          row.register,
+          row.realNameAuth,
+          row.creditInfo,
+          row.infoPush,
+          row.creditSuccess,
+          row.loanSuccess,
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // 根据当前语言生成文件名
+      const fileName = `${t('internalTransfer.title')}_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.csv`;
+      link.setAttribute('download', fileName);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      message.success(t('common.success'));
+    } catch (error) {
+      console.error('下载数据失败:', error);
+      message.error(t('common.error'));
+    }
+  };
+
+  // 刷新趋势分析图
+  const refreshChart = async () => {
+    await fetchChartData();
+    message.success(t('internalTransfer.chartControls.refreshChart'));
   };
 
   const columns = [
@@ -211,14 +281,16 @@ const InternalTransferData: React.FC = () => {
 
 
   // 转换图表数据格式，为每个数据点添加颜色信息
-  const transformedChartData = chartData.flatMap(item => [
-    { date: item.date, category: t('internalTransfer.chartCategories.register'), value: Number(item.注册人数) || 0, color: '#1890ff' },
-    { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: Number(item.实名认证完成人数) || 0, color: '#52c41a' },
-    { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: Number(item.获取个信人数) || 0, color: '#faad14' },
-    { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: Number(item.个人信息推送成功人数) || 0, color: '#f5222d' },
-    { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: Number(item.授信成功人数) || 0, color: '#722ed1' },
-    { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: Number(item.借款成功人数) || 0, color: '#13c2c2' },
-  ]);
+  const transformedChartData = chartData
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // 按日期排序
+    .flatMap(item => [
+      { date: item.date, category: t('internalTransfer.chartCategories.register'), value: Number(item.注册人数) || 0, color: '#1890ff' },
+      { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: Number(item.实名认证完成人数) || 0, color: '#52c41a' },
+      { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: Number(item.获取个信人数) || 0, color: '#faad14' },
+      { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: Number(item.个人信息推送成功人数) || 0, color: '#f5222d' },
+      { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: Number(item.授信成功人数) || 0, color: '#722ed1' },
+      { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: Number(item.借款成功人数) || 0, color: '#13c2c2' },
+    ]);
 
 
   // 折线图配置
@@ -232,7 +304,13 @@ const InternalTransferData: React.FC = () => {
     scale: {
       date: {
         type: 'cat',
-        tickCount: 5,
+        tickCount: Math.min(Math.max(transformedChartData.length / 6, 3), 15), // 根据数据量动态调整刻度数量，最少3个，最多15个
+        range: [0, 1],
+      },
+      value: {
+        nice: true,
+        min: 0,
+        max: Math.max(...transformedChartData.map(d => d.value)) * 1.1, // 设置最大值，留出10%空间
       },
     },
     smooth: true,
@@ -244,6 +322,38 @@ const InternalTransferData: React.FC = () => {
     },
     legend: {
       position: 'top' as const,
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        style: {
+          fontSize: 12,
+        },
+        formatter: (text: string) => {
+          // 格式化日期显示，如果是日期格式则显示月-日
+          if (text && text.includes('-')) {
+            const date = new Date(text);
+            if (!isNaN(date.getTime())) {
+              return `${date.getMonth() + 1}-${date.getDate()}`;
+            }
+          }
+          return text;
+        },
+      },
+      tickLine: {
+        style: {
+          stroke: '#d9d9d9',
+        },
+      },
+      grid: {
+        line: {
+          style: {
+            stroke: '#f0f0f0',
+            lineDash: [2, 2],
+          },
+        },
+      },
     },
     tooltip: {
       shared: true,
@@ -304,33 +414,154 @@ const InternalTransferData: React.FC = () => {
 
       {/* 筛选区域 */}
       <Card style={{ marginBottom: 16 }}>
-        <Space>
+        <Space wrap>
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('internalTransfer.dateRange')}：</span>
           <RangePicker
             value={dateRange}
             onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
             placeholder={[t('internalTransfer.startDate'), t('internalTransfer.endDate')]}
           />
-          <Button type="primary" onClick={() => {
-            setPagination(prev => ({ ...prev, current: 1 }));
-            fetchData();
-            fetchChartData();
-          }}>
+          <Button 
+            type="primary" 
+            onClick={async () => {
+              console.log('确认筛选，开始查询数据...');
+              // 同时获取表格数据和图表数据
+              await Promise.all([
+                fetchData(true), // 重置分页到第一页
+                fetchChartData()
+              ]);
+              message.success('数据筛选完成');
+            }}
+          >
             {t('common.confirm')}
+          </Button>
+          <Button 
+            onClick={async () => {
+              console.log('重置筛选条件...');
+              setDateRange(null);
+              setPagination(prev => ({ ...prev, current: 1 }));
+              // 重置后获取所有数据
+              await Promise.all([
+                fetchData(true),
+                fetchChartData()
+              ]);
+              message.success('筛选条件已重置');
+            }}
+          >
+            {t('common.reset')}
           </Button>
         </Space>
       </Card>
 
       {/* 折线图区域 */}
-      <Card 
-        title={t('internalTransfer.chartTitle')}
-        style={{ marginBottom: 16 }}
-        loading={chartLoading}
-      >
-        <div style={{ height: '400px' }}>
-          <Line {...chartConfig} />
-        </div>
-      </Card>
+      {showChart && (
+        <Card 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{t('internalTransfer.chartTitle')}</span>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<EyeOutlined />}
+                  size="small"
+                  onClick={() => setShowChart(false)}
+                  title={t('internalTransfer.chartControls.hideChart')}
+                />
+                <Button
+                  type="default"
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={downloadData}
+                  title={t('internalTransfer.chartControls.downloadData')}
+                  disabled={chartData.length === 0}
+                />
+                <Button
+                  type="default"
+                  icon={<ReloadOutlined />}
+                  size="small"
+                  onClick={refreshChart}
+                  title={t('internalTransfer.chartControls.refreshChart')}
+                  loading={chartLoading}
+                />
+              </Space>
+            </div>
+          }
+          style={{ marginBottom: 16 }}
+          loading={chartLoading}
+        >
+          <div style={{ 
+            height: '400px', 
+            width: '100%',
+            minHeight: '300px',
+            position: 'relative'
+          }}>
+            {transformedChartData.length > 0 ? (
+              <Line {...chartConfig} />
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: '#999',
+                fontSize: '16px'
+              }}>
+                {t('common.noData')}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* 当图表隐藏时显示控制按钮 */}
+      {!showChart && (
+        <Card 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{t('internalTransfer.chartControls.chartHiddenTitle')}</span>
+              <Space>
+                <Button
+                  type="default"
+                  icon={<EyeOutlined />}
+                  size="small"
+                  onClick={() => setShowChart(true)}
+                  title={t('internalTransfer.chartControls.showChart')}
+                />
+                <Button
+                  type="default"
+                  icon={<DownloadOutlined />}
+                  size="small"
+                  onClick={downloadData}
+                  title={t('internalTransfer.chartControls.downloadData')}
+                  disabled={chartData.length === 0}
+                />
+                <Button
+                  type="default"
+                  icon={<ReloadOutlined />}
+                  size="small"
+                  onClick={refreshChart}
+                  title={t('internalTransfer.chartControls.refreshChart')}
+                  loading={chartLoading}
+                />
+              </Space>
+            </div>
+          }
+          style={{ marginBottom: 16 }}
+        >
+          <div style={{
+            height: '60px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#999',
+            fontSize: '14px',
+            background: '#f5f5f5',
+            borderRadius: '6px'
+          }}>
+            {t('internalTransfer.chartControls.chartHidden')}
+          </div>
+        </Card>
+      )}
 
       {/* 数据表格区域 */}
       <Card title={t('internalTransfer.tableTitle')}>
@@ -346,7 +577,9 @@ const InternalTransferData: React.FC = () => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
+            pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (page, pageSize) => {
+              console.log('分页变化:', { page, pageSize, currentPagination: pagination });
               setPagination(prev => ({
                 ...prev,
                 current: page,
@@ -354,6 +587,7 @@ const InternalTransferData: React.FC = () => {
               }));
             },
             onShowSizeChange: (_, size) => {
+              console.log('页面大小变化:', { size, currentPagination: pagination });
               setPagination(prev => ({
                 ...prev,
                 current: 1,

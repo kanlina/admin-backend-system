@@ -69,6 +69,23 @@
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
       "loanSuccess": "Loan Success Count"
+    },
+    "chartControls": {
+      "hideChart": "Hide Trend Analysis",
+      "showChart": "Show Trend Analysis",
+      "downloadData": "Download Data",
+      "refreshChart": "Refresh Chart",
+      "chartHidden": "Trend analysis is hidden, click the eye icon to show",
+      "chartHiddenTitle": "Trend Analysis (Hidden)"
+    },
+    "downloadHeaders": {
+      "date": "Date",
+      "register": "Registration Count",
+      "realNameAuth": "Real Name Authentication Count",
+      "creditInfo": "Credit Information Count",
+      "infoPush": "Information Push Success Count",
+      "creditSuccess": "Credit Success Count",
+      "loanSuccess": "Loan Success Count"
     }
   },
   "auth": {

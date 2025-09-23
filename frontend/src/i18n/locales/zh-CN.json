@@ -69,6 +69,23 @@
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
       "loanSuccess": "借款成功人数"
+    },
+    "chartControls": {
+      "hideChart": "隐藏趋势分析",
+      "showChart": "显示趋势分析",
+      "downloadData": "下载数据",
+      "refreshChart": "刷新图表",
+      "chartHidden": "趋势分析已隐藏，点击眼睛图标显示",
+      "chartHiddenTitle": "趋势分析 (已隐藏)"
+    },
+    "downloadHeaders": {
+      "date": "日期",
+      "register": "注册人数",
+      "realNameAuth": "实名认证完成人数",
+      "creditInfo": "获取个信人数",
+      "infoPush": "个人信息推送成功人数",
+      "creditSuccess": "授信成功人数",
+      "loanSuccess": "借款成功人数"
     }
   },
   "auth": {

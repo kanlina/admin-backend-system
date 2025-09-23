@@ -69,6 +69,23 @@
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
       "loanSuccess": "Jumlah Pinjaman Berhasil"
+    },
+    "chartControls": {
+      "hideChart": "Sembunyikan Analisis Tren",
+      "showChart": "Tampilkan Analisis Tren",
+      "downloadData": "Unduh Data",
+      "refreshChart": "Refresh Chart",
+      "chartHidden": "Analisis tren disembunyikan, klik ikon mata untuk menampilkan",
+      "chartHiddenTitle": "Analisis Tren (Disembunyikan)"
+    },
+    "downloadHeaders": {
+      "date": "Tanggal",
+      "register": "Jumlah Pendaftaran",
+      "realNameAuth": "Jumlah Autentikasi Nama Asli",
+      "creditInfo": "Jumlah Informasi Kredit",
+      "infoPush": "Jumlah Push Informasi Berhasil",
+      "creditSuccess": "Jumlah Kredit Berhasil",
+      "loanSuccess": "Jumlah Pinjaman Berhasil"
     }
   },
   "auth": {

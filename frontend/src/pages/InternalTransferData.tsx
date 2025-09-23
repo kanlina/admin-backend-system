@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Space, message } from 'antd';
-import { SwapOutlined, EyeOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -11,22 +11,22 @@ const { RangePicker } = DatePicker;
 interface InternalTransferRecord {
   id: string;
   query_date: string;
-  注册人数: number;
-  实名认证完成人数: number;
-  获取个信人数: number;
-  个人信息推送成功人数: number;
-  授信成功人数: number;
-  借款成功人数: number;
+  register_count: number;
+  real_name_auth_count: number;
+  credit_info_count: number;
+  info_push_count: number;
+  credit_success_count: number;
+  loan_success_count: number;
 }
 
 interface ChartData {
   date: string;
-  注册人数: number;
-  实名认证完成人数: number;
-  获取个信人数: number;
-  个人信息推送成功人数: number;
-  授信成功人数: number;
-  借款成功人数: number;
+  register_count: number;
+  real_name_auth_count: number;
+  credit_info_count: number;
+  info_push_count: number;
+  credit_success_count: number;
+  loan_success_count: number;
 }
 
 const InternalTransferData: React.FC = () => {
@@ -42,17 +42,12 @@ const InternalTransferData: React.FC = () => {
     total: 0,
     totalPages: 0
   });
-  const [showChart, setShowChart] = useState(true); // 控制图表显示
+  const [showChart, setShowChart] = useState(false); // 控制图表显示，默认关闭
 
 
   useEffect(() => {
     fetchData();
   }, [pagination.current, pagination.pageSize]);
-
-  // 移除时间选择后自动触发查询，改为手动控制
-  // useEffect(() => {
-  //   fetchChartData();
-  // }, [dateRange]);
 
   const fetchData = async (resetPagination = false) => {
     setLoading(true);
@@ -116,6 +111,13 @@ const InternalTransferData: React.FC = () => {
       if (dateRange && dateRange[0] && dateRange[1]) {
         params.startDate = dateRange[0].format('YYYY-MM-DD');
         params.endDate = dateRange[1].format('YYYY-MM-DD');
+      } else {
+        // 如果没有日期筛选，默认查询当月数据
+        const now = dayjs();
+        const startOfMonth = now.startOf('month');
+        const endOfMonth = now.endOf('month');
+        params.startDate = startOfMonth.format('YYYY-MM-DD');
+        params.endDate = endOfMonth.format('YYYY-MM-DD');
       }
 
       const response = await apiService.getInternalTransferChartData(params);
@@ -124,15 +126,20 @@ const InternalTransferData: React.FC = () => {
         const apiData = response.data;
         
         // 转换图表数据格式
-        const formattedChartData = apiData.map((item: any) => ({
-          date: item.query_date,
-          注册人数: item.注册人数,
-          实名认证完成人数: item.实名认证完成人数,
-          获取个信人数: item.获取个信人数,
-          个人信息推送成功人数: item.个人信息推送成功人数,
-          授信成功人数: item.授信成功人数,
-          借款成功人数: item.借款成功人数,
-        }));
+        console.log('原始API数据:', apiData);
+        const formattedChartData = apiData.map((item: any) => {
+          console.log('处理单个数据项:', item);
+          return {
+            date: item.query_date,
+            register_count: item.register_count,
+            real_name_auth_count: item.real_name_auth_count,
+            credit_info_count: item.credit_info_count,
+            info_push_count: item.info_push_count,
+            credit_success_count: item.credit_success_count,
+            loan_success_count: item.loan_success_count,
+          };
+        });
+        console.log('格式化后的图表数据:', formattedChartData);
         
         setChartData(formattedChartData);
       } else {
@@ -151,12 +158,12 @@ const InternalTransferData: React.FC = () => {
     try {
       const csvData = chartData.map(item => ({
         date: item.date,
-        register: item.注册人数,
-        realNameAuth: item.实名认证完成人数,
-        creditInfo: item.获取个信人数,
-        infoPush: item.个人信息推送成功人数,
-        creditSuccess: item.授信成功人数,
-        loanSuccess: item.借款成功人数,
+        register: item.register_count,
+        realNameAuth: item.real_name_auth_count,
+        creditInfo: item.credit_info_count,
+        infoPush: item.info_push_count,
+        creditSuccess: item.credit_success_count,
+        loanSuccess: item.loan_success_count,
       }));
 
       const headers = [
@@ -237,45 +244,45 @@ const InternalTransferData: React.FC = () => {
     },
     {
       title: t('internalTransfer.registerCount'),
-      dataIndex: '注册人数',
-      key: '注册人数',
+      dataIndex: 'register_count',
+      key: 'register_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.注册人数 - b.注册人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.register_count - b.register_count,
     },
     {
       title: t('internalTransfer.realNameAuthCount'),
-      dataIndex: '实名认证完成人数',
-      key: '实名认证完成人数',
+      dataIndex: 'real_name_auth_count',
+      key: 'real_name_auth_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.实名认证完成人数 - b.实名认证完成人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.real_name_auth_count - b.real_name_auth_count,
     },
     {
       title: t('internalTransfer.creditInfoCount'),
-      dataIndex: '获取个信人数',
-      key: '获取个信人数',
+      dataIndex: 'credit_info_count',
+      key: 'credit_info_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.获取个信人数 - b.获取个信人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.credit_info_count - b.credit_info_count,
     },
     {
       title: t('internalTransfer.infoPushCount'),
-      dataIndex: '个人信息推送成功人数',
-      key: '个人信息推送成功人数',
+      dataIndex: 'info_push_count',
+      key: 'info_push_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.个人信息推送成功人数 - b.个人信息推送成功人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.info_push_count - b.info_push_count,
     },
     {
       title: t('internalTransfer.creditSuccessCount'),
-      dataIndex: '授信成功人数',
-      key: '授信成功人数',
+      dataIndex: 'credit_success_count',
+      key: 'credit_success_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.授信成功人数 - b.授信成功人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.credit_success_count - b.credit_success_count,
     },
     {
       title: t('internalTransfer.loanSuccessCount'),
-      dataIndex: '借款成功人数',
-      key: '借款成功人数',
+      dataIndex: 'loan_success_count',
+      key: 'loan_success_count',
       render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.借款成功人数 - b.借款成功人数,
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.loan_success_count - b.loan_success_count,
     },
   ];
 
@@ -283,14 +290,40 @@ const InternalTransferData: React.FC = () => {
   // 转换图表数据格式，为每个数据点添加颜色信息
   const transformedChartData = chartData
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // 按日期排序
-    .flatMap(item => [
-      { date: item.date, category: t('internalTransfer.chartCategories.register'), value: Number(item.注册人数) || 0, color: '#1890ff' },
-      { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: Number(item.实名认证完成人数) || 0, color: '#52c41a' },
-      { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: Number(item.获取个信人数) || 0, color: '#faad14' },
-      { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: Number(item.个人信息推送成功人数) || 0, color: '#f5222d' },
-      { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: Number(item.授信成功人数) || 0, color: '#722ed1' },
-      { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: Number(item.借款成功人数) || 0, color: '#13c2c2' },
-    ]);
+    .flatMap(item => {
+      console.log('转换前的数据项:', item);
+      
+      // 确保所有数值都是有效的数字，使用英文字段名
+      const registerCount = Number(item.register_count) || 0;
+      const realNameAuthCount = Number(item.real_name_auth_count) || 0;
+      const creditInfoCount = Number(item.credit_info_count) || 0;
+      const infoPushCount = Number(item.info_push_count) || 0;
+      const creditSuccessCount = Number(item.credit_success_count) || 0;
+      const loanSuccessCount = Number(item.loan_success_count) || 0;
+      
+      console.log('转换后的数值:', {
+        registerCount,
+        realNameAuthCount,
+        creditInfoCount,
+        infoPushCount,
+        creditSuccessCount,
+        loanSuccessCount
+      });
+      
+      const result = [
+        { date: item.date, category: t('internalTransfer.chartCategories.register'), value: registerCount, color: '#1890ff' },
+        { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: realNameAuthCount, color: '#52c41a' },
+        { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: creditInfoCount, color: '#faad14' },
+        { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: infoPushCount, color: '#f5222d' },
+        { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: creditSuccessCount, color: '#722ed1' },
+        { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: loanSuccessCount, color: '#13c2c2' },
+      ];
+      
+      // 调试信息：打印转换后的数据
+      console.log('Transformed chart data for date:', item.date, result);
+      
+      return result;
+    });
 
 
   // 折线图配置
@@ -355,34 +388,18 @@ const InternalTransferData: React.FC = () => {
         },
       },
     },
-    tooltip: {
-      shared: true,
-      showCrosshairs: true,
-      formatter: (datum: any) => {
-        const value = Number(datum.value) || 0;
-        return {
-          name: datum.category || '未知',
-          value: value.toLocaleString(),
-        };
-      },
-      customContent: (title: string, items: any[]) => {
-        if (!items || items.length === 0) return '';
-        
-        const content = items.map(item => {
-          const value = Number(item.value) || 0;
-          return `<div style="margin: 4px 0;">
-            <span style="color: ${item.color}; margin-right: 8px;">●</span>
-            <span style="font-weight: 500;">${item.name}:</span>
-            <span style="margin-left: 8px; font-weight: 600;">${value.toLocaleString()}</span>
-          </div>`;
-        }).join('');
-        
-        return `<div style="padding: 8px;">
-          <div style="font-weight: 600; margin-bottom: 8px;">${title}</div>
-          ${content}
-        </div>`;
-      },
-    },
+    // tooltip: {
+    //   shared: true,
+    //   showCrosshairs: true,
+    //   formatter: (datum: any) => {
+    //     // 直接处理数值，确保不为null或undefined
+    //     // const value = ;
+    //     return {
+    //       name: datum.category || '未知',
+    //       value: datum.value,
+    //     };
+    //   },
+    // },
     yAxis: {
       label: {
         formatter: (text: string) => {
@@ -398,20 +415,6 @@ const InternalTransferData: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* 页面标题 */}
-      <div style={{ 
-        marginBottom: '16px', 
-        fontSize: '18px', 
-        fontWeight: 'bold',
-        color: '#1890ff',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
-        <SwapOutlined />
-        {t('internalTransfer.title')}
-      </div>
-
       {/* 筛选区域 */}
       <Card style={{ marginBottom: 16 }}>
         <Space wrap>
@@ -421,15 +424,16 @@ const InternalTransferData: React.FC = () => {
             onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
             placeholder={[t('internalTransfer.startDate'), t('internalTransfer.endDate')]}
           />
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             onClick={async () => {
               console.log('确认筛选，开始查询数据...');
-              // 同时获取表格数据和图表数据
-              await Promise.all([
-                fetchData(true), // 重置分页到第一页
-                fetchChartData()
-              ]);
+              // 获取表格数据，如果图表显示则同时获取图表数据
+              const promises = [fetchData(true)]; // 重置分页到第一页
+              if (showChart) {
+                promises.push(fetchChartData());
+              }
+              await Promise.all(promises);
               message.success('数据筛选完成');
             }}
           >
@@ -440,11 +444,12 @@ const InternalTransferData: React.FC = () => {
               console.log('重置筛选条件...');
               setDateRange(null);
               setPagination(prev => ({ ...prev, current: 1 }));
-              // 重置后获取所有数据
-              await Promise.all([
-                fetchData(true),
-                fetchChartData()
-              ]);
+              // 重置后获取所有数据，如果图表显示则同时获取图表数据
+              const promises = [fetchData(true)];
+              if (showChart) {
+                promises.push(fetchChartData());
+              }
+              await Promise.all(promises);
               message.success('筛选条件已重置');
             }}
           >
@@ -524,7 +529,11 @@ const InternalTransferData: React.FC = () => {
                   type="default"
                   icon={<EyeOutlined />}
                   size="small"
-                  onClick={() => setShowChart(true)}
+                  onClick={async () => {
+                    setShowChart(true);
+                    // 显示图表时自动获取图表数据
+                    await fetchChartData();
+                  }}
                   title={t('internalTransfer.chartControls.showChart')}
                 />
                 <Button

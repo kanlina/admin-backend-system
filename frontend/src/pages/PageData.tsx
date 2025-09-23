@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Select, Space, Statistic, Row, Col, message, Progress } from 'antd';
-import { FileTextOutlined, DownloadOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 
@@ -192,13 +192,7 @@ const PageData: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card 
-        title={
-          <Space>
-            <FileTextOutlined />
-            页面数据监控
-          </Space>
-        }
+      <Card
         extra={
           <Space>
             <RangePicker

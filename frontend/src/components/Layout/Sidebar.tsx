@@ -87,10 +87,41 @@ const Sidebar: React.FC = () => {
         boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
       }}
     >
+      {/* Logo和项目名称 */}
+      <div style={{
+        padding: '16px',
+        borderBottom: '1px solid #f0f0f0',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '8px'
+      }}>
+        <img 
+          src="https://pilih-kredit-2025-backend-test.oss-ap-southeast-5.aliyuncs.com/appConf/logo.jpeg" 
+          alt="Pilih Kredit Logo" 
+          style={{ 
+            width: '24px', 
+            height: '24px', 
+            borderRadius: '4px',
+            objectFit: 'contain'
+          }} 
+        />
+        <span style={{ 
+          fontSize: '16px', 
+          fontWeight: 'bold', 
+          color: '#1890ff',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          Pilih Kredit
+        </span>
+      </div>
+      
       <Menu
         mode="inline"
         selectedKeys={[location.pathname]}
-        style={{ height: '100%', borderRight: 0 }}
+        style={{ height: 'calc(100% - 80px)', borderRight: 0 }}
         items={menuItems}
         onClick={handleMenuClick}
       />

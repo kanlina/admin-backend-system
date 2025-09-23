@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Select, Space, Statistic, Row, Col, message, Tag } from 'antd';
-import { CreditCardOutlined, DownloadOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 
@@ -250,13 +250,7 @@ const PostLoanData: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card 
-        title={
-          <Space>
-            <CreditCardOutlined />
-            贷后数据监控
-          </Space>
-        }
+      <Card
         extra={
           <Space>
             <RangePicker

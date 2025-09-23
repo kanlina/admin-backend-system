@@ -13,22 +13,22 @@ export const internalTransferService = {
           DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
           
           -- 1. 注册人数
-          COALESCE(register_stats.register_count, 0) AS "注册人数",
+          COALESCE(register_stats.register_count, 0) AS register_count,
           
           -- 2. OCR全部识别完成人数
-          COALESCE(ocr_stats.ocr_count, 0) AS "实名认证完成人数",
+          COALESCE(ocr_stats.ocr_count, 0) AS real_name_auth_count,
           
           -- 3. 个人信息提交人数
-          COALESCE(info_stats.info_count, 0) AS "获取个信人数",
+          COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
           -- 4. 个人信息推送给合作伙伴人数
-          COALESCE(upload_stats.upload_count, 0) AS "个人信息推送成功人数",
+          COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
           -- 5. 获取授信成功人数
-          COALESCE(credit_stats.credit_count, 0) AS "授信成功人数",
+          COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
           
           -- 6. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS "借款成功人数"
+          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
 
         FROM (
             -- 生成最近30天的日期序列（MySQL 5.7兼容）
@@ -176,22 +176,22 @@ export const internalTransferService = {
           DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
           
           -- 1. 注册人数
-          COALESCE(register_stats.register_count, 0) AS "注册人数",
+          COALESCE(register_stats.register_count, 0) AS register_count,
           
           -- 2. OCR全部识别完成人数
-          COALESCE(ocr_stats.ocr_count, 0) AS "实名认证完成人数",
+          COALESCE(ocr_stats.ocr_count, 0) AS real_name_auth_count,
           
           -- 3. 个人信息提交人数
-          COALESCE(info_stats.info_count, 0) AS "获取个信人数",
+          COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
           -- 4. 个人信息推送给合作伙伴人数
-          COALESCE(upload_stats.upload_count, 0) AS "个人信息推送成功人数",
+          COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
           -- 5. 获取授信成功人数
-          COALESCE(credit_stats.credit_count, 0) AS "授信成功人数",
+          COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
           
           -- 6. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS "借款成功人数"
+          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
 
         FROM (
             -- 生成最近30天的日期序列（MySQL 5.7兼容）

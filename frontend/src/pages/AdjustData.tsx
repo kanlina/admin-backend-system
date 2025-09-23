@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, DatePicker, Select, Space, Statistic, Row, Col, message, Tag, Progress } from 'antd';
+import { Card, Table, Button, DatePicker, Select, Space, Statistic, Row, Col, message, Tag } from 'antd';
 import { ToolOutlined, DownloadOutlined, ReloadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -23,6 +24,7 @@ interface AdjustRecord {
 }
 
 const AdjustData: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<AdjustRecord[]>([]);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
@@ -355,7 +357,7 @@ const AdjustData: React.FC = () => {
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+            showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
           }}
         />
       </Card>

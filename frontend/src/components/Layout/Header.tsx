@@ -3,12 +3,15 @@ import { Layout, Avatar, Dropdown, Button, Space } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 const { Header: AntHeader } = Layout;
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -19,13 +22,13 @@ const Header: React.FC = () => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: '个人资料',
+      label: t('common.profile'),
       onClick: () => navigate('/profile'),
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
-      label: '设置',
+      label: t('common.settings'),
       onClick: () => navigate('/settings'),
     },
     {
@@ -34,7 +37,7 @@ const Header: React.FC = () => {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: t('auth.logout'),
       onClick: handleLogout,
     },
   ];
@@ -49,12 +52,13 @@ const Header: React.FC = () => {
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
     }}>
       <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1890ff' }}>
-        管理后台
+        {t('navigation.adminPanel')}
       </div>
       
       <Space>
+        <LanguageSwitcher />
         <span style={{ color: '#666' }}>
-          欢迎，{user?.username}
+          {t('common.welcome')}，{user?.username}
         </span>
         <Dropdown
           menu={{ items: userMenuItems }}

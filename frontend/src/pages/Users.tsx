@@ -20,6 +20,7 @@ import {
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../services/api';
 import type { User, UpdateUserRequest } from '../types';
 import dayjs from 'dayjs';
@@ -27,6 +28,7 @@ import dayjs from 'dayjs';
 const { Option } = Select;
 
 const Users: React.FC = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -281,7 +283,7 @@ const Users: React.FC = () => {
             ...pagination,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+            showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
           }}
           onChange={handleTableChange}
         />

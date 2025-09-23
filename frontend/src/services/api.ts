@@ -132,6 +132,11 @@ class ApiService {
     const response = await this.api.get('/internal-transfer-data', { params });
     return response.data;
   }
+
+  async getInternalTransferChartData(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/internal-transfer-chart', { params });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

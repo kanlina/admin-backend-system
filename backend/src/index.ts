@@ -28,8 +28,8 @@ app.use(cors({
   credentials: true,
 }));
 
-// 请求限制
-const limiter = rateLimit({
+// 请求限制 - 为登录接口设置更宽松的限制
+const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
   max: 100, // 限制每个IP每15分钟最多100个请求
   message: {
@@ -37,7 +37,20 @@ const limiter = rateLimit({
     error: '请求过于频繁，请稍后再试',
   },
 });
-app.use(limiter);
+
+// 登录接口专用限流器 - 更宽松的限制
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 20, // 限制每个IP每15分钟最多20次登录尝试
+  message: {
+    success: false,
+    error: '登录尝试过于频繁，请稍后再试',
+  },
+  skipSuccessfulRequests: true, // 成功的请求不计入限制
+});
+
+// 应用限流器
+app.use(generalLimiter);
 
 // 解析中间件
 app.use(express.json({ limit: '10mb' }));

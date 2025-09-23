@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 const { Sider } = Layout;
 
@@ -20,37 +21,38 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const menuItems = [
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
-      label: '仪表盘',
+      label: t('navigation.dashboard'),
     },
     {
       key: 'data-monitor',
       icon: <MonitorOutlined />,
-      label: '数据监控',
+      label: t('navigation.dataMonitor'),
       children: [
         {
           key: '/data-monitor/internal-transfer',
           icon: <SwapOutlined />,
-          label: '内转数据',
+          label: t('navigation.internalTransfer'),
         },
         {
           key: '/data-monitor/adjust-data',
           icon: <ToolOutlined />,
-          label: 'Adjust数据',
+          label: t('navigation.adjustData'),
         },
         {
           key: '/data-monitor/page-data',
           icon: <FileTextOutlined />,
-          label: '页面数据',
+          label: t('navigation.pageData'),
         },
         {
           key: '/data-monitor/post-loan',
           icon: <CreditCardOutlined />,
-          label: '贷后数据',
+          label: t('navigation.postLoanData'),
         },
       ],
     },
@@ -58,17 +60,17 @@ const Sidebar: React.FC = () => {
       {
         key: '/users',
         icon: <UserOutlined />,
-        label: '用户管理',
+        label: t('navigation.userManagement'),
       },
       {
         key: '/analytics',
         icon: <BarChartOutlined />,
-        label: '数据分析',
+        label: t('navigation.analytics'),
       },
       {
         key: '/settings',
         icon: <SettingOutlined />,
-        label: '系统设置',
+        label: t('navigation.systemSettings'),
       },
     ] : []),
   ];

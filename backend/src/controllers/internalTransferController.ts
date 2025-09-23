@@ -27,3 +27,27 @@ export const getInternalTransferData = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getInternalTransferChartData = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    const data = await internalTransferService.getInternalTransferChartData(
+      startDate as string,
+      endDate as string
+    );
+
+    res.json({
+      success: true,
+      data: data,
+      message: '图表数据获取成功'
+    });
+  } catch (error) {
+    console.error('获取内转图表数据失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取图表数据失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};

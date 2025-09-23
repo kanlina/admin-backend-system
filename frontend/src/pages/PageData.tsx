@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Select, Space, Statistic, Row, Col, message, Progress } from 'antd';
 import { FileTextOutlined, DownloadOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -20,6 +21,7 @@ interface PageDataRecord {
 }
 
 const PageData: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<PageDataRecord[]>([]);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
@@ -259,7 +261,7 @@ const PageData: React.FC = () => {
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条/共 ${total} 条`,
+            showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
           }}
         />
       </Card>

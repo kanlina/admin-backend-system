@@ -16,6 +16,7 @@ import InternalTransferData from '../pages/InternalTransferData';
 import AdjustData from '../pages/AdjustData';
 import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
+import ApiPartners from '../pages/ApiPartners';
 
 // 配置 dayjs 多语言
 import dayjs from 'dayjs';
@@ -116,6 +117,15 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <AppLayout>
                   <PostLoanData />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* 合作伙伴中心路由 */}
+            <Route path="/partner-center/api-partners" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <ApiPartners />
                 </AppLayout>
               </ProtectedRoute>
             } />

@@ -7,7 +7,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3002/api',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -135,6 +135,32 @@ class ApiService {
 
   async getInternalTransferChartData(params?: any): Promise<ApiResponse<any[]>> {
     const response = await this.api.get('/internal-transfer-chart', { params });
+    return response.data;
+  }
+
+  // API合作伙伴配置相关
+  async getApiPartnerConfigs(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/api-partner-configs', { params });
+    return response.data;
+  }
+
+  async getApiPartnerConfigById(id: string): Promise<ApiResponse<any>> {
+    const response = await this.api.get(`/api-partner-configs/${id}`);
+    return response.data;
+  }
+
+  async createApiPartnerConfig(data: any): Promise<ApiResponse<any>> {
+    const response = await this.api.post('/api-partner-configs', data);
+    return response.data;
+  }
+
+  async updateApiPartnerConfig(id: string, data: any): Promise<ApiResponse<any>> {
+    const response = await this.api.put(`/api-partner-configs/${id}`, data);
+    return response.data;
+  }
+
+  async deleteApiPartnerConfig(id: string): Promise<ApiResponse<any>> {
+    const response = await this.api.delete(`/api-partner-configs/${id}`);
     return response.data;
   }
 }

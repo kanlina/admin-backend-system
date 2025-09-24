@@ -9,7 +9,9 @@ import {
   SwapOutlined,
   FileTextOutlined,
   CreditCardOutlined,
-  ToolOutlined
+  ToolOutlined,
+  TeamOutlined,
+  ApiOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,6 +55,18 @@ const Sidebar: React.FC = () => {
           key: '/data-monitor/post-loan',
           icon: <CreditCardOutlined />,
           label: t('navigation.postLoanData'),
+        },
+      ],
+    },
+    {
+      key: 'partner-center',
+      icon: <TeamOutlined />,
+      label: t('navigation.partnerCenter'),
+      children: [
+        {
+          key: '/partner-center/api-partners',
+          icon: <ApiOutlined />,
+          label: t('navigation.apiPartners'),
         },
       ],
     },

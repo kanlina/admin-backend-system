@@ -355,6 +355,20 @@ const InternalTransferData: React.FC = () => {
     },
     legend: {
       position: 'top' as const,
+      layout: 'horizontal' as const,
+      align: 'center' as const,
+      itemName: {
+        style: {
+          fontSize: 12,
+          fontWeight: 'normal',
+          textAlign: 'center',
+        },
+      },
+      itemMarker: {
+        style: {
+          marginRight: 8,
+        },
+      },
     },
     xAxis: {
       label: {

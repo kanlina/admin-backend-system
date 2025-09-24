@@ -27,6 +27,10 @@ const Header: React.FC = () => {
         return t('navigation.pageData');
       case '/data-monitor/post-loan':
         return t('navigation.postLoanData');
+      case '/data-monitor/partner-center':
+        return t('navigation.partnerCenter');
+      case '/data-monitor/partner-center/api-partners':
+        return t('navigation.apiPartners');
       case '/users':
         return t('navigation.userManagement');
       case '/analytics':

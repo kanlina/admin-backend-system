@@ -73,6 +73,12 @@ const InternalTransferData: React.FC = () => {
         const apiData = response.data;
         const paginationInfo = response.pagination;
         
+        // 调试：打印第一条数据的字段名
+        if (apiData.length > 0) {
+          console.log('后端返回的第一条数据:', apiData[0]);
+          console.log('数据字段名:', Object.keys(apiData[0]));
+        }
+        
         // 转换数据格式，添加id字段
         const formattedData = apiData.map((item: any, index: number) => ({
           id: ((paginationInfo.page - 1) * paginationInfo.limit + index + 1).toString(),

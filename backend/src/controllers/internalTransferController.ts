@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { internalTransferService } from '../services/internalTransferService';
+import { internalTransferService } from '../services/internalTransferService_fixed';
 
 export const getInternalTransferData = async (req: Request, res: Response) => {
   try {

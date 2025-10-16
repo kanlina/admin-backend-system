@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Space, message, Tag, Modal, Form, Input, Select } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
 
 interface Partner {
   id: string;
@@ -14,7 +13,6 @@ interface Partner {
 }
 
 const PartnerCenter: React.FC = () => {
-  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Partner[]>([]);
   const [pagination, setPagination] = useState({

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ApiPartnerService } from '../services/apiPartnerService';
-import { CreateApiPartnerRequest, UpdateApiPartnerRequest, ApiPartnerQuery, ApiResponse } from '../types/apiPartner';
+import { CreateApiPartnerRequest, UpdateApiPartnerRequest, ApiPartnerQuery } from '../types/apiPartner';
+import { ApiResponse } from '../types';
 
 const apiPartnerService = new ApiPartnerService();
 

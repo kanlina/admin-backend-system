@@ -59,8 +59,8 @@ export const uploadToOSS = async (file: Express.Multer.File, folder: string = 'c
     try {
       await ossClient.putACL(fileName, 'public-read');
       console.log('文件权限设置成功');
-    } catch (aclError) {
-      console.warn('设置文件权限失败，但上传成功:', aclError.message);
+    } catch (aclError: any) {
+      console.warn('设置文件权限失败，但上传成功:', aclError?.message || 'Unknown error');
       // 权限设置失败不影响上传成功
     }
     

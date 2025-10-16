@@ -99,7 +99,7 @@ export const internalTransferService = {
                 DATE(created_at) AS date_col,
                 COUNT(DISTINCT user_id) AS upload_count
             FROM user_upload_records
-            WHERE status = 1
+            WHERE status = "success"
             GROUP BY DATE(created_at)
         ) upload_stats ON upload_stats.date_col = date_series.date_col
 
@@ -263,7 +263,7 @@ export const internalTransferService = {
                 DATE(created_at) AS date_col,
                 COUNT(DISTINCT user_id) AS upload_count
             FROM user_upload_records 
-            WHERE status = 1
+            WHERE status = "success"
             GROUP BY DATE(created_at)
         ) upload_stats ON upload_stats.date_col = date_series.date_col
 

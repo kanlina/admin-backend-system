@@ -76,12 +76,13 @@ LEFT JOIN (
 ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
 LEFT JOIN (
-    -- 个人信息提交人数统计
+    -- 个人信息提交人数统计（按verification_success_at字段统计认证成功的日期）
     SELECT 
-        DATE(created_at) AS date_col,
+        DATE(verification_success_at) AS date_col,
         COUNT(DISTINCT user_id) AS info_count
     FROM user_info 
-    GROUP BY DATE(created_at)
+    WHERE verification_success_at IS NOT NULL
+    GROUP BY DATE(verification_success_at)
 ) info_stats ON info_stats.date_col = date_series.date_col
 
 LEFT JOIN (
@@ -89,7 +90,7 @@ LEFT JOIN (
     SELECT 
         DATE(created_at) AS date_col,
         COUNT(DISTINCT user_id) AS upload_count
-    FROM user_upload_record 
+    FROM user_upload_records
     WHERE status = 1
     GROUP BY DATE(created_at)
 ) upload_stats ON upload_stats.date_col = date_series.date_col

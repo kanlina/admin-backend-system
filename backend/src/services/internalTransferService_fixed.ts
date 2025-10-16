@@ -67,19 +67,20 @@ export const internalTransferService = {
         ) adjust_registration_stats ON adjust_registration_stats.date_col = date_series.date_col
 
         LEFT JOIN (
-            -- 实名认证完成人数统计（从user_info表查询，去重首次完成日期）
+            -- OCR全部识别完成人数统计（从user_ocr_record表查询首次完成face-recognition事件的去重用户）
             SELECT 
-                DATE(first_completion.updated_at) AS date_col,
+                DATE(first_completion.created_at) AS date_col,
                 COUNT(DISTINCT first_completion.user_id) AS ocr_count
             FROM (
                 SELECT 
                     user_id,
-                    MIN(updated_at) AS updated_at
-                FROM user_info
-                WHERE id_card_verify_status = 1 AND face_verify_status = 1
+                    MIN(created_at) AS created_at
+                FROM user_ocr_record
+                WHERE event_name = 'face-recognition' 
+                    AND recognition_status = 1
                 GROUP BY user_id
             ) AS first_completion
-            GROUP BY DATE(first_completion.updated_at)
+            GROUP BY DATE(first_completion.created_at)
         ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
         LEFT JOIN (
@@ -121,12 +122,6 @@ export const internalTransferService = {
         ) loan_stats ON loan_stats.date_col = date_series.date_col
 
         WHERE date_series.date_col IS NOT NULL
-      `;
-
-      // 日期筛选条件已经在日期序列生成时处理，无需重复添加
-
-      sql += `
-        GROUP BY date_series.date_col
         ORDER BY date_series.date_col DESC
         LIMIT ${validPageSize} OFFSET ${(validPage - 1) * validPageSize}
       `;
@@ -235,19 +230,20 @@ export const internalTransferService = {
         ) adjust_registration_stats ON adjust_registration_stats.date_col = date_series.date_col
 
         LEFT JOIN (
-            -- 实名认证完成人数统计（从user_info表查询，去重首次完成日期）
+            -- OCR全部识别完成人数统计（从user_ocr_record表查询首次完成face-recognition事件的去重用户）
             SELECT 
-                DATE(first_completion.updated_at) AS date_col,
+                DATE(first_completion.created_at) AS date_col,
                 COUNT(DISTINCT first_completion.user_id) AS ocr_count
             FROM (
                 SELECT 
                     user_id,
-                    MIN(updated_at) AS updated_at
-                FROM user_info
-                WHERE id_card_verify_status = 1 AND face_verify_status = 1
+                    MIN(created_at) AS created_at
+                FROM user_ocr_record
+                WHERE event_name = 'face-recognition' 
+                    AND recognition_status = 1
                 GROUP BY user_id
             ) AS first_completion
-            GROUP BY DATE(first_completion.updated_at)
+            GROUP BY DATE(first_completion.created_at)
         ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
         LEFT JOIN (
@@ -289,12 +285,6 @@ export const internalTransferService = {
         ) loan_stats ON loan_stats.date_col = date_series.date_col
 
         WHERE date_series.date_col IS NOT NULL
-      `;
-
-      // 日期筛选条件已经在日期序列生成时处理，无需重复添加
-
-      sql += `
-        GROUP BY date_series.date_col
         ORDER BY date_series.date_col ASC
       `;
 
@@ -303,6 +293,13 @@ export const internalTransferService = {
       const connection = await createCoreDbConnection();
       const [rows] = await connection.execute(sql);
       await connection.end();
+
+      // 打印返回的数据用于调试
+      console.log('图表查询返回的数据行数:', (rows as any).length);
+      if ((rows as any).length > 0) {
+        console.log('图表第一行数据:', (rows as any)[0]);
+        console.log('图表数据字段名:', Object.keys((rows as any)[0]));
+      }
 
       return rows;
 

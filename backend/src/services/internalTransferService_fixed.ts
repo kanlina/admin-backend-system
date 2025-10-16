@@ -18,22 +18,25 @@ export const internalTransferService = {
           DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
           
           -- 1. 注册人数
-          COALESCE(register_stats.register_count, 0) AS "注册人数",
+          COALESCE(register_stats.register_count, 0) AS register_count,
           
-          -- 2. OCR全部识别完成人数
-          COALESCE(ocr_stats.ocr_count, 0) AS "实名认证完成人数",
+          -- 2. 归因上报-Registration
+          COALESCE(adjust_registration_stats.registration_count, 0) AS adjust_registration_count,
           
-          -- 3. 个人信息提交人数
-          COALESCE(info_stats.info_count, 0) AS "获取个信人数",
+          -- 3. OCR全部识别完成人数
+          COALESCE(ocr_stats.ocr_count, 0) AS real_name_auth_count,
           
-          -- 4. 个人信息推送给合作伙伴人数
-          COALESCE(upload_stats.upload_count, 0) AS "个人信息推送成功人数",
+          -- 4. 个人信息提交人数
+          COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
-          -- 5. 获取授信成功人数
-          COALESCE(credit_stats.credit_count, 0) AS "授信成功人数",
+          -- 5. 个人信息推送给合作伙伴人数
+          COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
-          -- 6. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS "借款成功人数"
+          -- 6. 获取授信成功人数
+          COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
+          
+          -- 7. 提交贷款成功人数
+          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
 
         FROM (
             -- 根据时间范围生成日期序列（MySQL 5.7兼容）
@@ -54,13 +57,29 @@ export const internalTransferService = {
         ) register_stats ON register_stats.date_col = date_series.date_col
 
         LEFT JOIN (
-            -- OCR全部识别完成人数统计
+            -- 归因上报-Registration统计
             SELECT 
                 DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS ocr_count
-            FROM user_ocr_record 
-            WHERE status = 2
+                COUNT(DISTINCT user_id) AS registration_count
+            FROM adjust_event_record 
+            WHERE event_name = 'Registration' AND status = 1
             GROUP BY DATE(created_at)
+        ) adjust_registration_stats ON adjust_registration_stats.date_col = date_series.date_col
+
+        LEFT JOIN (
+            -- 实名认证完成人数统计（从user_info表查询，去重首次完成日期）
+            SELECT 
+                DATE(first_completion.updated_at) AS date_col,
+                COUNT(DISTINCT first_completion.user_id) AS ocr_count
+            FROM (
+                SELECT 
+                    user_id,
+                    MIN(updated_at) AS updated_at
+                FROM user_info
+                WHERE id_card_verify_status = 1 AND face_verify_status = 1
+                GROUP BY user_id
+            ) AS first_completion
+            GROUP BY DATE(first_completion.updated_at)
         ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
         LEFT JOIN (
@@ -167,22 +186,25 @@ export const internalTransferService = {
           DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
           
           -- 1. 注册人数
-          COALESCE(register_stats.register_count, 0) AS "注册人数",
+          COALESCE(register_stats.register_count, 0) AS register_count,
           
-          -- 2. OCR全部识别完成人数
-          COALESCE(ocr_stats.ocr_count, 0) AS "实名认证完成人数",
+          -- 2. 归因上报-Registration
+          COALESCE(adjust_registration_stats.registration_count, 0) AS adjust_registration_count,
           
-          -- 3. 个人信息提交人数
-          COALESCE(info_stats.info_count, 0) AS "获取个信人数",
+          -- 3. OCR全部识别完成人数
+          COALESCE(ocr_stats.ocr_count, 0) AS real_name_auth_count,
           
-          -- 4. 个人信息推送给合作伙伴人数
-          COALESCE(upload_stats.upload_count, 0) AS "个人信息推送成功人数",
+          -- 4. 个人信息提交人数
+          COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
-          -- 5. 获取授信成功人数
-          COALESCE(credit_stats.credit_count, 0) AS "授信成功人数",
+          -- 5. 个人信息推送给合作伙伴人数
+          COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
-          -- 6. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS "借款成功人数"
+          -- 6. 获取授信成功人数
+          COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
+          
+          -- 7. 提交贷款成功人数
+          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
 
         FROM (
             -- 根据时间范围生成日期序列（MySQL 5.7兼容）
@@ -203,13 +225,29 @@ export const internalTransferService = {
         ) register_stats ON register_stats.date_col = date_series.date_col
 
         LEFT JOIN (
-            -- OCR全部识别完成人数统计
+            -- 归因上报-Registration统计
             SELECT 
                 DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS ocr_count
-            FROM user_ocr_record 
-            WHERE status = 2
+                COUNT(DISTINCT user_id) AS registration_count
+            FROM adjust_event_record 
+            WHERE event_name = 'Registration' AND status = 1
             GROUP BY DATE(created_at)
+        ) adjust_registration_stats ON adjust_registration_stats.date_col = date_series.date_col
+
+        LEFT JOIN (
+            -- 实名认证完成人数统计（从user_info表查询，去重首次完成日期）
+            SELECT 
+                DATE(first_completion.updated_at) AS date_col,
+                COUNT(DISTINCT first_completion.user_id) AS ocr_count
+            FROM (
+                SELECT 
+                    user_id,
+                    MIN(updated_at) AS updated_at
+                FROM user_info
+                WHERE id_card_verify_status = 1 AND face_verify_status = 1
+                GROUP BY user_id
+            ) AS first_completion
+            GROUP BY DATE(first_completion.updated_at)
         ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
         LEFT JOIN (

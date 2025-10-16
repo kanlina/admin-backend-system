@@ -44,6 +44,7 @@
     "analytics": "数据分析",
     "systemSettings": "系统设置",
     "apiPartners": "API合作伙伴配置",
+    "cpiPartners": "CPI合作伙伴配置",
     "logout": "退出登录",
     "adminPanel": "管理后台"
   },
@@ -58,6 +59,7 @@
     "tableTitle": "详细数据",
     "rowNumber": "序号",
     "registerCount": "注册人数",
+    "adjustRegistrationCount": "归因上报-Registration",
     "realNameAuthCount": "实名认证完成人数",
     "creditInfoCount": "获取个信人数",
     "infoPushCount": "个人信息推送成功人数",
@@ -66,6 +68,7 @@
     "noData": "暂无数据",
     "chartCategories": {
       "register": "注册人数",
+      "adjustRegistration": "归因上报-Registration",
       "realNameAuth": "实名认证完成人数",
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
@@ -83,6 +86,7 @@
     "downloadHeaders": {
       "date": "日期",
       "register": "注册人数",
+      "adjustRegistration": "归因上报-Registration",
       "realNameAuth": "实名认证完成人数",
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
@@ -226,6 +230,103 @@
     },
     "messages": {
       "loading": "正在获取API合作伙伴配置数据...",
+      "loadSuccess": "数据加载成功，共 {{count}} 条记录",
+      "loadError": "获取数据失败",
+      "addSuccess": "添加成功",
+      "addError": "添加失败",
+      "updateSuccess": "更新成功",
+      "updateError": "更新失败",
+      "deleteSuccess": "删除成功",
+      "deleteError": "删除失败",
+      "authFailed": "认证失败，使用模拟数据",
+      "apiNotImplemented": "后端API未实现，使用模拟数据",
+      "networkError": "网络请求失败，使用模拟数据",
+      "requiredFields": "缺少必填字段：app_id, partner_name, partner_api, secret_key",
+      "appIdExists": "该应用ID已存在",
+      "authFailedRetry": "认证失败，请重新登录",
+      "dataFormatError": "数据格式错误，请检查输入内容",
+      "networkErrorRetry": "网络错误，请稍后重试",
+      "operationFailed": "操作失败，请稍后重试"
+    },
+    "validation": {
+      "required": "请输入{{field}}",
+      "url": "请输入有效的URL",
+      "number": "请输入有效的数字"
+    }
+  },
+  "cpiPartners": {
+    "title": "CPI合作伙伴配置管理",
+    "addConfig": "添加配置",
+    "addConfigTitle": "添加CPI合作伙伴配置",
+    "editConfig": "编辑CPI合作伙伴配置",
+    "confirmDelete": "确认删除",
+    "deleteConfirm": "确定要删除这个CPI合作伙伴配置吗？此操作不可撤销。",
+    "columns": {
+      "index": "序号",
+      "appId": "应用ID",
+      "partnerName": "合作伙伴名称",
+      "partnerLogo": "合作伙伴Logo",
+      "defaultInterestRate": "默认利率",
+      "status": "状态",
+      "defaultAmount": "默认金额",
+      "createdAt": "创建时间",
+      "action": "操作"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "form": {
+      "basicInfo": "基本信息",
+      "defaultConfig": "默认配置",
+      "downloadLinks": "下载链接",
+      "statusSettings": "状态设置",
+      "appId": "应用ID",
+      "partnerName": "合作伙伴名称",
+      "partnerPhone": "联系电话",
+      "partnerDescription": "合作伙伴描述",
+      "partnerApi": "API基础URL",
+      "secretKey": "密钥",
+      "type": "类型",
+      "defaultAmount": "默认金额",
+      "defaultLoanDays": "默认借款天数",
+      "defaultInterestRate": "默认利率",
+      "iosDownloadUrl": "iOS下载链接",
+      "androidDownloadUrl": "Android下载链接",
+      "status": "状态",
+      "isHead": "是否头部",
+      "addBank": "添加银行",
+      "isSign": "是否签名",
+      "isReload": "是否重新加载",
+      "extend": "扩展信息(JSON格式)",
+      "placeholders": {
+        "appId": "请输入应用ID",
+        "partnerName": "请输入合作伙伴名称",
+        "partnerPhone": "请输入联系电话",
+        "partnerDescription": "请输入合作伙伴描述",
+        "partnerApi": "https://cpi.example.com/v1",
+        "secretKey": "请输入密钥",
+        "defaultAmount": "请输入默认金额",
+        "defaultLoanDays": "请输入默认借款天数",
+        "defaultInterestRate": "请输入默认利率，如：0.05",
+        "iosDownloadUrl": "请输入iOS下载链接",
+        "androidDownloadUrl": "请输入Android下载链接",
+        "extend": "请输入扩展信息，JSON格式"
+      },
+      "types": {
+        "bank": "银行",
+        "finance": "金融",
+        "tech": "科技"
+      },
+      "switchLabels": {
+        "enabled": "启用",
+        "disabled": "禁用",
+        "yes": "是",
+        "no": "否"
+      }
+    },
+    "messages": {
+      "loading": "正在获取CPI合作伙伴配置数据...",
       "loadSuccess": "数据加载成功，共 {{count}} 条记录",
       "loadError": "获取数据失败",
       "addSuccess": "添加成功",

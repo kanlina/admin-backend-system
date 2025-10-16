@@ -265,8 +265,8 @@ const InternalTransferData: React.FC = () => {
       title: t('internalTransfer.adjustRegistrationCount'),
       dataIndex: 'adjust_registration_count',
       key: 'adjust_registration_count',
-      render: (value: number) => value.toLocaleString(),
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => a.adjust_registration_count - b.adjust_registration_count,
+      render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.adjust_registration_count || 0) - (b.adjust_registration_count || 0),
     },
     {
       title: t('internalTransfer.realNameAuthCount'),

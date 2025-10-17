@@ -8,7 +8,7 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
-      timeout: 10000,
+      timeout: 30000, // 增加到30秒
       headers: {
         'Content-Type': 'application/json',
       },
@@ -135,6 +135,27 @@ class ApiService {
 
   async getInternalTransferChartData(params?: any): Promise<ApiResponse<any[]>> {
     const response = await this.api.get('/internal-transfer-chart', { params });
+    return response.data;
+  }
+
+  // 归因数据相关
+  async getAttributionEventNames(dataSource: 'adjust' | 'appsflyer' = 'adjust'): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-event-names', { params: { dataSource } });
+    return response.data;
+  }
+
+  async getAttributionData(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/attribution-data', { params });
+    return response.data;
+  }
+
+  async getAttributionChartData(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/attribution-chart', { params });
+    return response.data;
+  }
+
+  async getAttributionComparison(params?: any): Promise<ApiResponse<any>> {
+    const response = await this.api.get('/attribution-comparison', { params });
     return response.data;
   }
 

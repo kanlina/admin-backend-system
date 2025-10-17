@@ -105,12 +105,18 @@ export const internalTransferService = {
 
         LEFT JOIN (
             -- 授信成功人数统计
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS credit_count
-            FROM user_credit 
-            WHERE credit_status = 2
-            GROUP BY DATE(created_at)
+          SELECT
+          DATE(credit.created_at) AS date_col,
+          COUNT(DISTINCT credit.user_id) AS credit_count
+          FROM (
+          SELECT
+          user_id,
+          MIN(created_at) AS created_at
+          FROM user_credit_record
+          WHERE credit_status = 2
+          GROUP BY user_id
+          ) AS credit
+          GROUP BY DATE(credit.created_at)
         ) credit_stats ON credit_stats.date_col = date_series.date_col
 
         LEFT JOIN (
@@ -269,12 +275,18 @@ export const internalTransferService = {
 
         LEFT JOIN (
             -- 授信成功人数统计
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS credit_count
-            FROM user_credit 
-            WHERE credit_status = 2
-            GROUP BY DATE(created_at)
+          SELECT
+          DATE(credit.created_at) AS date_col,
+          COUNT(DISTINCT credit.user_id) AS credit_count
+          FROM (
+          SELECT
+          user_id,
+          MIN(created_at) AS created_at
+          FROM user_credit_record
+          WHERE credit_status = 2
+          GROUP BY user_id
+          ) AS credit
+          GROUP BY DATE(credit.created_at)
         ) credit_stats ON credit_stats.date_col = date_series.date_col
 
         LEFT JOIN (

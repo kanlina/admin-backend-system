@@ -12,23 +12,25 @@ interface InternalTransferRecord {
   id: string;
   query_date: string;
   register_count: number;
-  adjust_registration_count: number;
   real_name_auth_count: number;
   credit_info_count: number;
   info_push_count: number;
   credit_success_count: number;
   loan_success_count: number;
+  loan_approved_count: number;
+  loan_repaid_count: number;
 }
 
 interface ChartData {
   date: string;
   register_count: number;
-  adjust_registration_count: number;
   real_name_auth_count: number;
   credit_info_count: number;
   info_push_count: number;
   credit_success_count: number;
   loan_success_count: number;
+  loan_approved_count: number;
+  loan_repaid_count: number;
 }
 
 const InternalTransferData: React.FC = () => {
@@ -140,12 +142,13 @@ const InternalTransferData: React.FC = () => {
           return {
             date: item.query_date,
             register_count: item.register_count,
-            adjust_registration_count: item.adjust_registration_count,
             real_name_auth_count: item.real_name_auth_count,
             credit_info_count: item.credit_info_count,
             info_push_count: item.info_push_count,
             credit_success_count: item.credit_success_count,
             loan_success_count: item.loan_success_count,
+            loan_approved_count: item.loan_approved_count,
+            loan_repaid_count: item.loan_repaid_count,
           };
         });
         console.log('格式化后的图表数据:', formattedChartData);
@@ -168,35 +171,38 @@ const InternalTransferData: React.FC = () => {
       const csvData = chartData.map(item => ({
         date: item.date,
         register: item.register_count,
-        adjustRegistration: item.adjust_registration_count,
         realNameAuth: item.real_name_auth_count,
         creditInfo: item.credit_info_count,
         infoPush: item.info_push_count,
         creditSuccess: item.credit_success_count,
         loanSuccess: item.loan_success_count,
+        loanApproved: item.loan_approved_count,
+        loanRepaid: item.loan_repaid_count,
       }));
 
       const headers = [
         t('internalTransfer.downloadHeaders.date'),
         t('internalTransfer.downloadHeaders.register'),
-        t('internalTransfer.downloadHeaders.adjustRegistration'),
         t('internalTransfer.downloadHeaders.realNameAuth'),
         t('internalTransfer.downloadHeaders.creditInfo'),
         t('internalTransfer.downloadHeaders.infoPush'),
         t('internalTransfer.downloadHeaders.creditSuccess'),
-        t('internalTransfer.downloadHeaders.loanSuccess')
+        t('internalTransfer.downloadHeaders.loanSuccess'),
+        t('internalTransfer.downloadHeaders.loanApproved'),
+        t('internalTransfer.downloadHeaders.loanRepaid')
       ];
       const csvContent = [
         headers.join(','),
         ...csvData.map(row => [
           row.date,
           row.register,
-          row.adjustRegistration,
           row.realNameAuth,
           row.creditInfo,
           row.infoPush,
           row.creditSuccess,
           row.loanSuccess,
+          row.loanApproved,
+          row.loanRepaid,
         ].join(','))
       ].join('\n');
 
@@ -262,13 +268,6 @@ const InternalTransferData: React.FC = () => {
       sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.register_count || 0) - (b.register_count || 0),
     },
     {
-      title: t('internalTransfer.adjustRegistrationCount'),
-      dataIndex: 'adjust_registration_count',
-      key: 'adjust_registration_count',
-      render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
-      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.adjust_registration_count || 0) - (b.adjust_registration_count || 0),
-    },
-    {
       title: t('internalTransfer.realNameAuthCount'),
       dataIndex: 'real_name_auth_count',
       key: 'real_name_auth_count',
@@ -303,6 +302,20 @@ const InternalTransferData: React.FC = () => {
       render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
       sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.loan_success_count || 0) - (b.loan_success_count || 0),
     },
+    {
+      title: t('internalTransfer.loanApprovedCount'),
+      dataIndex: 'loan_approved_count',
+      key: 'loan_approved_count',
+      render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.loan_approved_count || 0) - (b.loan_approved_count || 0),
+    },
+    {
+      title: t('internalTransfer.loanRepaidCount'),
+      dataIndex: 'loan_repaid_count',
+      key: 'loan_repaid_count',
+      render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.loan_repaid_count || 0) - (b.loan_repaid_count || 0),
+    },
   ];
 
 
@@ -314,31 +327,34 @@ const InternalTransferData: React.FC = () => {
       
       // 确保所有数值都是有效的数字，使用英文字段名
       const registerCount = Number(item.register_count) || 0;
-      const adjustRegistrationCount = Number(item.adjust_registration_count) || 0;
       const realNameAuthCount = Number(item.real_name_auth_count) || 0;
       const creditInfoCount = Number(item.credit_info_count) || 0;
       const infoPushCount = Number(item.info_push_count) || 0;
       const creditSuccessCount = Number(item.credit_success_count) || 0;
       const loanSuccessCount = Number(item.loan_success_count) || 0;
+      const loanApprovedCount = Number(item.loan_approved_count) || 0;
+      const loanRepaidCount = Number(item.loan_repaid_count) || 0;
       
       console.log('转换后的数值:', {
         registerCount,
-        adjustRegistrationCount,
         realNameAuthCount,
         creditInfoCount,
         infoPushCount,
         creditSuccessCount,
-        loanSuccessCount
+        loanSuccessCount,
+        loanApprovedCount,
+        loanRepaidCount
       });
       
       const result = [
         { date: item.date, category: t('internalTransfer.chartCategories.register'), value: registerCount, color: '#1890ff' },
-        { date: item.date, category: t('internalTransfer.chartCategories.adjustRegistration'), value: adjustRegistrationCount, color: '#fa8c16' },
         { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: realNameAuthCount, color: '#52c41a' },
         { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: creditInfoCount, color: '#faad14' },
         { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: infoPushCount, color: '#f5222d' },
         { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: creditSuccessCount, color: '#722ed1' },
         { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: loanSuccessCount, color: '#13c2c2' },
+        { date: item.date, category: t('internalTransfer.chartCategories.loanApproved'), value: loanApprovedCount, color: '#eb2f96' },
+        { date: item.date, category: t('internalTransfer.chartCategories.loanRepaid'), value: loanRepaidCount, color: '#a0d911' },
       ];
       
       // 调试信息：打印转换后的数据
@@ -355,7 +371,7 @@ const InternalTransferData: React.FC = () => {
     yField: 'value',
     seriesField: 'category',
     colorField: 'category',
-    color: ['#1890ff', '#fa8c16', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'],
+    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#a0d911'],
     scale: {
       date: {
         type: 'cat',

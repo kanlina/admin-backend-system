@@ -148,7 +148,11 @@ const AdjustData: React.FC = () => {
   };
 
   const fetchData = async (resetPagination = false) => {
-    if (currentEvents.length === 0) return;
+    if (currentEvents.length === 0) {
+      console.log('⚠️ 没有选择任何事件，跳过数据查询');
+      setData([]);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -169,13 +173,25 @@ const AdjustData: React.FC = () => {
         if (selectedMediaSource) params.mediaSource = selectedMediaSource;
       }
 
+      console.log('📊 开始查询归因数据，参数:', params, '已选事件:', currentEvents);
       const response = await apiService.getAttributionData(params);
+      
+      console.log('📥 API响应:', {
+        success: response.success,
+        dataType: typeof response.data,
+        dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
+        data: response.data,
+        pagination: response.pagination,
+        eventNames: (response as any).eventNames
+      });
       
       if (response.success && response.data && response.pagination) {
         const formattedData = response.data.map((item: any, index: number) => ({
           id: ((response.pagination!.page - 1) * response.pagination!.limit + index + 1).toString(),
           ...item
         }));
+        
+        console.log('✅ 格式化后的数据:', formattedData.slice(0, 2));
         
         setData(formattedData);
         setPagination({
@@ -185,7 +201,11 @@ const AdjustData: React.FC = () => {
           totalPages: response.pagination.totalPages
         });
         
-        message.success('数据加载成功');
+        message.success(`数据加载成功，共 ${formattedData.length} 条记录`);
+      } else {
+        console.error('❌ API响应格式错误:', response);
+        message.error('数据格式错误');
+        setData([]);
       }
     } catch (error) {
       console.error('API请求错误:', error);

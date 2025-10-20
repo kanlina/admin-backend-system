@@ -64,7 +64,9 @@
     "creditInfoCount": "Jumlah Informasi Kredit",
     "infoPushCount": "Jumlah Push Informasi Berhasil",
     "creditSuccessCount": "Jumlah Kredit Berhasil",
-    "loanSuccessCount": "Jumlah Pinjaman Berhasil",
+    "loanSuccessCount": "Pengajuan Pinjaman",
+    "loanApprovedCount": "Pinjaman Disetujui",
+    "loanRepaidCount": "Pinjaman Dilunasi",
     "noData": "Tidak Ada Data",
     "chartCategories": {
       "register": "Jumlah Pendaftaran",
@@ -73,7 +75,9 @@
       "creditInfo": "Jumlah Informasi Kredit",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
-      "loanSuccess": "Jumlah Pinjaman Berhasil"
+      "loanSuccess": "Pengajuan Pinjaman",
+      "loanApproved": "Pinjaman Disetujui",
+      "loanRepaid": "Pinjaman Dilunasi"
     },
     "chartControls": {
       "hideChart": "Sembunyikan Analisis Tren",
@@ -91,7 +95,8 @@
       "creditInfo": "Jumlah Informasi Kredit",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
-      "loanSuccess": "Jumlah Pinjaman Berhasil"
+      "loanSuccess": "Jumlah Pengajuan Pinjaman",
+      "loanApproved": "Jumlah Pinjaman Disetujui"
     }
   },
   "attributionData": {
@@ -110,7 +115,7 @@
     "creditInfoCount": "Jumlah Informasi Kredit",
     "infoPushCount": "Jumlah Push Informasi Berhasil",
     "creditSuccessCount": "Jumlah Kredit Berhasil",
-    "loanSuccessCount": "Jumlah Pinjaman Berhasil",
+    "loanSuccessCount": "Jumlah Pengajuan Pinjaman",
     "noData": "Tidak Ada Data",
     "chartCategories": {
       "register": "Inisialisasi SDK",
@@ -119,7 +124,7 @@
       "creditInfo": "Jumlah Informasi Kredit",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
-      "loanSuccess": "Jumlah Pinjaman Berhasil"
+      "loanSuccess": "Jumlah Pengajuan Pinjaman"
     },
     "chartControls": {
       "hideChart": "Sembunyikan Analisis Tren",
@@ -137,7 +142,7 @@
       "creditInfo": "Jumlah Informasi Kredit",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
-      "loanSuccess": "Jumlah Pinjaman Berhasil"
+      "loanSuccess": "Jumlah Pengajuan Pinjaman"
     }
   },
   "auth": {

@@ -201,15 +201,15 @@ const AdjustData: React.FC = () => {
           totalPages: response.pagination.totalPages
         });
         
-        message.success(`数据加载成功，共 ${formattedData.length} 条记录`);
+        message.success(t('attributionData.dataLoaded', { count: formattedData.length }));
       } else {
         console.error('❌ API响应格式错误:', response);
-        message.error('数据格式错误');
+        message.error(t('attributionData.dataFormatError'));
         setData([]);
       }
     } catch (error) {
       console.error('API请求错误:', error);
-      message.error('网络请求失败，请检查后端服务');
+      message.error(t('attributionData.networkError'));
     } finally {
       setLoading(false);
     }
@@ -242,11 +242,11 @@ const AdjustData: React.FC = () => {
       if (response.success && response.data) {
         setChartData((response.data as any).data || response.data || []);
       } else {
-        message.error(response.message || '获取图表数据失败');
+        message.error(response.message || t('attributionData.chartDataError'));
       }
     } catch (error) {
       console.error('图表数据请求错误:', error);
-      message.error('获取图表数据失败，请检查后端服务');
+      message.error(t('attributionData.chartDataError'));
     } finally {
       setChartLoading(false);
     }
@@ -255,11 +255,11 @@ const AdjustData: React.FC = () => {
   const downloadData = () => {
     try {
       if (chartData.length === 0) {
-        message.warning('暂无数据可下载');
+        message.warning(t('attributionData.noDataToDownload'));
         return;
       }
 
-      const headers = ['日期', ...currentEvents];
+      const headers = [t('attributionData.downloadHeaders.date'), ...currentEvents];
       const csvRows = chartData.map(item => {
         const row = [item.query_date];
         currentEvents.forEach(eventName => {
@@ -274,17 +274,17 @@ const AdjustData: React.FC = () => {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      const sourceName = dataSource === 'adjust' ? '上报' : '回调';
-      link.setAttribute('download', `归因数据_${sourceName}_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.csv`);
+      const sourceName = dataSource === 'adjust' ? t('attributionData.reported') : t('attributionData.callback');
+      link.setAttribute('download', `${t('attributionData.title')}_${sourceName}_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      message.success(t('common.success'));
+      message.success(t('attributionData.downloadSuccess'));
     } catch (error) {
       console.error('下载数据失败:', error);
-      message.error(t('common.error'));
+      message.error(t('attributionData.downloadError'));
     }
   };
 
@@ -504,11 +504,11 @@ const AdjustData: React.FC = () => {
 
   const addFunnel = () => {
     if (!funnelEvent1 || !funnelEvent2) {
-      message.warning('请选择两个事件');
+      message.warning(t('attributionData.funnelDescription'));
       return;
     }
     if (funnelEvent1 === funnelEvent2) {
-      message.warning('请选择不同的事件');
+      message.warning(t('attributionData.funnelDescription'));
       return;
     }
     
@@ -518,7 +518,7 @@ const AdjustData: React.FC = () => {
     );
     
     if (alreadyExists) {
-      message.warning('该漏斗已存在');
+      message.warning(t('attributionData.funnelDescription'));
       return;
     }
     
@@ -532,7 +532,7 @@ const AdjustData: React.FC = () => {
     saveSelectedItems([...currentItems, newItem]);
     setFunnelEvent1(undefined);
     setFunnelEvent2(undefined);
-    message.success('漏斗已添加');
+    message.success(t('attributionData.funnelTitle'));
   };
 
   const moveItemUp = (index: number) => {
@@ -558,7 +558,7 @@ const AdjustData: React.FC = () => {
     setSettingsVisible(false);
     await fetchData(true);
     if (showChart) await fetchChartData();
-    message.success('设置已应用');
+    message.success(t('attributionData.filterApplied'));
   };
 
   return (
@@ -573,7 +573,7 @@ const AdjustData: React.FC = () => {
           flexWrap: 'wrap',
           marginBottom: (dataSource === 'appsflyer' && (selectedAppId || selectedMediaSource)) ? 16 : 0
         }}>
-          <span style={{ fontWeight: 'bold', color: '#333' }}>数据源：</span>
+          <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dataSource')}：</span>
           <Button.Group>
             <Button
               type={dataSource === 'appsflyer' ? 'primary' : 'default'}
@@ -585,7 +585,7 @@ const AdjustData: React.FC = () => {
                 minWidth: '80px'
               }}
             >
-              回调
+              {t('attributionData.callback')}
             </Button>
             <Button
               type={dataSource === 'adjust' ? 'primary' : 'default'}
@@ -597,7 +597,7 @@ const AdjustData: React.FC = () => {
                 minWidth: '80px'
               }}
             >
-              上报
+              {t('attributionData.reported')}
             </Button>
           </Button.Group>
           
@@ -618,7 +618,7 @@ const AdjustData: React.FC = () => {
                 promises.push(fetchChartData());
               }
               await Promise.all(promises);
-              message.success('数据筛选完成');
+              message.success(t('attributionData.filterApplied'));
             }}
           >
             {t('common.confirm')}
@@ -633,7 +633,7 @@ const AdjustData: React.FC = () => {
                 promises.push(fetchChartData());
               }
               await Promise.all(promises);
-              message.success('筛选条件已重置');
+              message.success(t('attributionData.filterCleared'));
             }}
           >
             {t('common.reset')}
@@ -642,7 +642,7 @@ const AdjustData: React.FC = () => {
             icon={<SettingOutlined />}
             onClick={() => setSettingsVisible(true)}
           >
-            选择事件
+            {t('attributionData.selectEvents')}
           </Button>
           {dataSource === 'appsflyer' && (
             <Button 
@@ -654,7 +654,7 @@ const AdjustData: React.FC = () => {
                 color: '#1890ff'
               }}
             >
-              筛选条件
+              {t('attributionData.filterConditions')}
             </Button>
           )}
         </div>
@@ -696,7 +696,7 @@ const AdjustData: React.FC = () => {
                     borderRadius: '50%',
                     display: 'inline-block'
                   }}></span>
-                  当前筛选条件：
+                  {t('attributionData.currentFilter')}：
                 </span>
                 <Space wrap size="small">
                   {selectedAppId && (
@@ -742,11 +742,11 @@ const AdjustData: React.FC = () => {
                 onClick={() => {
                   setSelectedAppId(undefined);
                   setSelectedMediaSource(undefined);
-                  message.success('已清除筛选条件');
+                  message.success(t('attributionData.filterCleared'));
                 }}
                 style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}
               >
-                清除所有
+                {t('attributionData.clearAll')}
               </Button>
             </div>
           </div>
@@ -903,13 +903,13 @@ const AdjustData: React.FC = () => {
 
       {/* 事件选择模态框 */}
       <Modal
-        title="选择事件和配置漏斗"
+        title={t('attributionData.selectEvents')}
         open={settingsVisible}
         onOk={applySettings}
         onCancel={() => setSettingsVisible(false)}
         width={800}
-        okText="应用"
-        cancelText="取消"
+        okText={t('attributionData.applyFilter')}
+        cancelText={t('common.cancel')}
       >
         {/* 可用事件列表 */}
         <div style={{ marginBottom: 24 }}>
@@ -935,11 +935,11 @@ const AdjustData: React.FC = () => {
         {/* 添加漏斗 */}
         <div style={{ marginBottom: 24, padding: '16px', background: '#e6f7ff', borderRadius: '4px', border: '1px solid #91d5ff' }}>
           <h4 style={{ marginTop: 0, marginBottom: 12 }}>
-            <FunnelPlotOutlined /> 添加转化漏斗
+            <FunnelPlotOutlined /> {t('attributionData.funnelTitle')}
           </h4>
           <Space>
             <Select
-              placeholder="选择第一个事件"
+              placeholder={t('attributionData.funnelEvent1')}
               value={funnelEvent1}
               onChange={setFunnelEvent1}
               style={{ width: 200 }}
@@ -953,7 +953,7 @@ const AdjustData: React.FC = () => {
             </Select>
             <span style={{ color: '#666' }}>/</span>
             <Select
-              placeholder="选择第二个事件"
+              placeholder={t('attributionData.funnelEvent2')}
               value={funnelEvent2}
               onChange={setFunnelEvent2}
               style={{ width: 200 }}
@@ -981,10 +981,10 @@ const AdjustData: React.FC = () => {
 
         {/* 已选择的事件和漏斗 */}
         <div>
-          <h4>已选择的项目（{currentItems.length}个，按此顺序显示）：</h4>
+          <h4>{t('attributionData.selectedItems')}（{currentItems.length}个，按此顺序显示）：</h4>
           {currentItems.length === 0 ? (
             <div style={{ color: '#999', padding: '20px', textAlign: 'center', background: '#fafafa', borderRadius: '4px' }}>
-              请从上方选择事件或添加漏斗
+              {t('attributionData.selectEvents')}
             </div>
           ) : (
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
@@ -1032,21 +1032,21 @@ const AdjustData: React.FC = () => {
                       icon={<ArrowUpOutlined />}
                       onClick={() => moveItemUp(index)}
                       disabled={index === 0}
-                      title="上移"
+                      title={t('common.previous')}
                     />
                     <Button
                       size="small"
                       icon={<ArrowDownOutlined />}
                       onClick={() => moveItemDown(index)}
                       disabled={index === currentItems.length - 1}
-                      title="下移"
+                      title={t('common.next')}
                     />
                     <Button
                       size="small"
                       danger
                       icon={<CloseOutlined />}
                       onClick={() => removeItem(index)}
-                      title="移除"
+                      title={t('common.delete')}
                     />
                   </Space>
                 </div>
@@ -1058,7 +1058,7 @@ const AdjustData: React.FC = () => {
 
       {/* 筛选条件模态框（仅回调数据源） */}
       <Modal
-        title="筛选条件"
+        title={t('attributionData.filterConditions')}
         open={filterVisible}
         onOk={async () => {
           setFilterVisible(false);
@@ -1068,14 +1068,14 @@ const AdjustData: React.FC = () => {
         }}
         onCancel={() => setFilterVisible(false)}
         width={600}
-        okText="应用"
-        cancelText="取消"
+        okText={t('attributionData.applyFilter')}
+        cancelText={t('common.cancel')}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>应用ID（app_id）</div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.appId')}（app_id）</div>
             <Select
-              placeholder="全部app_id"
+              placeholder={t('attributionData.allAppIds')}
               value={selectedAppId}
               onChange={setSelectedAppId}
               style={{ width: '100%' }}
@@ -1095,9 +1095,9 @@ const AdjustData: React.FC = () => {
           </div>
 
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>媒体来源（Media Source）</div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.mediaSource')}（Media Source）</div>
             <Select
-              placeholder="全部媒体来源"
+              placeholder={t('attributionData.allMediaSources')}
               value={selectedMediaSource}
               onChange={setSelectedMediaSource}
               style={{ width: '100%' }}

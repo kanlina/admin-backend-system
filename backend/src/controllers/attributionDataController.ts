@@ -2,6 +2,46 @@ import { Request, Response } from 'express';
 import { adjustDataService } from '../services/adjustDataService';
 import { appsflyerDataService } from '../services/appsflyerDataService';
 
+// 获取所有 app_name
+export const getAllAppNames = async (req: Request, res: Response) => {
+  try {
+    const appNames = await appsflyerDataService.getAllAppNames();
+
+    res.json({
+      success: true,
+      data: appNames,
+      message: '获取 app_name 列表成功'
+    });
+  } catch (error) {
+    console.error('获取 app_name 列表失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取 app_name 列表失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
+// 获取所有 media_source
+export const getAllMediaSources = async (req: Request, res: Response) => {
+  try {
+    const mediaSources = await appsflyerDataService.getAllMediaSources();
+
+    res.json({
+      success: true,
+      data: mediaSources,
+      message: '获取 media_source 列表成功'
+    });
+  } catch (error) {
+    console.error('获取 media_source 列表失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取 media_source 列表失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
 // 获取所有可用的事件类型
 export const getAllEventNames = async (req: Request, res: Response) => {
   try {
@@ -28,7 +68,7 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust' } = req.query;
+    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appName, mediaSource } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustData(
@@ -41,7 +81,9 @@ export const getAttributionData = async (req: Request, res: Response) => {
           startDate as string,
           endDate as string,
           parseInt(page as string),
-          parseInt(pageSize as string)
+          parseInt(pageSize as string),
+          appName as string,
+          mediaSource as string
         );
 
     res.json({
@@ -63,7 +105,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
 
 export const getAttributionChartData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, dataSource = 'adjust' } = req.query;
+    const { startDate, endDate, dataSource = 'adjust', appName, mediaSource } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustChartData(
@@ -72,7 +114,9 @@ export const getAttributionChartData = async (req: Request, res: Response) => {
         )
       : await appsflyerDataService.getAppsflyerChartData(
           startDate as string,
-          endDate as string
+          endDate as string,
+          appName as string,
+          mediaSource as string
         );
 
     res.json({

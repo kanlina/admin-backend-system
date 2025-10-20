@@ -1,8 +1,14 @@
 import express from 'express';
-import { getAllEventNames, getAttributionData, getAttributionChartData, getComparisonData } from '../controllers/attributionDataController';
+import { getAllAppNames, getAllMediaSources, getAllEventNames, getAttributionData, getAttributionChartData, getComparisonData } from '../controllers/attributionDataController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
+
+// 获取所有 app_name
+router.get('/attribution-app-names', authenticateToken, getAllAppNames);
+
+// 获取所有 media_source
+router.get('/attribution-media-sources', authenticateToken, getAllMediaSources);
 
 // 获取所有事件类型
 router.get('/attribution-event-names', authenticateToken, getAllEventNames);

@@ -35,8 +35,14 @@ export const internalTransferService = {
           -- 6. 获取授信成功人数
           COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
           
-          -- 7. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
+          -- 7. 提交贷款人数（所有状态）
+          COALESCE(loan_submit_stats.loan_count, 0) AS loan_success_count,
+          
+          -- 8. 借款成功人数（status=1）
+          COALESCE(loan_approved_stats.loan_approved_count, 0) AS loan_approved_count,
+          
+          -- 9. 已还款人数（repayment_status=1）
+          COALESCE(loan_repaid_stats.loan_repaid_count, 0) AS loan_repaid_count
 
         FROM (
             -- 根据时间范围生成日期序列（MySQL 5.7兼容）
@@ -120,13 +126,45 @@ export const internalTransferService = {
         ) credit_stats ON credit_stats.date_col = date_series.date_col
 
         LEFT JOIN (
-            -- 借款成功人数统计
+            -- 提交贷款人数统计（所有状态）
             SELECT 
                 DATE(created_at) AS date_col,
                 COUNT(DISTINCT id) AS loan_count
-            FROM user_loans 
+            FROM user_loans
             GROUP BY DATE(created_at)
-        ) loan_stats ON loan_stats.date_col = date_series.date_col
+        ) loan_submit_stats ON loan_submit_stats.date_col = date_series.date_col
+
+        LEFT JOIN (
+            -- 借款成功人数统计（status=1）
+          SELECT
+          DATE(plan.created_at) AS date_col,
+          COUNT(DISTINCT plan.order_no) AS loan_approved_count
+          FROM (
+          SELECT
+          order_no,
+          MIN(created_at) AS created_at
+          FROM scheduled_repay_plan
+          WHERE partner_order_status = 2
+          GROUP BY order_no
+          ) AS plan
+          GROUP BY DATE(plan.created_at)
+        ) loan_approved_stats ON loan_approved_stats.date_col = date_series.date_col
+
+        LEFT JOIN (
+            -- 已还款人数统计（假设partner_order_status=3表示已还款，请根据实际情况调整）
+          SELECT
+          DATE(plan.created_at) AS date_col,
+          COUNT(DISTINCT plan.order_no) AS loan_repaid_count
+          FROM (
+          SELECT
+          order_no,
+          MIN(created_at) AS created_at
+          FROM scheduled_repay_plan
+          WHERE partner_order_status = 3
+          GROUP BY order_no
+          ) AS plan
+          GROUP BY DATE(plan.created_at)
+        ) loan_repaid_stats ON loan_repaid_stats.date_col = date_series.date_col
 
         WHERE date_series.date_col IS NOT NULL
         ORDER BY date_series.date_col DESC
@@ -205,8 +243,14 @@ export const internalTransferService = {
           -- 6. 获取授信成功人数
           COALESCE(credit_stats.credit_count, 0) AS credit_success_count,
           
-          -- 7. 提交贷款成功人数
-          COALESCE(loan_stats.loan_count, 0) AS loan_success_count
+          -- 7. 提交贷款人数（所有状态）
+          COALESCE(loan_submit_stats.loan_count, 0) AS loan_success_count,
+          
+          -- 8. 借款成功人数（status=1）
+          COALESCE(loan_approved_stats.loan_approved_count, 0) AS loan_approved_count,
+          
+          -- 9. 已还款人数（repayment_status=1）
+          COALESCE(loan_repaid_stats.loan_repaid_count, 0) AS loan_repaid_count
 
         FROM (
             -- 根据时间范围生成日期序列（MySQL 5.7兼容）
@@ -289,14 +333,46 @@ export const internalTransferService = {
           GROUP BY DATE(credit.created_at)
         ) credit_stats ON credit_stats.date_col = date_series.date_col
 
-        LEFT JOIN (
-            -- 借款成功人数统计
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT id) AS loan_count
-            FROM user_loans 
-            GROUP BY DATE(created_at)
-        ) loan_stats ON loan_stats.date_col = date_series.date_col
+          LEFT JOIN (
+          -- 提交贷款人数统计（所有状态）
+          SELECT
+          DATE(created_at) AS date_col,
+          COUNT(DISTINCT order_no) AS loan_count
+          FROM user_loans
+          GROUP BY DATE(created_at)
+          ) loan_submit_stats ON loan_submit_stats.date_col = date_series.date_col
+
+          LEFT JOIN (
+          -- 借款成功人数统计（status=1）
+          SELECT
+          DATE(plan.created_at) AS date_col,
+          COUNT(DISTINCT plan.order_no) AS loan_approved_count
+          FROM (
+          SELECT
+          order_no,
+          MIN(created_at) AS created_at
+          FROM scheduled_repay_plan
+          WHERE partner_order_status = 2
+          GROUP BY order_no
+          ) AS plan
+          GROUP BY DATE(plan.created_at)
+          ) loan_approved_stats ON loan_approved_stats.date_col = date_series.date_col
+
+          LEFT JOIN (
+          -- 已还款人数统计（假设partner_order_status=3表示已还款，请根据实际情况调整）
+          SELECT
+          DATE(plan.created_at) AS date_col,
+          COUNT(DISTINCT plan.order_no) AS loan_repaid_count
+          FROM (
+          SELECT
+          order_no,
+          MIN(created_at) AS created_at
+          FROM scheduled_repay_plan
+          WHERE partner_order_status = 3
+          GROUP BY order_no
+          ) AS plan
+          GROUP BY DATE(plan.created_at)
+          ) loan_repaid_stats ON loan_repaid_stats.date_col = date_series.date_col
 
         WHERE date_series.date_col IS NOT NULL
         ORDER BY date_series.date_col ASC

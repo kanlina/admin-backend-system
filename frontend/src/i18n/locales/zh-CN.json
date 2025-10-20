@@ -64,7 +64,9 @@
     "creditInfoCount": "获取个信人数",
     "infoPushCount": "个人信息推送成功人数",
     "creditSuccessCount": "授信成功人数",
-    "loanSuccessCount": "借款成功人数",
+    "loanSuccessCount": "提交借款数",
+    "loanApprovedCount": "借款成功数",
+    "loanRepaidCount": "已还款数",
     "noData": "暂无数据",
     "chartCategories": {
       "register": "注册人数",
@@ -73,7 +75,9 @@
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
-      "loanSuccess": "借款成功人数"
+      "loanSuccess": "提交借款数",
+      "loanApproved": "借款成功数",
+      "loanRepaid": "已还款数"
     },
     "chartControls": {
       "hideChart": "隐藏趋势分析",
@@ -91,7 +95,8 @@
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
-      "loanSuccess": "借款成功人数"
+      "loanSuccess": "提交借款人数",
+      "loanApproved": "借款成功人数"
     }
   },
   "attributionData": {
@@ -110,7 +115,7 @@
     "creditInfoCount": "获取个信人数",
     "infoPushCount": "个人信息推送成功人数",
     "creditSuccessCount": "授信成功人数",
-    "loanSuccessCount": "借款成功人数",
+    "loanSuccessCount": "提交借款人数",
     "noData": "暂无数据",
     "chartCategories": {
       "register": "SDK初始化",
@@ -119,7 +124,7 @@
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
-      "loanSuccess": "借款成功人数"
+      "loanSuccess": "提交借款人数"
     },
     "chartControls": {
       "hideChart": "隐藏趋势分析",
@@ -137,7 +142,7 @@
       "creditInfo": "获取个信人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
-      "loanSuccess": "借款成功人数"
+      "loanSuccess": "提交借款人数"
     }
   },
   "auth": {

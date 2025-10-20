@@ -11,17 +11,20 @@ export const appsflyerDataService = {
         ORDER BY event_name ASC
       `;
       
-      console.log('开始获取 AppsFlyer 事件类型列表...');
+      console.log('🔍 [AppsFlyer] 开始查询事件类型列表...');
+      console.log('SQL:', sql.trim());
+      
       const connection = await createCoreDbConnection();
       const [rows] = await connection.execute(sql);
       await connection.end();
       
       const eventNames = (rows as any[]).map(row => row.event_name);
-      console.log('获取到 AppsFlyer 事件类型:', eventNames.length, '个:', eventNames);
+      console.log('✅ [AppsFlyer] 获取到事件类型:', eventNames.length, '个');
+      console.log('事件列表:', eventNames);
       
       return eventNames;
     } catch (error) {
-      console.error('获取 AppsFlyer 事件类型列表失败:', error);
+      console.error('❌ [AppsFlyer] 获取事件类型列表失败:', error);
       throw error;
     }
   },
@@ -80,8 +83,9 @@ export const appsflyerDataService = {
     const validPage = Math.max(1, parseInt(page.toString()));
     const validPageSize = Math.min(Math.max(1, parseInt(pageSize.toString())), 100);
     
-    const defaultStartDate = startDate || 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
-    const defaultEndDate = endDate || 'CURDATE()';
+    // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
+    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    const defaultEndDate = endDate ? `'${endDate}'` : 'CURDATE()';
     
     try {
       const eventNames = await this.getAllEventNames();
@@ -115,13 +119,14 @@ export const appsflyerDataService = {
         LEFT JOIN (
            SELECT
           DATE(callback.created_at) AS date_col,
-          COUNT(DISTINCT callback.appsflyer_id) AS count_${sanitizedName}
+          COUNT(callback.appsflyer_id) AS count_${sanitizedName}
           FROM (
           SELECT
           appsflyer_id,
           MIN(created_at) AS created_at
           FROM appsflyer_callback
           WHERE event_name = '${escapedEventName}' 
+          AND callback_status = 'processed'
           ${additionalWhere}
           GROUP BY appsflyer_id
           ) AS callback
@@ -150,11 +155,25 @@ export const appsflyerDataService = {
         LIMIT ${validPageSize} OFFSET ${(validPage - 1) * validPageSize}
       `;
 
-      console.log('执行 AppsFlyer 数据SQL查询，事件数量:', eventNames.length);
+      console.log('🔍 [AppsFlyer] 执行数据查询');
+      console.log('事件数量:', eventNames.length);
+      console.log('日期范围:', defaultStartDate, '到', defaultEndDate);
+      console.log('筛选条件:', { appName, mediaSource });
+      console.log('分页参数:', { page: validPage, pageSize: validPageSize });
+      console.log('完整SQL语句:');
+      console.log(sql);
+      console.log('--- SQL结束 ---');
       
       const connection = await createCoreDbConnection();
+      const startTime = Date.now();
       const [rows] = await connection.execute(sql);
+      const queryTime = Date.now() - startTime;
       await connection.end();
+      
+      console.log(`✅ [AppsFlyer] 查询完成，耗时: ${queryTime}ms, 返回记录数: ${(rows as any[]).length}`);
+      if ((rows as any[]).length > 0) {
+        console.log('第一条记录示例:', (rows as any[])[0]);
+      }
 
       // 获取总数
       const countSql = `
@@ -194,8 +213,9 @@ export const appsflyerDataService = {
     appName?: string,
     mediaSource?: string
   ) {
-    const defaultStartDate = startDate || 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
-    const defaultEndDate = endDate || 'CURDATE()';
+    // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
+    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    const defaultEndDate = endDate ? `'${endDate}'` : 'CURDATE()';
     
     try {
       const eventNames = await this.getAllEventNames();

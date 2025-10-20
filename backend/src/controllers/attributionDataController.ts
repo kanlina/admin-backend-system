@@ -47,9 +47,16 @@ export const getAllEventNames = async (req: Request, res: Response) => {
   try {
     const { dataSource = 'adjust' } = req.query;
     
+    console.log('========================================');
+    console.log('📋 [事件列表] 收到请求, 数据源:', dataSource);
+    
     const eventNames = dataSource === 'adjust' 
       ? await adjustDataService.getAllEventNames()
       : await appsflyerDataService.getAllEventNames();
+
+    console.log('✅ [事件列表] 查询成功, 事件数量:', eventNames.length);
+    console.log('事件列表:', eventNames);
+    console.log('========================================\n');
 
     res.json({
       success: true,
@@ -57,7 +64,8 @@ export const getAllEventNames = async (req: Request, res: Response) => {
       message: '获取事件类型列表成功'
     });
   } catch (error) {
-    console.error('获取事件类型列表失败:', error);
+    console.error('❌ [事件列表] 获取失败:', error);
+    console.log('========================================\n');
     res.status(500).json({
       success: false,
       message: '获取事件类型列表失败',
@@ -69,6 +77,18 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appName, mediaSource } = req.query;
+    
+    console.log('========================================');
+    console.log('📊 [归因数据] 收到请求');
+    console.log('请求参数:', {
+      startDate,
+      endDate,
+      page,
+      pageSize,
+      dataSource,
+      appName,
+      mediaSource
+    });
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustData(
@@ -86,6 +106,16 @@ export const getAttributionData = async (req: Request, res: Response) => {
           mediaSource as string
         );
 
+    console.log('✅ [归因数据] 查询成功');
+    console.log('返回数据:', {
+      dataLength: Array.isArray(result.data) ? result.data.length : 0,
+      eventNamesCount: Array.isArray(result.eventNames) ? result.eventNames.length : 0,
+      eventNames: result.eventNames,
+      pagination: result.pagination,
+      firstRecord: Array.isArray(result.data) && result.data.length > 0 ? result.data[0] : null
+    });
+    console.log('========================================\n');
+
     res.json({
       success: true,
       data: result.data,
@@ -94,7 +124,9 @@ export const getAttributionData = async (req: Request, res: Response) => {
       message: '归因数据获取成功'
     });
   } catch (error) {
-    console.error('获取归因数据失败:', error);
+    console.error('❌ [归因数据] 获取失败:', error);
+    console.error('错误堆栈:', error instanceof Error ? error.stack : '无堆栈信息');
+    console.log('========================================\n');
     res.status(500).json({
       success: false,
       message: '获取归因数据失败',

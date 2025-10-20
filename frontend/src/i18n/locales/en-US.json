@@ -64,7 +64,9 @@
     "creditInfoCount": "Credit Information Count",
     "infoPushCount": "Information Push Success Count",
     "creditSuccessCount": "Credit Success Count",
-    "loanSuccessCount": "Loan Success Count",
+    "loanSuccessCount": "Loan Submissions",
+    "loanApprovedCount": "Loans Approved",
+    "loanRepaidCount": "Loans Repaid",
     "noData": "No Data",
     "chartCategories": {
       "register": "Registration Count",
@@ -73,7 +75,9 @@
       "creditInfo": "Credit Information Count",
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
-      "loanSuccess": "Loan Success Count"
+      "loanSuccess": "Loan Submissions",
+      "loanApproved": "Loans Approved",
+      "loanRepaid": "Loans Repaid"
     },
     "chartControls": {
       "hideChart": "Hide Trend Analysis",
@@ -91,7 +95,9 @@
       "creditInfo": "Credit Information Count",
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
-      "loanSuccess": "Loan Success Count"
+      "loanSuccess": "Loan Submissions",
+      "loanApproved": "Loans Approved",
+      "loanRepaid": "Loans Repaid"
     }
   },
   "attributionData": {
@@ -110,7 +116,7 @@
     "creditInfoCount": "Credit Information Count",
     "infoPushCount": "Information Push Success Count",
     "creditSuccessCount": "Credit Success Count",
-    "loanSuccessCount": "Loan Success Count",
+    "loanSuccessCount": "Loan Submission Count",
     "noData": "No Data",
     "chartCategories": {
       "register": "SDK Initialization",
@@ -119,7 +125,7 @@
       "creditInfo": "Credit Information Count",
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
-      "loanSuccess": "Loan Success Count"
+      "loanSuccess": "Loan Submission Count"
     },
     "chartControls": {
       "hideChart": "Hide Trend Analysis",
@@ -137,7 +143,7 @@
       "creditInfo": "Credit Information Count",
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
-      "loanSuccess": "Loan Success Count"
+      "loanSuccess": "Loan Submission Count"
     }
   },
   "auth": {

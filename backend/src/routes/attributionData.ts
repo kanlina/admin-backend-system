@@ -4,8 +4,8 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
-// 获取所有 app_name
-router.get('/attribution-app-names', authenticateToken, getAllAppNames);
+// 获取所有 app_id（复用原控制器getAllAppNames逻辑后续可替换）
+router.get('/attribution-app-ids', authenticateToken, getAllAppNames);
 
 // 获取所有 media_source
 router.get('/attribution-media-sources', authenticateToken, getAllMediaSources);

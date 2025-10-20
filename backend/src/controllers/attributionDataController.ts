@@ -2,21 +2,21 @@ import { Request, Response } from 'express';
 import { adjustDataService } from '../services/adjustDataService';
 import { appsflyerDataService } from '../services/appsflyerDataService';
 
-// 获取所有 app_name
+// 获取所有 app_id
 export const getAllAppNames = async (req: Request, res: Response) => {
   try {
-    const appNames = await appsflyerDataService.getAllAppNames();
+    const appIds = await appsflyerDataService.getAllAppIds();
 
     res.json({
       success: true,
-      data: appNames,
-      message: '获取 app_name 列表成功'
+      data: appIds,
+      message: '获取 app_id 列表成功'
     });
   } catch (error) {
-    console.error('获取 app_name 列表失败:', error);
+    console.error('获取 app_id 列表失败:', error);
     res.status(500).json({
       success: false,
-      message: '获取 app_name 列表失败',
+      message: '获取 app_id 列表失败',
       error: error instanceof Error ? error.message : '未知错误'
     });
   }
@@ -76,7 +76,7 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appName, mediaSource } = req.query;
+    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource } = req.query;
     
     console.log('========================================');
     console.log('📊 [归因数据] 收到请求');
@@ -86,7 +86,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
       page,
       pageSize,
       dataSource,
-      appName,
+      appId,
       mediaSource
     });
     
@@ -102,7 +102,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
           endDate as string,
           parseInt(page as string),
           parseInt(pageSize as string),
-          appName as string,
+          appId as string,
           mediaSource as string
         );
 
@@ -137,7 +137,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
 
 export const getAttributionChartData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, dataSource = 'adjust', appName, mediaSource } = req.query;
+    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustChartData(
@@ -147,7 +147,7 @@ export const getAttributionChartData = async (req: Request, res: Response) => {
       : await appsflyerDataService.getAppsflyerChartData(
           startDate as string,
           endDate as string,
-          appName as string,
+          appId as string,
           mediaSource as string
         );
 

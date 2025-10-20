@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select } from 'antd';
+import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag } from 'antd';
 import { EyeOutlined, DownloadOutlined, ReloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
@@ -53,9 +53,9 @@ const AdjustData: React.FC = () => {
   const [funnelEvent2, setFunnelEvent2] = useState<string | undefined>(undefined);
   
   // 筛选条件状态（仅用于回调数据）
-  const [allAppNames, setAllAppNames] = useState<string[]>([]);
+  const [allAppIds, setAllAppIds] = useState<string[]>([]);
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
-  const [selectedAppName, setSelectedAppName] = useState<string | undefined>(undefined);
+  const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSource, setSelectedMediaSource] = useState<string | undefined>(undefined);
   
   const currentItems = selectedItems[dataSource];
@@ -83,13 +83,13 @@ const AdjustData: React.FC = () => {
 
   const loadFilterOptions = async () => {
     try {
-      const [appNamesRes, mediaSourcesRes] = await Promise.all([
-        apiService.getAttributionAppNames(),
+      const [appIdsRes, mediaSourcesRes] = await Promise.all([
+        apiService.getAttributionAppIds(),
         apiService.getAttributionMediaSources()
       ]);
       
-      if (appNamesRes.success && appNamesRes.data) {
-        setAllAppNames(appNamesRes.data);
+      if (appIdsRes.success && appIdsRes.data) {
+        setAllAppIds(appIdsRes.data);
       }
       if (mediaSourcesRes.success && mediaSourcesRes.data) {
         setAllMediaSources(mediaSourcesRes.data);
@@ -169,7 +169,7 @@ const AdjustData: React.FC = () => {
       
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
-        if (selectedAppName) params.appName = selectedAppName;
+        if (selectedAppId) params.appId = selectedAppId;
         if (selectedMediaSource) params.mediaSource = selectedMediaSource;
       }
 
@@ -233,7 +233,7 @@ const AdjustData: React.FC = () => {
       
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
-        if (selectedAppName) params.appName = selectedAppName;
+        if (selectedAppId) params.appId = selectedAppId;
         if (selectedMediaSource) params.mediaSource = selectedMediaSource;
       }
 
@@ -563,9 +563,16 @@ const AdjustData: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* 筛选区域 */}
+      {/* 数据源选择和筛选区域 */}
       <Card style={{ marginBottom: 16 }}>
-        <Space wrap>
+        {/* 第一行：数据源、日期、按钮 */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px',
+          flexWrap: 'wrap',
+          marginBottom: (dataSource === 'appsflyer' && (selectedAppId || selectedMediaSource)) ? 16 : 0
+        }}>
           <span style={{ fontWeight: 'bold', color: '#333' }}>数据源：</span>
           <Button.Group>
             <Button
@@ -574,7 +581,8 @@ const AdjustData: React.FC = () => {
               style={{ 
                 background: dataSource === 'appsflyer' ? '#52c41a' : undefined,
                 borderColor: dataSource === 'appsflyer' ? '#52c41a' : undefined,
-                fontWeight: dataSource === 'appsflyer' ? 600 : 400
+                fontWeight: dataSource === 'appsflyer' ? 600 : 400,
+                minWidth: '80px'
               }}
             >
               回调
@@ -585,18 +593,22 @@ const AdjustData: React.FC = () => {
               style={{ 
                 background: dataSource === 'adjust' ? '#1890ff' : undefined,
                 borderColor: dataSource === 'adjust' ? '#1890ff' : undefined,
-                fontWeight: dataSource === 'adjust' ? 600 : 400
+                fontWeight: dataSource === 'adjust' ? 600 : 400,
+                minWidth: '80px'
               }}
             >
               上报
             </Button>
           </Button.Group>
+          
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dateRange')}：</span>
             <RangePicker
               value={dateRange}
               onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
             placeholder={[t('attributionData.startDate'), t('attributionData.endDate')]}
+            style={{ width: '240px' }}
           />
+          
           <Button
             type="primary"
             onClick={async () => {
@@ -636,11 +648,109 @@ const AdjustData: React.FC = () => {
             <Button 
               icon={<PlusOutlined />}
               onClick={() => setFilterVisible(true)}
+              style={{ 
+                background: '#f0f5ff',
+                borderColor: '#91d5ff',
+                color: '#1890ff'
+              }}
             >
               筛选条件
             </Button>
           )}
+        </div>
+
+        {/* 第二行：筛选条件显示区域 */}
+        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSource) && (
+          <div style={{ 
+            padding: '12px 16px', 
+            background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', 
+            borderRadius: '8px',
+            border: '1px solid #91d5ff',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px',
+                flex: 1
+              }}>
+                <span style={{ 
+                  fontSize: '14px', 
+                  color: '#1890ff', 
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{ 
+                    width: '6px', 
+                    height: '6px', 
+                    background: '#1890ff', 
+                    borderRadius: '50%',
+                    display: 'inline-block'
+                  }}></span>
+                  当前筛选条件：
+                </span>
+                <Space wrap size="small">
+                  {selectedAppId && (
+                    <Tag 
+                      color="purple" 
+                      style={{ 
+                        margin: 0,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        background: '#f9f0ff',
+                        borderColor: '#9254de',
+                        color: '#722ed1'
+                      }}
+                    >
+                      app_id: {selectedAppId}
+                    </Tag>
+                  )}
+                  {selectedMediaSource && (
+                    <Tag 
+                      color="orange" 
+                      style={{ 
+                        margin: 0,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        background: '#fff7e6',
+                        borderColor: '#ffa940',
+                        color: '#d46b08'
+                      }}
+                    >
+                      媒体: {selectedMediaSource}
+                    </Tag>
+                  )}
           </Space>
+              </div>
+              <Button 
+                size="small" 
+                type="link"
+                danger
+                onClick={() => {
+                  setSelectedAppId(undefined);
+                  setSelectedMediaSource(undefined);
+                  message.success('已清除筛选条件');
+                }}
+                style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}
+              >
+                清除所有
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* 折线图区域 */}
@@ -963,11 +1073,11 @@ const AdjustData: React.FC = () => {
       >
         <Space direction="vertical" style={{ width: '100%' }} size="large">
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>应用名称（App Name）</div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>应用ID（app_id）</div>
             <Select
-              placeholder="全部应用"
-              value={selectedAppName}
-              onChange={setSelectedAppName}
+              placeholder="全部app_id"
+              value={selectedAppId}
+              onChange={setSelectedAppId}
               style={{ width: '100%' }}
               allowClear
               showSearch
@@ -976,9 +1086,9 @@ const AdjustData: React.FC = () => {
                 return String(label || '').toLowerCase().includes(input.toLowerCase());
               }}
             >
-              {allAppNames.map(name => (
-                <Select.Option key={name} value={name}>
-                  {name}
+              {allAppIds.map(id => (
+                <Select.Option key={id} value={id}>
+                  {id}
                 </Select.Option>
               ))}
             </Select>
@@ -1006,7 +1116,7 @@ const AdjustData: React.FC = () => {
             </Select>
           </div>
 
-          {(selectedAppName || selectedMediaSource) && (
+          {(selectedAppId || selectedMediaSource) && (
             <div style={{ 
               padding: '12px', 
               background: '#f0f5ff', 
@@ -1015,9 +1125,9 @@ const AdjustData: React.FC = () => {
             }}>
               <div style={{ marginBottom: 4, fontSize: '12px', color: '#666' }}>当前筛选条件：</div>
               <Space wrap>
-                {selectedAppName && (
+                {selectedAppId && (
                   <span style={{ fontSize: '13px', color: '#1890ff' }}>
-                    应用: <strong>{selectedAppName}</strong>
+                    app_id: <strong>{selectedAppId}</strong>
                   </span>
                 )}
                 {selectedMediaSource && (
@@ -1031,7 +1141,7 @@ const AdjustData: React.FC = () => {
                   size="small" 
                   danger
                   onClick={() => {
-                    setSelectedAppName(undefined);
+                    setSelectedAppId(undefined);
                     setSelectedMediaSource(undefined);
                     message.success('已清除筛选条件');
                   }}

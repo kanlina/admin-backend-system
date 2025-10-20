@@ -46,10 +46,17 @@ const AdjustData: React.FC = () => {
   });
   const [showChart, setShowChart] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [filterVisible, setFilterVisible] = useState(false);
   
   // 漏斗选择器状态
   const [funnelEvent1, setFunnelEvent1] = useState<string | undefined>(undefined);
   const [funnelEvent2, setFunnelEvent2] = useState<string | undefined>(undefined);
+  
+  // 筛选条件状态（仅用于回调数据）
+  const [allAppNames, setAllAppNames] = useState<string[]>([]);
+  const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
+  const [selectedAppName, setSelectedAppName] = useState<string | undefined>(undefined);
+  const [selectedMediaSource, setSelectedMediaSource] = useState<string | undefined>(undefined);
   
   const currentItems = selectedItems[dataSource];
   const currentAllEvents = allEventNames[dataSource];
@@ -71,7 +78,26 @@ const AdjustData: React.FC = () => {
   useEffect(() => {
     loadAllEventNames('adjust');
     loadAllEventNames('appsflyer');
+    loadFilterOptions();
   }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const [appNamesRes, mediaSourcesRes] = await Promise.all([
+        apiService.getAttributionAppNames(),
+        apiService.getAttributionMediaSources()
+      ]);
+      
+      if (appNamesRes.success && appNamesRes.data) {
+        setAllAppNames(appNamesRes.data);
+      }
+      if (mediaSourcesRes.success && mediaSourcesRes.data) {
+        setAllMediaSources(mediaSourcesRes.data);
+      }
+    } catch (error) {
+      console.error('加载筛选选项失败:', error);
+    }
+  };
 
   useEffect(() => {
     if (currentEvents.length > 0) {
@@ -136,6 +162,12 @@ const AdjustData: React.FC = () => {
         params.startDate = dateRange[0].format('YYYY-MM-DD');
         params.endDate = dateRange[1].format('YYYY-MM-DD');
       }
+      
+      // 添加筛选条件（仅回调数据源）
+      if (dataSource === 'appsflyer') {
+        if (selectedAppName) params.appName = selectedAppName;
+        if (selectedMediaSource) params.mediaSource = selectedMediaSource;
+      }
 
       const response = await apiService.getAttributionData(params);
       
@@ -177,6 +209,12 @@ const AdjustData: React.FC = () => {
         const now = dayjs();
         params.startDate = now.startOf('month').format('YYYY-MM-DD');
         params.endDate = now.endOf('month').format('YYYY-MM-DD');
+      }
+      
+      // 添加筛选条件（仅回调数据源）
+      if (dataSource === 'appsflyer') {
+        if (selectedAppName) params.appName = selectedAppName;
+        if (selectedMediaSource) params.mediaSource = selectedMediaSource;
       }
 
       const response = await apiService.getAttributionChartData(params);
@@ -534,9 +572,9 @@ const AdjustData: React.FC = () => {
             </Button>
           </Button.Group>
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dateRange')}：</span>
-          <RangePicker
-            value={dateRange}
-            onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+            <RangePicker
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
             placeholder={[t('attributionData.startDate'), t('attributionData.endDate')]}
           />
           <Button
@@ -573,7 +611,15 @@ const AdjustData: React.FC = () => {
             onClick={() => setSettingsVisible(true)}
           >
             选择事件
+          </Button>
+          {dataSource === 'appsflyer' && (
+            <Button 
+              icon={<PlusOutlined />}
+              onClick={() => setFilterVisible(true)}
+            >
+              筛选条件
             </Button>
+          )}
           </Space>
       </Card>
 
@@ -878,6 +924,104 @@ const AdjustData: React.FC = () => {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* 筛选条件模态框（仅回调数据源） */}
+      <Modal
+        title="筛选条件"
+        open={filterVisible}
+        onOk={async () => {
+          setFilterVisible(false);
+          await fetchData(true);
+          if (showChart) await fetchChartData();
+          message.success('筛选条件已应用');
+        }}
+        onCancel={() => setFilterVisible(false)}
+        width={600}
+        okText="应用"
+        cancelText="取消"
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>应用名称（App Name）</div>
+            <Select
+              placeholder="全部应用"
+              value={selectedAppName}
+              onChange={setSelectedAppName}
+              style={{ width: '100%' }}
+              allowClear
+              showSearch
+              filterOption={(input, option) => {
+                const label = option?.children;
+                return String(label || '').toLowerCase().includes(input.toLowerCase());
+              }}
+            >
+              {allAppNames.map(name => (
+                <Select.Option key={name} value={name}>
+                  {name}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>媒体来源（Media Source）</div>
+            <Select
+              placeholder="全部媒体来源"
+              value={selectedMediaSource}
+              onChange={setSelectedMediaSource}
+              style={{ width: '100%' }}
+              allowClear
+              showSearch
+              filterOption={(input, option) => {
+                const label = option?.children;
+                return String(label || '').toLowerCase().includes(input.toLowerCase());
+              }}
+            >
+              {allMediaSources.map(source => (
+                <Select.Option key={source} value={source}>
+                  {source}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          {(selectedAppName || selectedMediaSource) && (
+            <div style={{ 
+              padding: '12px', 
+              background: '#f0f5ff', 
+              borderRadius: '4px',
+              border: '1px solid #adc6ff'
+            }}>
+              <div style={{ marginBottom: 4, fontSize: '12px', color: '#666' }}>当前筛选条件：</div>
+              <Space wrap>
+                {selectedAppName && (
+                  <span style={{ fontSize: '13px', color: '#1890ff' }}>
+                    应用: <strong>{selectedAppName}</strong>
+                  </span>
+                )}
+                {selectedMediaSource && (
+                  <span style={{ fontSize: '13px', color: '#1890ff' }}>
+                    媒体: <strong>{selectedMediaSource}</strong>
+                  </span>
+                )}
+              </Space>
+              <div style={{ marginTop: 8 }}>
+                <Button 
+                  size="small" 
+                  danger
+                  onClick={() => {
+                    setSelectedAppName(undefined);
+                    setSelectedMediaSource(undefined);
+                    message.success('已清除筛选条件');
+                  }}
+                >
+                  清除所有筛选
+                </Button>
+              </div>
+            </div>
+          )}
+        </Space>
       </Modal>
     </div>
   );

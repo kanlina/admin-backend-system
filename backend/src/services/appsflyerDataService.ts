@@ -26,8 +26,57 @@ export const appsflyerDataService = {
     }
   },
 
-  // 获取 AppsFlyer 回调数据（分页）
-  async getAppsflyerData(startDate?: string, endDate?: string, page: number = 1, pageSize: number = 10) {
+  // 获取所有 app_name
+  async getAllAppNames() {
+    try {
+      const sql = `
+        SELECT DISTINCT app_name 
+        FROM appsflyer_callback 
+        WHERE app_name IS NOT NULL AND app_name != ''
+        ORDER BY app_name ASC
+      `;
+      
+      const connection = await createCoreDbConnection();
+      const [rows] = await connection.execute(sql);
+      await connection.end();
+      
+      return (rows as any[]).map(row => row.app_name);
+    } catch (error) {
+      console.error('获取 app_name 列表失败:', error);
+      throw error;
+    }
+  },
+
+  // 获取所有 media_source
+  async getAllMediaSources() {
+    try {
+      const sql = `
+        SELECT DISTINCT media_source 
+        FROM appsflyer_callback 
+        WHERE media_source IS NOT NULL AND media_source != ''
+        ORDER BY media_source ASC
+      `;
+      
+      const connection = await createCoreDbConnection();
+      const [rows] = await connection.execute(sql);
+      await connection.end();
+      
+      return (rows as any[]).map(row => row.media_source);
+    } catch (error) {
+      console.error('获取 media_source 列表失败:', error);
+      throw error;
+    }
+  },
+
+  // 获取 AppsFlyer 回调数据（分页，支持筛选）
+  async getAppsflyerData(
+    startDate?: string, 
+    endDate?: string, 
+    page: number = 1, 
+    pageSize: number = 10,
+    appName?: string,
+    mediaSource?: string
+  ) {
     const validPage = Math.max(1, parseInt(page.toString()));
     const validPageSize = Math.min(Math.max(1, parseInt(pageSize.toString())), 100);
     
@@ -45,6 +94,18 @@ export const appsflyerDataService = {
         };
       }
 
+      // 构建筛选条件
+      const filterConditions = [];
+      if (appName) {
+        const escapedAppName = appName.replace(/'/g, "''");
+        filterConditions.push(`app_name = '${escapedAppName}'`);
+      }
+      if (mediaSource) {
+        const escapedMediaSource = mediaSource.replace(/'/g, "''");
+        filterConditions.push(`media_source = '${escapedMediaSource}'`);
+      }
+      const additionalWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
+
       // 动态构建每个事件类型的统计子查询
       const eventStatsJoins = eventNames.map((eventName) => {
         const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -61,6 +122,7 @@ export const appsflyerDataService = {
           MIN(created_at) AS created_at
           FROM appsflyer_callback
           WHERE event_name = '${escapedEventName}' 
+          ${additionalWhere}
           GROUP BY appsflyer_id
           ) AS callback
           GROUP BY DATE(callback.created_at)
@@ -125,8 +187,13 @@ export const appsflyerDataService = {
     }
   },
 
-  // 获取 AppsFlyer 图表数据（不分页）
-  async getAppsflyerChartData(startDate?: string, endDate?: string) {
+  // 获取 AppsFlyer 图表数据（不分页，支持筛选）
+  async getAppsflyerChartData(
+    startDate?: string, 
+    endDate?: string,
+    appName?: string,
+    mediaSource?: string
+  ) {
     const defaultStartDate = startDate || 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
     const defaultEndDate = endDate || 'CURDATE()';
     
@@ -136,6 +203,18 @@ export const appsflyerDataService = {
       if (eventNames.length === 0) {
         return { data: [], eventNames: [] };
       }
+
+      // 构建筛选条件
+      const filterConditions = [];
+      if (appName) {
+        const escapedAppName = appName.replace(/'/g, "''");
+        filterConditions.push(`app_name = '${escapedAppName}'`);
+      }
+      if (mediaSource) {
+        const escapedMediaSource = mediaSource.replace(/'/g, "''");
+        filterConditions.push(`media_source = '${escapedMediaSource}'`);
+      }
+      const filterWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
 
       const eventStatsJoins = eventNames.map((eventName) => {
         const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -150,6 +229,7 @@ export const appsflyerDataService = {
             WHERE event_name = '${escapedEventName}' 
               AND callback_status = 'processed'
               AND customer_user_id IS NOT NULL
+              ${filterWhere}
             GROUP BY DATE(created_at)
         ) stats_${sanitizedName} ON stats_${sanitizedName}.date_col = date_series.date_col`;
       }).join('\n');

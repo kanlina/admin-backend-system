@@ -139,6 +139,16 @@ class ApiService {
   }
 
   // 归因数据相关
+  async getAttributionAppNames(): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-app-names');
+    return response.data;
+  }
+
+  async getAttributionMediaSources(): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-media-sources');
+    return response.data;
+  }
+
   async getAttributionEventNames(dataSource: 'adjust' | 'appsflyer' = 'adjust'): Promise<ApiResponse<string[]>> {
     const response = await this.api.get('/attribution-event-names', { params: { dataSource } });
     return response.data;

@@ -139,8 +139,8 @@ class ApiService {
   }
 
   // 归因数据相关
-  async getAttributionAppNames(): Promise<ApiResponse<string[]>> {
-    const response = await this.api.get('/attribution-app-names');
+  async getAttributionAppIds(): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-app-ids');
     return response.data;
   }
 

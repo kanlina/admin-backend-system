@@ -29,26 +29,30 @@ export const appsflyerDataService = {
     }
   },
 
-  // 获取所有 app_name
-  async getAllAppNames() {
+  // 获取所有 app_id
+  async getAllAppIds() {
     try {
       const sql = `
-        SELECT DISTINCT app_name 
+        SELECT DISTINCT app_id 
         FROM appsflyer_callback 
-        WHERE app_name IS NOT NULL AND app_name != ''
-        ORDER BY app_name ASC
+        WHERE app_id IS NOT NULL AND app_id != ''
+        ORDER BY app_id ASC
       `;
-      
+      console.log('🔍 [AppsFlyer] 开始查询 app_id 列表...');
+      console.log('SQL:', sql.trim());
       const connection = await createCoreDbConnection();
       const [rows] = await connection.execute(sql);
       await connection.end();
-      
-      return (rows as any[]).map(row => row.app_name);
+      const appIds = (rows as any[]).map(row => row.app_id);
+      console.log('✅ [AppsFlyer] 获取到 app_id 数量:', appIds.length);
+      console.log('app_id 列表:', appIds);
+      return appIds;
     } catch (error) {
-      console.error('获取 app_name 列表失败:', error);
+      console.error('❌ [AppsFlyer] 获取 app_id 列表失败:', error);
       throw error;
     }
   },
+
 
   // 获取所有 media_source
   async getAllMediaSources() {
@@ -77,7 +81,7 @@ export const appsflyerDataService = {
     endDate?: string, 
     page: number = 1, 
     pageSize: number = 10,
-    appName?: string,
+    appId?: string,
     mediaSource?: string
   ) {
     const validPage = Math.max(1, parseInt(page.toString()));
@@ -100,9 +104,9 @@ export const appsflyerDataService = {
 
       // 构建筛选条件
       const filterConditions = [];
-      if (appName) {
-        const escapedAppName = appName.replace(/'/g, "''");
-        filterConditions.push(`app_name = '${escapedAppName}'`);
+      if (appId) {
+        const escapedAppId = appId.replace(/'/g, "''");
+        filterConditions.push(`app_id = '${escapedAppId}'`);
       }
       if (mediaSource) {
         const escapedMediaSource = mediaSource.replace(/'/g, "''");
@@ -128,7 +132,7 @@ export const appsflyerDataService = {
           WHERE event_name = '${escapedEventName}' 
           AND callback_status = 'processed'
           ${additionalWhere}
-          GROUP BY appsflyer_id
+          GROUP BY id
           ) AS callback
           GROUP BY DATE(callback.created_at)
         ) stats_${sanitizedName} ON stats_${sanitizedName}.date_col = date_series.date_col`;
@@ -158,7 +162,8 @@ export const appsflyerDataService = {
       console.log('🔍 [AppsFlyer] 执行数据查询');
       console.log('事件数量:', eventNames.length);
       console.log('日期范围:', defaultStartDate, '到', defaultEndDate);
-      console.log('筛选条件:', { appName, mediaSource });
+      console.log('筛选条件:', { appId, mediaSource });
+      console.log('筛选条件:', { appId, mediaSource });
       console.log('分页参数:', { page: validPage, pageSize: validPageSize });
       console.log('完整SQL语句:');
       console.log(sql);
@@ -210,7 +215,7 @@ export const appsflyerDataService = {
   async getAppsflyerChartData(
     startDate?: string, 
     endDate?: string,
-    appName?: string,
+    appId?: string,
     mediaSource?: string
   ) {
     // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
@@ -226,9 +231,9 @@ export const appsflyerDataService = {
 
       // 构建筛选条件
       const filterConditions = [];
-      if (appName) {
-        const escapedAppName = appName.replace(/'/g, "''");
-        filterConditions.push(`app_name = '${escapedAppName}'`);
+      if (appId) {
+        const escapedAppId = appId.replace(/'/g, "''");
+        filterConditions.push(`app_id = '${escapedAppId}'`);
       }
       if (mediaSource) {
         const escapedMediaSource = mediaSource.replace(/'/g, "''");

@@ -62,6 +62,7 @@
     "adjustRegistrationCount": "Laporan Atribusi-Registration",
     "realNameAuthCount": "Jumlah Autentikasi Nama Asli",
     "creditInfoCount": "Jumlah Informasi Kredit",
+    "pushTotalCount": "Total Jumlah Push",
     "infoPushCount": "Jumlah Push Informasi Berhasil",
     "creditSuccessCount": "Jumlah Kredit Berhasil",
     "loanSuccessCount": "Pengajuan Pinjaman",
@@ -73,6 +74,7 @@
       "adjustRegistration": "Laporan Atribusi-Registration",
       "realNameAuth": "Jumlah Autentikasi Nama Asli",
       "creditInfo": "Jumlah Informasi Kredit",
+      "pushTotal": "Total Jumlah Push",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
       "loanSuccess": "Pengajuan Pinjaman",
@@ -93,10 +95,12 @@
       "adjustRegistration": "Laporan Atribusi-Registration",
       "realNameAuth": "Jumlah Autentikasi Nama Asli",
       "creditInfo": "Jumlah Informasi Kredit",
+      "pushTotal": "Total Jumlah Push",
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
       "loanSuccess": "Jumlah Pengajuan Pinjaman",
-      "loanApproved": "Jumlah Pinjaman Disetujui"
+      "loanApproved": "Jumlah Pinjaman Disetujui",
+      "loanRepaid": "Pinjaman Dilunasi"
     }
   },
   "attributionData": {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, DatePicker, Space, message } from 'antd';
-import { EyeOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -14,18 +14,7 @@ interface InternalTransferRecord {
   register_count: number;
   real_name_auth_count: number;
   credit_info_count: number;
-  info_push_count: number;
-  credit_success_count: number;
-  loan_success_count: number;
-  loan_approved_count: number;
-  loan_repaid_count: number;
-}
-
-interface ChartData {
-  date: string;
-  register_count: number;
-  real_name_auth_count: number;
-  credit_info_count: number;
+  push_total_count: number;
   info_push_count: number;
   credit_success_count: number;
   loan_success_count: number;
@@ -36,9 +25,8 @@ interface ChartData {
 const InternalTransferData: React.FC = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [chartLoading, setChartLoading] = useState(false);
   const [data, setData] = useState<InternalTransferRecord[]>([]);
-  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [allData, setAllData] = useState<InternalTransferRecord[]>([]); // 存储所有数据用于图表
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -69,7 +57,18 @@ const InternalTransferData: React.FC = () => {
 
       console.log('获取表格数据参数:', params);
 
-      const response = await apiService.getInternalTransferData(params);
+      // 同时获取图表所需的全部数据
+      const allDataParams: any = { page: 1, pageSize: 1000 }; // 获取大量数据用于图表
+      if (dateRange && dateRange[0] && dateRange[1]) {
+        allDataParams.startDate = dateRange[0].format('YYYY-MM-DD');
+        allDataParams.endDate = dateRange[1].format('YYYY-MM-DD');
+      }
+
+      // 并行请求表格数据和全部数据
+      const [response, allResponse] = await Promise.all([
+        apiService.getInternalTransferData(params),
+        apiService.getInternalTransferData(allDataParams)
+      ]);
       
       if (response.success && response.data && response.pagination) {
         const apiData = response.data;
@@ -94,6 +93,15 @@ const InternalTransferData: React.FC = () => {
           total: paginationInfo.total,
           totalPages: paginationInfo.totalPages
         });
+
+        // 保存全部数据用于图表
+        if (allResponse.success && allResponse.data) {
+          const formattedAllData = allResponse.data.map((item: any, index: number) => ({
+            id: (index + 1).toString(),
+            ...item
+          }));
+          setAllData(formattedAllData);
+        }
         
         console.log('表格数据加载成功:', {
           dataCount: formattedData.length,
@@ -112,67 +120,15 @@ const InternalTransferData: React.FC = () => {
     }
   };
 
-  const fetchChartData = async () => {
-    setChartLoading(true);
-    try {
-      const params: any = {};
-      
-      // 如果有日期范围，添加到请求参数中
-      if (dateRange && dateRange[0] && dateRange[1]) {
-        params.startDate = dateRange[0].format('YYYY-MM-DD');
-        params.endDate = dateRange[1].format('YYYY-MM-DD');
-      } else {
-        // 如果没有日期筛选，默认查询当月数据
-        const now = dayjs();
-        const startOfMonth = now.startOf('month');
-        const endOfMonth = now.endOf('month');
-        params.startDate = startOfMonth.format('YYYY-MM-DD');
-        params.endDate = endOfMonth.format('YYYY-MM-DD');
-      }
-
-      const response = await apiService.getInternalTransferChartData(params);
-      
-      if (response.success && response.data) {
-        const apiData = response.data;
-        
-        // 转换图表数据格式
-        console.log('原始API数据:', apiData);
-        const formattedChartData = apiData.map((item: any) => {
-          console.log('处理单个数据项:', item);
-          return {
-            date: item.query_date,
-            register_count: item.register_count,
-            real_name_auth_count: item.real_name_auth_count,
-            credit_info_count: item.credit_info_count,
-            info_push_count: item.info_push_count,
-            credit_success_count: item.credit_success_count,
-            loan_success_count: item.loan_success_count,
-            loan_approved_count: item.loan_approved_count,
-            loan_repaid_count: item.loan_repaid_count,
-          };
-        });
-        console.log('格式化后的图表数据:', formattedChartData);
-        
-        setChartData(formattedChartData);
-      } else {
-        message.error(response.message || '获取图表数据失败');
-      }
-    } catch (error) {
-      console.error('图表数据请求错误:', error);
-      message.error('获取图表数据失败，请检查后端服务');
-    } finally {
-      setChartLoading(false);
-    }
-  };
-
   // 下载当前数据
   const downloadData = () => {
     try {
-      const csvData = chartData.map(item => ({
-        date: item.date,
+      const csvData = allData.map(item => ({
+        date: item.query_date,
         register: item.register_count,
         realNameAuth: item.real_name_auth_count,
         creditInfo: item.credit_info_count,
+        pushTotal: item.push_total_count,
         infoPush: item.info_push_count,
         creditSuccess: item.credit_success_count,
         loanSuccess: item.loan_success_count,
@@ -185,6 +141,7 @@ const InternalTransferData: React.FC = () => {
         t('internalTransfer.downloadHeaders.register'),
         t('internalTransfer.downloadHeaders.realNameAuth'),
         t('internalTransfer.downloadHeaders.creditInfo'),
+        t('internalTransfer.downloadHeaders.pushTotal'),
         t('internalTransfer.downloadHeaders.infoPush'),
         t('internalTransfer.downloadHeaders.creditSuccess'),
         t('internalTransfer.downloadHeaders.loanSuccess'),
@@ -198,6 +155,7 @@ const InternalTransferData: React.FC = () => {
           row.register,
           row.realNameAuth,
           row.creditInfo,
+          row.pushTotal,
           row.infoPush,
           row.creditSuccess,
           row.loanSuccess,
@@ -224,12 +182,6 @@ const InternalTransferData: React.FC = () => {
       console.error('下载数据失败:', error);
       message.error(t('common.error'));
     }
-  };
-
-  // 刷新趋势分析图
-  const refreshChart = async () => {
-    await fetchChartData();
-    message.success(t('internalTransfer.chartControls.refreshChart'));
   };
 
   const columns = [
@@ -282,6 +234,13 @@ const InternalTransferData: React.FC = () => {
       sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.credit_info_count || 0) - (b.credit_info_count || 0),
     },
     {
+      title: t('internalTransfer.pushTotalCount'),
+      dataIndex: 'push_total_count',
+      key: 'push_total_count',
+      render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
+      sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.push_total_count || 0) - (b.push_total_count || 0),
+    },
+    {
       title: t('internalTransfer.infoPushCount'),
       dataIndex: 'info_push_count',
       key: 'info_push_count',
@@ -320,8 +279,8 @@ const InternalTransferData: React.FC = () => {
 
 
   // 转换图表数据格式，为每个数据点添加颜色信息
-  const transformedChartData = chartData
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) // 按日期排序
+  const transformedChartData = allData
+    .sort((a, b) => new Date(a.query_date).getTime() - new Date(b.query_date).getTime()) // 按日期排序
     .flatMap(item => {
       console.log('转换前的数据项:', item);
       
@@ -329,6 +288,7 @@ const InternalTransferData: React.FC = () => {
       const registerCount = Number(item.register_count) || 0;
       const realNameAuthCount = Number(item.real_name_auth_count) || 0;
       const creditInfoCount = Number(item.credit_info_count) || 0;
+      const pushTotalCount = Number(item.push_total_count) || 0;
       const infoPushCount = Number(item.info_push_count) || 0;
       const creditSuccessCount = Number(item.credit_success_count) || 0;
       const loanSuccessCount = Number(item.loan_success_count) || 0;
@@ -339,6 +299,7 @@ const InternalTransferData: React.FC = () => {
         registerCount,
         realNameAuthCount,
         creditInfoCount,
+        pushTotalCount,
         infoPushCount,
         creditSuccessCount,
         loanSuccessCount,
@@ -347,18 +308,19 @@ const InternalTransferData: React.FC = () => {
       });
       
       const result = [
-        { date: item.date, category: t('internalTransfer.chartCategories.register'), value: registerCount, color: '#1890ff' },
-        { date: item.date, category: t('internalTransfer.chartCategories.realNameAuth'), value: realNameAuthCount, color: '#52c41a' },
-        { date: item.date, category: t('internalTransfer.chartCategories.creditInfo'), value: creditInfoCount, color: '#faad14' },
-        { date: item.date, category: t('internalTransfer.chartCategories.infoPush'), value: infoPushCount, color: '#f5222d' },
-        { date: item.date, category: t('internalTransfer.chartCategories.creditSuccess'), value: creditSuccessCount, color: '#722ed1' },
-        { date: item.date, category: t('internalTransfer.chartCategories.loanSuccess'), value: loanSuccessCount, color: '#13c2c2' },
-        { date: item.date, category: t('internalTransfer.chartCategories.loanApproved'), value: loanApprovedCount, color: '#eb2f96' },
-        { date: item.date, category: t('internalTransfer.chartCategories.loanRepaid'), value: loanRepaidCount, color: '#a0d911' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.register'), value: registerCount, color: '#1890ff' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.realNameAuth'), value: realNameAuthCount, color: '#52c41a' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.creditInfo'), value: creditInfoCount, color: '#faad14' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.pushTotal'), value: pushTotalCount, color: '#ff7a45' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.infoPush'), value: infoPushCount, color: '#f5222d' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.creditSuccess'), value: creditSuccessCount, color: '#722ed1' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.loanSuccess'), value: loanSuccessCount, color: '#13c2c2' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.loanApproved'), value: loanApprovedCount, color: '#eb2f96' },
+        { date: item.query_date, category: t('internalTransfer.chartCategories.loanRepaid'), value: loanRepaidCount, color: '#a0d911' },
       ];
       
       // 调试信息：打印转换后的数据
-      console.log('Transformed chart data for date:', item.date, result);
+      console.log('Transformed chart data for date:', item.query_date, result);
       
       return result;
     });
@@ -371,7 +333,7 @@ const InternalTransferData: React.FC = () => {
     yField: 'value',
     seriesField: 'category',
     colorField: 'category',
-    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#a0d911'],
+    color: ['#1890ff', '#52c41a', '#faad14', '#ff7a45', '#f5222d', '#722ed1', '#13c2c2', '#eb2f96', '#a0d911'],
     scale: {
       date: {
         type: 'cat',
@@ -480,12 +442,7 @@ const InternalTransferData: React.FC = () => {
             type="primary"
             onClick={async () => {
               console.log('确认筛选，开始查询数据...');
-              // 获取表格数据，如果图表显示则同时获取图表数据
-              const promises = [fetchData(true)]; // 重置分页到第一页
-              if (showChart) {
-                promises.push(fetchChartData());
-              }
-              await Promise.all(promises);
+              await fetchData(true); // 重置分页到第一页
               message.success('数据筛选完成');
             }}
           >
@@ -496,12 +453,7 @@ const InternalTransferData: React.FC = () => {
               console.log('重置筛选条件...');
               setDateRange(null);
               setPagination(prev => ({ ...prev, current: 1 }));
-              // 重置后获取所有数据，如果图表显示则同时获取图表数据
-              const promises = [fetchData(true)];
-              if (showChart) {
-                promises.push(fetchChartData());
-              }
-              await Promise.all(promises);
+              await fetchData(true);
               message.success('筛选条件已重置');
             }}
           >
@@ -530,21 +482,12 @@ const InternalTransferData: React.FC = () => {
                   size="small"
                   onClick={downloadData}
                   title={t('internalTransfer.chartControls.downloadData')}
-                  disabled={chartData.length === 0}
-                />
-                <Button
-                  type="default"
-                  icon={<ReloadOutlined />}
-                  size="small"
-                  onClick={refreshChart}
-                  title={t('internalTransfer.chartControls.refreshChart')}
-                  loading={chartLoading}
+                  disabled={allData.length === 0}
                 />
               </Space>
             </div>
           }
           style={{ marginBottom: 16 }}
-          loading={chartLoading}
         >
           <div style={{ 
             height: '400px', 
@@ -581,10 +524,8 @@ const InternalTransferData: React.FC = () => {
                   type="default"
                   icon={<EyeOutlined />}
                   size="small"
-                  onClick={async () => {
+                  onClick={() => {
                     setShowChart(true);
-                    // 显示图表时自动获取图表数据
-                    await fetchChartData();
                   }}
                   title={t('internalTransfer.chartControls.showChart')}
                 />
@@ -594,15 +535,7 @@ const InternalTransferData: React.FC = () => {
                   size="small"
                   onClick={downloadData}
                   title={t('internalTransfer.chartControls.downloadData')}
-                  disabled={chartData.length === 0}
-                />
-                <Button
-                  type="default"
-                  icon={<ReloadOutlined />}
-                  size="small"
-                  onClick={refreshChart}
-                  title={t('internalTransfer.chartControls.refreshChart')}
-                  loading={chartLoading}
+                  disabled={allData.length === 0}
                 />
               </Space>
             </div>

@@ -62,6 +62,7 @@
     "adjustRegistrationCount": "归因上报-Registration",
     "realNameAuthCount": "实名认证完成人数",
     "creditInfoCount": "获取个信人数",
+    "pushTotalCount": "推送总人数",
     "infoPushCount": "个人信息推送成功人数",
     "creditSuccessCount": "授信成功人数",
     "loanSuccessCount": "提交借款数",
@@ -73,6 +74,7 @@
       "adjustRegistration": "归因上报-Registration",
       "realNameAuth": "实名认证完成人数",
       "creditInfo": "获取个信人数",
+      "pushTotal": "推送总人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
       "loanSuccess": "提交借款数",
@@ -93,10 +95,12 @@
       "adjustRegistration": "归因上报-Registration",
       "realNameAuth": "实名认证完成人数",
       "creditInfo": "获取个信人数",
+      "pushTotal": "推送总人数",
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
       "loanSuccess": "提交借款人数",
-      "loanApproved": "借款成功人数"
+      "loanApproved": "借款成功人数",
+      "loanRepaid": "已还款数"
     }
   },
   "attributionData": {

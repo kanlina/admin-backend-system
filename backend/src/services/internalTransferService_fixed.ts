@@ -29,7 +29,10 @@ export const internalTransferService = {
           -- 4. 个人信息提交人数
           COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
-          -- 5. 个人信息推送给合作伙伴人数
+          -- 5. 推送总人数
+          COALESCE(push_total_stats.push_total_count, 0) AS push_total_count,
+          
+          -- 6. 个人信息推送给合作伙伴人数
           COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
           -- 6. 获取授信成功人数
@@ -98,6 +101,15 @@ export const internalTransferService = {
             WHERE verification_success_at IS NOT NULL
             GROUP BY DATE(verification_success_at)
         ) info_stats ON info_stats.date_col = date_series.date_col
+
+        LEFT JOIN (
+            -- 推送总人数统计
+            SELECT 
+                DATE(created_at) AS date_col,
+                COUNT(DISTINCT user_id) AS push_total_count
+            FROM user_upload_records
+            GROUP BY DATE(created_at)
+        ) push_total_stats ON push_total_stats.date_col = date_series.date_col
 
         LEFT JOIN (
             -- 个人信息推送给合作伙伴人数统计
@@ -237,7 +249,10 @@ export const internalTransferService = {
           -- 4. 个人信息提交人数
           COALESCE(info_stats.info_count, 0) AS credit_info_count,
           
-          -- 5. 个人信息推送给合作伙伴人数
+          -- 5. 推送总人数
+          COALESCE(push_total_stats.push_total_count, 0) AS push_total_count,
+          
+          -- 6. 个人信息推送给合作伙伴人数
           COALESCE(upload_stats.upload_count, 0) AS info_push_count,
           
           -- 6. 获取授信成功人数

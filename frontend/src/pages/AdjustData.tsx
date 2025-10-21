@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag } from 'antd';
-import { EyeOutlined, DownloadOutlined, ReloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined } from '@ant-design/icons';
+import { EyeOutlined, DownloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -23,10 +23,9 @@ const AdjustData: React.FC = () => {
   const { t } = useTranslation();
   const [dataSource, setDataSource] = useState<DataSource>('appsflyer');
   const [loading, setLoading] = useState(false);
-  const [chartLoading, setChartLoading] = useState(false);
   
   const [data, setData] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [allData, setAllData] = useState<any[]>([]); // 存储所有数据用于图表和下载
   
   const [allEventNames, setAllEventNames] = useState<Record<DataSource, string[]>>({
     adjust: [],
@@ -151,6 +150,7 @@ const AdjustData: React.FC = () => {
     if (currentEvents.length === 0) {
       console.log('⚠️ 没有选择任何事件，跳过数据查询');
       setData([]);
+      setAllData([]);
       return;
     }
 
@@ -175,8 +175,16 @@ const AdjustData: React.FC = () => {
         }
       }
 
+      // 同时获取图表所需的全部数据
+      const allDataParams: any = { ...params, page: 1, pageSize: 1000 };
+
       console.log('📊 开始查询归因数据，参数:', params, '已选事件:', currentEvents);
-      const response = await apiService.getAttributionData(params);
+      
+      // 并行请求表格数据和全部数据
+      const [response, allResponse] = await Promise.all([
+        apiService.getAttributionData(params),
+        apiService.getAttributionData(allDataParams)
+      ]);
       
       console.log('📥 API响应:', {
         success: response.success,
@@ -202,12 +210,22 @@ const AdjustData: React.FC = () => {
           total: response.pagination.total,
           totalPages: response.pagination.totalPages
         });
+
+        // 保存全部数据用于图表和下载
+        if (allResponse.success && allResponse.data) {
+          const formattedAllData = allResponse.data.map((item: any, index: number) => ({
+            id: (index + 1).toString(),
+            ...item
+          }));
+          setAllData(formattedAllData);
+        }
         
         message.success(t('attributionData.dataLoaded', { count: formattedData.length }));
       } else {
         console.error('❌ API响应格式错误:', response);
         message.error(t('attributionData.dataFormatError'));
         setData([]);
+        setAllData([]);
       }
     } catch (error) {
       console.error('API请求错误:', error);
@@ -217,59 +235,57 @@ const AdjustData: React.FC = () => {
     }
   };
 
-  const fetchChartData = async () => {
-    if (currentEvents.length === 0) return;
-
-    setChartLoading(true);
-    try {
-      const params: any = { dataSource: dataSource };
-      
-      if (dateRange && dateRange[0] && dateRange[1]) {
-        params.startDate = dateRange[0].format('YYYY-MM-DD');
-        params.endDate = dateRange[1].format('YYYY-MM-DD');
-      } else {
-        const now = dayjs();
-        params.startDate = now.startOf('month').format('YYYY-MM-DD');
-        params.endDate = now.endOf('month').format('YYYY-MM-DD');
-      }
-      
-      // 添加筛选条件（仅回调数据源）
-      if (dataSource === 'appsflyer') {
-        if (selectedAppId) params.appId = selectedAppId;
-        if (selectedMediaSources && selectedMediaSources.length > 0) {
-          params.mediaSource = selectedMediaSources.join(',');
-        }
-      }
-
-      const response = await apiService.getAttributionChartData(params);
-      
-      if (response.success && response.data) {
-        setChartData((response.data as any).data || response.data || []);
-      } else {
-        message.error(response.message || t('attributionData.chartDataError'));
-      }
-    } catch (error) {
-      console.error('图表数据请求错误:', error);
-      message.error(t('attributionData.chartDataError'));
-    } finally {
-      setChartLoading(false);
-    }
-  };
-
   const downloadData = () => {
     try {
-      if (chartData.length === 0) {
+      if (allData.length === 0) {
         message.warning(t('attributionData.noDataToDownload'));
         return;
       }
 
-      const headers = [t('attributionData.downloadHeaders.date'), ...currentEvents];
-      const csvRows = chartData.map(item => {
+      // 构建表头（包含事件和漏斗，按照currentItems的顺序）
+      const headers = [t('attributionData.downloadHeaders.date')];
+      if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+        headers.push(t('attributionData.mediaSource'));
+      }
+      
+      // 添加所有列（事件和漏斗）
+      currentItems.forEach(item => {
+        if (item.type === 'event') {
+          headers.push(item.name);
+        } else if (item.type === 'funnel' && item.event1 && item.event2) {
+          // 漏斗列包含3个子列
+          headers.push(`${item.event1} → ${item.event2} (${item.event1})`);
+          headers.push(`${item.event1} → ${item.event2} (${item.event2})`);
+          headers.push(`${item.event1} → ${item.event2} (转化率)`);
+        }
+      });
+
+      // 构建数据行
+      const csvRows = allData.map(item => {
         const row = [item.query_date];
-        currentEvents.forEach(eventName => {
-          const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
-          row.push(item[`event_${sanitizedName}`] || 0);
+        if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+          row.push(item.media_source || '');
+        }
+        
+        currentItems.forEach(selectedItem => {
+          if (selectedItem.type === 'event') {
+            // 普通事件：输出数量
+            const sanitizedName = selectedItem.name.replace(/[^a-zA-Z0-9_]/g, '_');
+            row.push(item[`event_${sanitizedName}`] || 0);
+          } else if (selectedItem.type === 'funnel' && selectedItem.event1 && selectedItem.event2) {
+            // 漏斗：输出事件1数量、事件2数量、转化率
+            const sanitizedName1 = selectedItem.event1.replace(/[^a-zA-Z0-9_]/g, '_');
+            const sanitizedName2 = selectedItem.event2.replace(/[^a-zA-Z0-9_]/g, '_');
+            const val1 = Number(item[`event_${sanitizedName1}`]) || 0;
+            const val2 = Number(item[`event_${sanitizedName2}`]) || 0;
+            const conversionRate = val1 > 0 ? ((val2 / val1) * 100).toFixed(2) : '0.00';
+            
+            row.push(val1); // 事件1数量
+            row.push(val2); // 事件2数量
+            row.push(`${conversionRate}%`); // 转化率
+          }
         });
+        
         return row.join(',');
       });
 
@@ -290,11 +306,6 @@ const AdjustData: React.FC = () => {
       console.error('下载数据失败:', error);
       message.error(t('attributionData.downloadError'));
     }
-  };
-
-  const refreshChart = async () => {
-    await fetchChartData();
-    message.success(t('attributionData.chartControls.refreshChart'));
   };
 
   const handleDataSourceChange = (source: DataSource) => {
@@ -320,17 +331,51 @@ const AdjustData: React.FC = () => {
         title: t('common.date'),
         dataIndex: 'query_date',
         key: 'query_date',
-        width: 120,
+        width: 140,
         fixed: 'left' as const,
-        render: (date: string) => {
+        render: (date: string, _: any, index: number) => {
           if (!date) return '-';
-          return dayjs(date).format('YYYY-MM-DD');
+          
+          // 判断是否是该日期的第一行
+          const isFirstOfDate = index === 0 || data[index - 1]?.query_date !== date;
+          
+          return (
+            <div style={{ 
+              fontWeight: isFirstOfDate ? 600 : 400,
+              fontSize: '13px',
+              color: isFirstOfDate ? '#262626' : '#8c8c8c'
+            }}>
+              {isFirstOfDate ? dayjs(date).format('YYYY-MM-DD') : ''}
+        </div>
+          );
         },
         sorter: (a: any, b: any) => {
           return dayjs(a.query_date).valueOf() - dayjs(b.query_date).valueOf();
         },
       },
     ];
+
+    // 如果是回调数据源且选择了媒体渠道，添加媒体渠道列
+    if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+      baseColumns.push({
+        title: t('attributionData.mediaSource'),
+        dataIndex: 'media_source',
+        key: 'media_source',
+        width: 180,
+        fixed: 'left' as const,
+        render: (source: string) => (
+          <span style={{ 
+            fontSize: '13px',
+            fontWeight: 500,
+            color: '#262626'
+          }}>
+            {source}
+          </span>
+        ),
+        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
+        onFilter: (value: any, record: any) => record.media_source === value,
+      });
+    }
 
     // 按照用户排序生成列
     const itemColumns = currentItems.map(item => {
@@ -391,21 +436,26 @@ const AdjustData: React.FC = () => {
   }, [currentItems, pagination, t]);
 
   const transformedChartData = useMemo(() => {
-    return chartData
+    return allData
       .sort((a, b) => new Date(a.query_date).getTime() - new Date(b.query_date).getTime())
       .flatMap(item => {
         return currentEvents.map(eventName => {
           const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
           const value = Number(item[`event_${sanitizedName}`]) || 0;
           
+          // 如果有多个媒体渠道，在category中包含媒体渠道信息
+          const category = (dataSource === 'appsflyer' && selectedMediaSources.length > 0 && item.media_source)
+            ? `${item.media_source} - ${eventName}`
+            : eventName;
+          
           return {
             date: item.query_date,
-            category: eventName,
+            category: category,
             value: value
           };
         });
       });
-  }, [chartData, currentEvents]);
+  }, [allData, currentEvents, dataSource, selectedMediaSources]);
 
   const chartConfig = {
     data: transformedChartData,
@@ -561,7 +611,6 @@ const AdjustData: React.FC = () => {
   const applySettings = async () => {
     setSettingsVisible(false);
     await fetchData(true);
-    if (showChart) await fetchChartData();
     message.success(t('attributionData.filterApplied'));
   };
 
@@ -617,11 +666,7 @@ const AdjustData: React.FC = () => {
             type="primary"
             onClick={async () => {
               console.log('确认筛选，开始查询数据...');
-              const promises = [fetchData(true)];
-              if (showChart) {
-                promises.push(fetchChartData());
-              }
-              await Promise.all(promises);
+              await fetchData(true);
               message.success(t('attributionData.filterApplied'));
             }}
           >
@@ -632,11 +677,7 @@ const AdjustData: React.FC = () => {
               console.log('重置筛选条件...');
               setDateRange(null);
               setPagination(prev => ({ ...prev, current: 1 }));
-              const promises = [fetchData(true)];
-              if (showChart) {
-                promises.push(fetchChartData());
-              }
-              await Promise.all(promises);
+              await fetchData(true);
               message.success(t('attributionData.filterCleared'));
             }}
           >
@@ -784,21 +825,12 @@ const AdjustData: React.FC = () => {
                   size="small"
                   onClick={downloadData}
                   title={t('attributionData.chartControls.downloadData')}
-                  disabled={chartData.length === 0}
-                />
-                <Button
-                  type="default"
-                  icon={<ReloadOutlined />}
-                  size="small"
-                  onClick={refreshChart}
-                  title={t('attributionData.chartControls.refreshChart')}
-                  loading={chartLoading}
+                  disabled={allData.length === 0}
                 />
               </Space>
             </div>
           }
           style={{ marginBottom: 16 }}
-          loading={chartLoading}
         >
           <div style={{ 
             height: '400px', 
@@ -835,27 +867,18 @@ const AdjustData: React.FC = () => {
                   type="default"
                   icon={<EyeOutlined />}
                   size="small"
-                  onClick={async () => {
+                  onClick={() => {
                     setShowChart(true);
-                    await fetchChartData();
                   }}
                   title={t('attributionData.chartControls.showChart')}
                 />
                 <Button
                   type="default"
                   icon={<DownloadOutlined />}
-                  size="small"
+            size="small" 
                   onClick={downloadData}
                   title={t('attributionData.chartControls.downloadData')}
-                  disabled={chartData.length === 0}
-                />
-                <Button
-                  type="default"
-                  icon={<ReloadOutlined />}
-            size="small" 
-                  onClick={refreshChart}
-                  title={t('attributionData.chartControls.refreshChart')}
-                  loading={chartLoading}
+                  disabled={allData.length === 0}
                 />
               </Space>
             </div>
@@ -879,11 +902,47 @@ const AdjustData: React.FC = () => {
 
       {/* 数据表格区域 */}
       <Card title={t('attributionData.tableTitle')}>
+        <style>{`
+          .date-group-even {
+            background-color: #fafafa !important;
+          }
+          .date-group-odd {
+            background-color: #ffffff !important;
+          }
+          .date-group-even:hover,
+          .date-group-odd:hover {
+            background-color: #e6f7ff !important;
+          }
+          .date-group-separator {
+            border-top: 2px solid #d9d9d9 !important;
+          }
+        `}</style>
         <Table
           columns={columns}
           dataSource={data}
           loading={loading}
           rowKey="id"
+          rowClassName={(record: any, index: number) => {
+            // 为同一天的数据添加相同的背景色
+            const classes: string[] = [];
+            
+            if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+              // 根据日期分组
+              const dateIndex = data.findIndex(item => item.query_date === record.query_date);
+              const dateGroupIndex = Math.floor(dateIndex / selectedMediaSources.length);
+              classes.push(dateGroupIndex % 2 === 0 ? 'date-group-even' : 'date-group-odd');
+              
+              // 为每个日期组的第一行添加分隔线
+              const isFirstOfDate = index === 0 || data[index - 1]?.query_date !== record.query_date;
+              if (isFirstOfDate && index !== 0) {
+                classes.push('date-group-separator');
+              }
+            } else {
+              classes.push(index % 2 === 0 ? 'date-group-even' : 'date-group-odd');
+            }
+            
+            return classes.join(' ');
+          }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -909,6 +968,9 @@ const AdjustData: React.FC = () => {
               }));
             }
           }}
+          bordered
+          scroll={{ x: 1200 }}
+          size="middle"
         />
       </Card>
 
@@ -1074,7 +1136,6 @@ const AdjustData: React.FC = () => {
         onOk={async () => {
           setFilterVisible(false);
           await fetchData(true);
-          if (showChart) await fetchChartData();
           message.success('筛选条件已应用');
         }}
         onCancel={() => setFilterVisible(false)}

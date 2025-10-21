@@ -102,64 +102,71 @@ export const appsflyerDataService = {
         };
       }
 
-      // 构建筛选条件
-      const filterConditions = [];
-      if (appId) {
-        const escapedAppId = appId.replace(/'/g, "''");
-        filterConditions.push(`app_id = '${escapedAppId}'`);
-      }
-      if (mediaSource) {
-        // 支持多选：mediaSource 可以是逗号分隔的字符串
-        const mediaSources = mediaSource.split(',').map(s => s.trim()).filter(s => s);
-        if (mediaSources.length > 0) {
-          const escapedSources = mediaSources.map(s => `'${s.replace(/'/g, "''")}'`).join(', ');
-          filterConditions.push(`media_source IN (${escapedSources})`);
-        }
-      }
-      const additionalWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
+      // 解析媒体渠道（支持多选）
+      const mediaSources = mediaSource 
+        ? mediaSource.split(',').map(s => s.trim()).filter(s => s)
+        : ['ALL']; // 如果没有选择媒体渠道，使用'ALL'表示所有渠道
 
-      // 动态构建每个事件类型的统计子查询
-      const eventStatsJoins = eventNames.map((eventName) => {
-        const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
-        const escapedEventName = eventName.replace(/'/g, "''");
+      // 构建app_id筛选条件
+      const appIdWhere = appId ? `AND app_id = '${appId.replace(/'/g, "''")}'` : '';
+
+      // 为每个媒体渠道生成独立的查询
+      const mediaSourceQueries = mediaSources.map((source, index) => {
+        const escapedSource = source.replace(/'/g, "''");
+        const mediaSourceWhere = source !== 'ALL' ? `AND media_source = '${escapedSource}'` : '';
         
+        // 为每个事件类型构建统计子查询
+        const eventStatsJoins = eventNames.map((eventName) => {
+          const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
+          const escapedEventName = eventName.replace(/'/g, "''");
+          
+          return `
+          LEFT JOIN (
+             SELECT
+            DATE(callback.created_at) AS date_col,
+            COUNT(callback.appsflyer_id) AS count_${sanitizedName}
+            FROM (
+            SELECT
+            appsflyer_id,
+            MIN(created_at) AS created_at
+            FROM appsflyer_callback
+            WHERE event_name = '${escapedEventName}' 
+            AND callback_status = 'processed'
+            ${appIdWhere}
+            ${mediaSourceWhere}
+            GROUP BY id
+            ) AS callback
+            GROUP BY DATE(callback.created_at)
+          ) stats_${sanitizedName}_${index} ON stats_${sanitizedName}_${index}.date_col = date_series.date_col`;
+        }).join('\n');
+
+        const selectColumns = eventNames.map((eventName) => {
+          const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
+          return `COALESCE(stats_${sanitizedName}_${index}.count_${sanitizedName}, 0) AS event_${sanitizedName}`;
+        }).join(',\n            ');
+
         return `
-        LEFT JOIN (
-           SELECT
-          DATE(callback.created_at) AS date_col,
-          COUNT(callback.appsflyer_id) AS count_${sanitizedName}
+          SELECT 
+            DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
+            '${escapedSource}' AS media_source
+            ${selectColumns ? ',' + selectColumns : ''}
           FROM (
-          SELECT
-          appsflyer_id,
-          MIN(created_at) AS created_at
-          FROM appsflyer_callback
-          WHERE event_name = '${escapedEventName}' 
-          AND callback_status = 'processed'
-          ${additionalWhere}
-          GROUP BY id
-          ) AS callback
-          GROUP BY DATE(callback.created_at)
-        ) stats_${sanitizedName} ON stats_${sanitizedName}.date_col = date_series.date_col`;
-      }).join('\n');
+              SELECT DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) AS date_col
+              FROM (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS a
+              CROSS JOIN (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS b
+              WHERE DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) <= ${defaultEndDate}
+          ) AS date_series
+          ${eventStatsJoins}
+          WHERE date_series.date_col IS NOT NULL
+        `;
+      });
 
-      const selectColumns = eventNames.map((eventName) => {
-        const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
-        return `COALESCE(stats_${sanitizedName}.count_${sanitizedName}, 0) AS event_${sanitizedName}`;
-      }).join(',\n          ');
-
+      // 使用UNION ALL合并所有媒体渠道的查询
       const sql = `
-        SELECT 
-          DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date
-          ${selectColumns ? ',' + selectColumns : ''}
-        FROM (
-            SELECT DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) AS date_col
-            FROM (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS a
-            CROSS JOIN (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS b
-            WHERE DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) <= ${defaultEndDate}
-        ) AS date_series
-        ${eventStatsJoins}
-        WHERE date_series.date_col IS NOT NULL
-        ORDER BY date_series.date_col DESC
+        SELECT * FROM (
+          ${mediaSourceQueries.join('\n          UNION ALL\n')}
+        ) AS combined_data
+        ORDER BY query_date DESC, media_source ASC
         LIMIT ${validPageSize} OFFSET ${(validPage - 1) * validPageSize}
       `;
 
@@ -184,7 +191,7 @@ export const appsflyerDataService = {
         console.log('第一条记录示例:', (rows as any[])[0]);
       }
 
-      // 获取总数
+      // 获取总数：日期数量 × 媒体渠道数量
       const countSql = `
         SELECT COUNT(*) as total
         FROM (
@@ -200,7 +207,8 @@ export const appsflyerDataService = {
       const [countRows] = await countConnection.execute(countSql);
       await countConnection.end();
 
-      const total = (countRows as any)[0]?.total || 0;
+      const dateCount = (countRows as any)[0]?.total || 0;
+      const total = dateCount * mediaSources.length; // 总数 = 日期数 × 媒体渠道数
       const totalPages = Math.ceil(total / validPageSize);
 
       return {
@@ -233,58 +241,66 @@ export const appsflyerDataService = {
         return { data: [], eventNames: [] };
       }
 
-      // 构建筛选条件
-      const filterConditions = [];
-      if (appId) {
-        const escapedAppId = appId.replace(/'/g, "''");
-        filterConditions.push(`app_id = '${escapedAppId}'`);
-      }
-      if (mediaSource) {
-        // 支持多选：mediaSource 可以是逗号分隔的字符串
-        const mediaSources = mediaSource.split(',').map(s => s.trim()).filter(s => s);
-        if (mediaSources.length > 0) {
-          const escapedSources = mediaSources.map(s => `'${s.replace(/'/g, "''")}'`).join(', ');
-          filterConditions.push(`media_source IN (${escapedSources})`);
-        }
-      }
-      const filterWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
+      // 解析媒体渠道（支持多选）
+      const mediaSources = mediaSource 
+        ? mediaSource.split(',').map(s => s.trim()).filter(s => s)
+        : ['ALL']; // 如果没有选择媒体渠道，使用'ALL'表示所有渠道
 
-      const eventStatsJoins = eventNames.map((eventName) => {
-        const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
-        const escapedEventName = eventName.replace(/'/g, "''");
+      // 构建app_id筛选条件
+      const appIdWhere = appId ? `AND app_id = '${appId.replace(/'/g, "''")}'` : '';
+
+      // 为每个媒体渠道生成独立的查询
+      const mediaSourceQueries = mediaSources.map((source, index) => {
+        const escapedSource = source.replace(/'/g, "''");
+        const mediaSourceWhere = source !== 'ALL' ? `AND media_source = '${escapedSource}'` : '';
         
+        // 为每个事件类型构建统计子查询
+        const eventStatsJoins = eventNames.map((eventName) => {
+          const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
+          const escapedEventName = eventName.replace(/'/g, "''");
+          
+          return `
+          LEFT JOIN (
+              SELECT 
+                  DATE(created_at) AS date_col,
+                  COUNT(DISTINCT customer_user_id) AS count_${sanitizedName}
+              FROM appsflyer_callback
+              WHERE event_name = '${escapedEventName}' 
+                AND callback_status = 'processed'
+                AND customer_user_id IS NOT NULL
+                ${appIdWhere}
+                ${mediaSourceWhere}
+              GROUP BY DATE(created_at)
+          ) stats_${sanitizedName}_${index} ON stats_${sanitizedName}_${index}.date_col = date_series.date_col`;
+        }).join('\n');
+
+        const selectColumns = eventNames.map((eventName) => {
+          const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
+          return `COALESCE(stats_${sanitizedName}_${index}.count_${sanitizedName}, 0) AS event_${sanitizedName}`;
+        }).join(',\n            ');
+
         return `
-        LEFT JOIN (
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT customer_user_id) AS count_${sanitizedName}
-            FROM appsflyer_callback
-            WHERE event_name = '${escapedEventName}' 
-              AND callback_status = 'processed'
-              AND customer_user_id IS NOT NULL
-              ${filterWhere}
-            GROUP BY DATE(created_at)
-        ) stats_${sanitizedName} ON stats_${sanitizedName}.date_col = date_series.date_col`;
-      }).join('\n');
+          SELECT 
+            DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date,
+            '${escapedSource}' AS media_source
+            ${selectColumns ? ',' + selectColumns : ''}
+          FROM (
+              SELECT DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) AS date_col
+              FROM (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS a
+              CROSS JOIN (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS b
+              WHERE DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) <= ${defaultEndDate}
+          ) AS date_series
+          ${eventStatsJoins}
+          WHERE date_series.date_col IS NOT NULL
+        `;
+      });
 
-      const selectColumns = eventNames.map((eventName) => {
-        const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
-        return `COALESCE(stats_${sanitizedName}.count_${sanitizedName}, 0) AS event_${sanitizedName}`;
-      }).join(',\n          ');
-
+      // 使用UNION ALL合并所有媒体渠道的查询
       const sql = `
-        SELECT 
-          DATE_FORMAT(date_series.date_col, '%Y-%m-%d') AS query_date
-          ${selectColumns ? ',' + selectColumns : ''}
-        FROM (
-            SELECT DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) AS date_col
-            FROM (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS a
-            CROSS JOIN (SELECT 0 AS a UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9) AS b
-            WHERE DATE_ADD(${defaultStartDate}, INTERVAL (a.a + (10 * b.a)) DAY) <= ${defaultEndDate}
-        ) AS date_series
-        ${eventStatsJoins}
-        WHERE date_series.date_col IS NOT NULL
-        ORDER BY date_series.date_col ASC
+        SELECT * FROM (
+          ${mediaSourceQueries.join('\n          UNION ALL\n')}
+        ) AS combined_data
+        ORDER BY query_date ASC, media_source ASC
       `;
 
       console.log('执行 AppsFlyer 图表SQL查询，事件数量:', eventNames.length);

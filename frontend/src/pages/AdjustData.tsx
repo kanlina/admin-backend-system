@@ -56,7 +56,7 @@ const AdjustData: React.FC = () => {
   const [allAppIds, setAllAppIds] = useState<string[]>([]);
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
-  const [selectedMediaSource, setSelectedMediaSource] = useState<string | undefined>(undefined);
+  const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
   
   const currentItems = selectedItems[dataSource];
   const currentAllEvents = allEventNames[dataSource];
@@ -170,7 +170,9 @@ const AdjustData: React.FC = () => {
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
         if (selectedAppId) params.appId = selectedAppId;
-        if (selectedMediaSource) params.mediaSource = selectedMediaSource;
+        if (selectedMediaSources && selectedMediaSources.length > 0) {
+          params.mediaSource = selectedMediaSources.join(',');
+        }
       }
 
       console.log('📊 开始查询归因数据，参数:', params, '已选事件:', currentEvents);
@@ -234,7 +236,9 @@ const AdjustData: React.FC = () => {
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
         if (selectedAppId) params.appId = selectedAppId;
-        if (selectedMediaSource) params.mediaSource = selectedMediaSource;
+        if (selectedMediaSources && selectedMediaSources.length > 0) {
+          params.mediaSource = selectedMediaSources.join(',');
+        }
       }
 
       const response = await apiService.getAttributionChartData(params);
@@ -571,7 +575,7 @@ const AdjustData: React.FC = () => {
           alignItems: 'center', 
           gap: '12px',
           flexWrap: 'wrap',
-          marginBottom: (dataSource === 'appsflyer' && (selectedAppId || selectedMediaSource)) ? 16 : 0
+          marginBottom: (dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0)) ? 16 : 0
         }}>
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dataSource')}：</span>
           <Button.Group>
@@ -660,7 +664,7 @@ const AdjustData: React.FC = () => {
         </div>
 
         {/* 第二行：筛选条件显示区域 */}
-        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSource) && (
+        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0) && (
           <div style={{ 
             padding: '12px 16px', 
             background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', 
@@ -716,9 +720,16 @@ const AdjustData: React.FC = () => {
                       app_id: {selectedAppId}
                     </Tag>
                   )}
-                  {selectedMediaSource && (
+                  {selectedMediaSources.map(source => (
                     <Tag 
-                      color="orange" 
+                      key={source}
+                      color="orange"
+                      closable
+                      onClose={() => {
+                        const newSources = selectedMediaSources.filter(s => s !== source);
+                        setSelectedMediaSources(newSources);
+                        message.success(`已移除媒体渠道: ${source}`);
+                      }}
                       style={{ 
                         margin: 0,
                         padding: '4px 8px',
@@ -730,9 +741,9 @@ const AdjustData: React.FC = () => {
                         color: '#d46b08'
                       }}
                     >
-                      媒体: {selectedMediaSource}
+                      媒体: {source}
                     </Tag>
-                  )}
+                  ))}
           </Space>
               </div>
               <Button 
@@ -741,7 +752,7 @@ const AdjustData: React.FC = () => {
                 danger
                 onClick={() => {
                   setSelectedAppId(undefined);
-                  setSelectedMediaSource(undefined);
+                  setSelectedMediaSources([]);
                   message.success(t('attributionData.filterCleared'));
                 }}
                 style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}
@@ -1097,12 +1108,14 @@ const AdjustData: React.FC = () => {
           <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.mediaSource')}（Media Source）</div>
             <Select
+              mode="multiple"
               placeholder={t('attributionData.allMediaSources')}
-              value={selectedMediaSource}
-              onChange={setSelectedMediaSource}
+              value={selectedMediaSources}
+              onChange={setSelectedMediaSources}
               style={{ width: '100%' }}
               allowClear
               showSearch
+              maxTagCount="responsive"
               filterOption={(input, option) => {
                 const label = option?.children;
                 return String(label || '').toLowerCase().includes(input.toLowerCase());
@@ -1116,7 +1129,7 @@ const AdjustData: React.FC = () => {
             </Select>
           </div>
 
-          {(selectedAppId || selectedMediaSource) && (
+          {(selectedAppId || selectedMediaSources.length > 0) && (
             <div style={{ 
               padding: '12px', 
               background: '#f0f5ff', 
@@ -1130,9 +1143,9 @@ const AdjustData: React.FC = () => {
                     app_id: <strong>{selectedAppId}</strong>
                   </span>
                 )}
-                {selectedMediaSource && (
+                {selectedMediaSources.length > 0 && (
                   <span style={{ fontSize: '13px', color: '#1890ff' }}>
-                    媒体: <strong>{selectedMediaSource}</strong>
+                    媒体: <strong>{selectedMediaSources.join(', ')}</strong>
                   </span>
                 )}
               </Space>
@@ -1142,7 +1155,7 @@ const AdjustData: React.FC = () => {
                   danger
                   onClick={() => {
                     setSelectedAppId(undefined);
-                    setSelectedMediaSource(undefined);
+                    setSelectedMediaSources([]);
                     message.success('已清除筛选条件');
                   }}
                 >

@@ -109,8 +109,12 @@ export const appsflyerDataService = {
         filterConditions.push(`app_id = '${escapedAppId}'`);
       }
       if (mediaSource) {
-        const escapedMediaSource = mediaSource.replace(/'/g, "''");
-        filterConditions.push(`media_source = '${escapedMediaSource}'`);
+        // 支持多选：mediaSource 可以是逗号分隔的字符串
+        const mediaSources = mediaSource.split(',').map(s => s.trim()).filter(s => s);
+        if (mediaSources.length > 0) {
+          const escapedSources = mediaSources.map(s => `'${s.replace(/'/g, "''")}'`).join(', ');
+          filterConditions.push(`media_source IN (${escapedSources})`);
+        }
       }
       const additionalWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
 
@@ -236,8 +240,12 @@ export const appsflyerDataService = {
         filterConditions.push(`app_id = '${escapedAppId}'`);
       }
       if (mediaSource) {
-        const escapedMediaSource = mediaSource.replace(/'/g, "''");
-        filterConditions.push(`media_source = '${escapedMediaSource}'`);
+        // 支持多选：mediaSource 可以是逗号分隔的字符串
+        const mediaSources = mediaSource.split(',').map(s => s.trim()).filter(s => s);
+        if (mediaSources.length > 0) {
+          const escapedSources = mediaSources.map(s => `'${s.replace(/'/g, "''")}'`).join(', ');
+          filterConditions.push(`media_source IN (${escapedSources})`);
+        }
       }
       const filterWhere = filterConditions.length > 0 ? `AND ${filterConditions.join(' AND ')}` : '';
 

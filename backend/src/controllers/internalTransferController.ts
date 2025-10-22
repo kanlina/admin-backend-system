@@ -51,3 +51,34 @@ export const getInternalTransferChartData = async (req: Request, res: Response) 
     });
   }
 };
+
+export const getInternalTransferDetails = async (req: Request, res: Response) => {
+  try {
+    const { date, type } = req.query;
+
+    if (!date || !type) {
+      return res.status(400).json({
+        success: false,
+        message: '缺少必要参数：date 和 type'
+      });
+    }
+
+    const data = await internalTransferService.getInternalTransferDetails(
+      date as string,
+      type as string
+    );
+
+    res.json({
+      success: true,
+      data: data,
+      message: '详细数据获取成功'
+    });
+  } catch (error) {
+    console.error('获取内转详细数据失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取详细数据失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};

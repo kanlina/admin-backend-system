@@ -412,5 +412,190 @@ export const internalTransferService = {
       console.error('获取内转图表数据失败:', error);
       throw error;
     }
+  },
+
+  // 获取某一天的详细数据（用户明细）
+  async getInternalTransferDetails(date: string, type: string) {
+    try {
+      let sql = '';
+      
+      switch (type) {
+        case 'register':
+          // 注册人数明细（完全参考汇总逻辑，返回所有字段）
+          sql = `
+            SELECT *
+            FROM user_login_record 
+            WHERE is_new_user = 1 
+              AND DATE(request_time) = '${date}'
+            ORDER BY request_time DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'real_name_auth':
+          // OCR全部识别完成人数明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT ocr.*
+            FROM (
+              SELECT 
+                user_id,
+                MIN(created_at) AS created_at
+              FROM user_ocr_record
+              WHERE event_name = 'face-recognition' 
+                AND recognition_status = 1
+              GROUP BY user_id
+            ) AS first_completion
+            INNER JOIN user_ocr_record ocr 
+              ON ocr.user_id = first_completion.user_id 
+              AND ocr.created_at = first_completion.created_at
+            WHERE DATE(first_completion.created_at) = '${date}'
+            ORDER BY first_completion.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'credit_info':
+          // 个人信息提交人数明细（完全参考汇总逻辑，返回所有字段）
+          sql = `
+            SELECT *
+            FROM user_info 
+            WHERE verification_success_at IS NOT NULL
+              AND DATE(verification_success_at) = '${date}'
+            ORDER BY verification_success_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'push_total':
+          // 推送总人数明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT upr.*
+            FROM (
+              SELECT 
+                user_id,
+                MIN(created_at) AS created_at
+              FROM user_upload_records
+              GROUP BY user_id
+            ) AS first_push
+            INNER JOIN user_upload_records upr 
+              ON upr.user_id = first_push.user_id 
+              AND upr.created_at = first_push.created_at
+            WHERE DATE(first_push.created_at) = '${date}'
+            ORDER BY first_push.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'info_push':
+          // 个人信息推送成功人数明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT upr.*
+            FROM (
+              SELECT 
+                user_id,
+                MIN(created_at) AS created_at
+              FROM user_upload_records
+              WHERE status = 'success'
+              GROUP BY user_id
+            ) AS first_success
+            INNER JOIN user_upload_records upr 
+              ON upr.user_id = first_success.user_id 
+              AND upr.created_at = first_success.created_at
+            WHERE DATE(first_success.created_at) = '${date}'
+            ORDER BY first_success.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'credit_success':
+          // 授信成功人数明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT ucr.*
+            FROM (
+              SELECT
+                user_id,
+                MIN(created_at) AS created_at
+              FROM user_credit_record
+              WHERE credit_status = 2
+              GROUP BY user_id
+            ) AS credit
+            INNER JOIN user_credit_record ucr 
+              ON ucr.user_id = credit.user_id 
+              AND ucr.created_at = credit.created_at
+            WHERE DATE(credit.created_at) = '${date}'
+            ORDER BY credit.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'loan_success':
+          // 提交贷款明细（完全参考汇总逻辑，返回所有字段）
+          sql = `
+            SELECT *
+            FROM user_loans
+            WHERE DATE(created_at) = '${date}'
+            ORDER BY created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'loan_approved':
+          // 借款成功明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT srp.*
+            FROM (
+              SELECT
+                order_no,
+                MIN(created_at) AS created_at
+              FROM scheduled_repay_plan
+              WHERE partner_order_status = 2
+              GROUP BY order_no
+            ) AS plan
+            INNER JOIN scheduled_repay_plan srp 
+              ON srp.order_no = plan.order_no 
+              AND srp.created_at = plan.created_at
+            WHERE DATE(plan.created_at) = '${date}'
+            ORDER BY plan.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        case 'loan_repaid':
+          // 已还款明细（完全参考汇总逻辑的子查询）
+          sql = `
+            SELECT srp.*
+            FROM (
+              SELECT
+                order_no,
+                MIN(created_at) AS created_at
+              FROM scheduled_repay_plan
+              WHERE partner_order_status = 3
+              GROUP BY order_no
+            ) AS plan
+            INNER JOIN scheduled_repay_plan srp 
+              ON srp.order_no = plan.order_no 
+              AND srp.created_at = plan.created_at
+            WHERE DATE(plan.created_at) = '${date}'
+            ORDER BY plan.created_at DESC
+            LIMIT 1000
+          `;
+          break;
+
+        default:
+          throw new Error('无效的类型参数');
+      }
+
+      console.log('执行详情SQL查询:', sql);
+      
+      const connection = await createCoreDbConnection();
+      const [rows] = await connection.execute(sql);
+      await connection.end();
+
+      return rows;
+
+    } catch (error) {
+      console.error('获取内转详细数据失败:', error);
+      throw error;
+    }
   }
 };

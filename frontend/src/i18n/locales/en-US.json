@@ -1,5 +1,8 @@
 {
   "common": {
+    "actions": "Actions",
+    "details": "Details",
+    "noData": "No Data",
     "loading": "Loading...",
     "search": "Search",
     "reset": "Reset",
@@ -101,6 +104,25 @@
       "loanSuccess": "Loan Submissions",
       "loanApproved": "Loans Approved",
       "loanRepaid": "Loans Repaid"
+    },
+    "detailTitle": "Data Details",
+    "details": {
+      "userId": "User ID",
+      "eventTime": "Event Time",
+      "deviceId": "Device ID",
+      "ipAddress": "IP Address",
+      "eventName": "Event Name",
+      "recognitionStatus": "Recognition Status",
+      "fullName": "Full Name",
+      "idCardNumber": "ID Card Number",
+      "status": "Status",
+      "partnerName": "Partner",
+      "creditStatus": "Credit Status",
+      "creditAmount": "Credit Amount",
+      "orderNo": "Order Number",
+      "loanAmount": "Loan Amount",
+      "partnerOrderStatus": "Order Status",
+      "repaymentAmount": "Repayment Amount"
     }
   },
   "attributionData": {

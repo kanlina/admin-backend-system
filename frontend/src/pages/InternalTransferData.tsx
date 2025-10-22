@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Button, DatePicker, Space, message } from 'antd';
-import { EyeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Space, message, Modal, Tabs, Tooltip } from 'antd';
+import { EyeOutlined, DownloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +35,14 @@ const InternalTransferData: React.FC = () => {
     totalPages: 0
   });
   const [showChart, setShowChart] = useState(false); // 控制图表显示，默认关闭
+  
+  // 详情Modal相关状态
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailData, setDetailData] = useState<any>({});
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [activeTabKey, setActiveTabKey] = useState('register');
+  const [selectedRecord, setSelectedRecord] = useState<InternalTransferRecord | null>(null);
 
 
   useEffect(() => {
@@ -118,6 +126,410 @@ const InternalTransferData: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 查看详情
+  const handleViewDetails = async (record: InternalTransferRecord) => {
+    setSelectedDate(record.query_date);
+    setSelectedRecord(record); // 保存选中的记录（用于显示总数）
+    setDetailModalVisible(true);
+    setActiveTabKey('register'); // 打开时重置到第一个Tab
+    setDetailData({}); // 清空之前的数据
+    
+    // 立即加载第一个Tab的数据
+    loadTabData('register', record.query_date);
+  };
+
+  // 懒加载Tab数据
+  const loadTabData = async (type: string, date?: string) => {
+    const queryDate = date || selectedDate;
+    
+    // 如果数据已经加载过，不重复请求
+    if (detailData[type] && detailData[type].length >= 0) {
+      return;
+    }
+
+    setDetailLoading(true);
+    try {
+      const response = await apiService.getInternalTransferDetails({ 
+        date: queryDate, 
+        type 
+      });
+      
+      if (response.success) {
+        setDetailData((prev: any) => ({
+          ...prev,
+          [type]: response.data || []
+        }));
+      } else {
+        setDetailData((prev: any) => ({
+          ...prev,
+          [type]: []
+        }));
+        message.error(response.message || '获取详情数据失败');
+      }
+    } catch (error) {
+      console.error('获取详情数据失败:', error);
+      message.error(t('common.error'));
+      setDetailData((prev: any) => ({
+        ...prev,
+        [type]: []
+      }));
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  // 处理Tab切换
+  const handleTabChange = (key: string) => {
+    setActiveTabKey(key);
+    loadTabData(key);
+  };
+
+  // 生成动态表格列的辅助函数（处理超长字段）
+  const generateDynamicColumns = (data: any[]) => {
+    if (!data || data.length === 0) return [];
+    
+    // 可点击复制的字段（如token等）
+    const copyableFields = ['token', 'refresh_token', 'access_token'];
+    
+    // 超长字段（需要截断显示）
+    const longTextFields = ['device_id', 'ip_address', 'app_version', 'system_version'];
+    
+    // 复制到剪贴板的函数
+    const copyToClipboard = (text: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+        message.success('Copied to clipboard');
+      }).catch(() => {
+        message.error('Copy failed');
+      });
+    };
+    
+    // Status状态映射
+    const getStatusDisplay = (status: any) => {
+      const statusNum = Number(status);
+      const statusMap: { [key: number]: { text: string; color: string } } = {
+        0: { text: 'PENDING', color: '#faad14' },
+        1: { text: 'SUCCESS', color: '#52c41a' },
+        2: { text: 'FAILED', color: '#f5222d' },
+      };
+      
+      const statusInfo = statusMap[statusNum];
+      if (statusInfo) {
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: `${statusInfo.color}15`,
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+      return status;
+    };
+    
+    // is_new_user字段映射
+    const getIsNewUserDisplay = (isNewUser: any) => {
+      const isNew = Number(isNewUser) === 1;
+      return (
+        <span style={{ 
+          color: isNew ? '#52c41a' : '#1890ff', 
+          fontWeight: 'bold',
+          padding: '2px 8px',
+          borderRadius: '4px',
+          backgroundColor: isNew ? '#52c41a15' : '#1890ff15',
+        }}>
+          {isNew ? 'New User' : 'Existing User'}
+        </span>
+      );
+    };
+    
+    // recognition_status字段映射 (识别状态)
+    const getRecognitionStatusDisplay = (status: any) => {
+      const statusNum = Number(status);
+      const statusMap: { [key: number]: { text: string; color: string } } = {
+        0: { text: 'Processing', color: '#faad14' },      // 识别中
+        1: { text: 'Recognized', color: '#52c41a' },      // 已识别
+        2: { text: 'Failed', color: '#f5222d' },          // 识别失败
+      };
+      
+      const statusInfo = statusMap[statusNum];
+      if (statusInfo) {
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: `${statusInfo.color}15`,
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+      return status;
+    };
+    
+    // 验证状态字段映射 (通用: id_card_verify_status, face_verify_status, liveness_verify_status)
+    const getVerifyStatusDisplay = (status: any) => {
+      const statusNum = Number(status);
+      const statusMap: { [key: number]: { text: string; color: string } } = {
+        0: { text: 'In Progress', color: '#faad14' },     // 验证中
+        1: { text: 'Successful', color: '#52c41a' },      // 验证成功
+        2: { text: 'Failed', color: '#f5222d' },          // 验证失败
+      };
+      
+      const statusInfo = statusMap[statusNum];
+      if (statusInfo) {
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: `${statusInfo.color}15`,
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+      return status;
+    };
+    
+    // credit_status字段映射 (授信状态)
+    const getCreditStatusDisplay = (status: any) => {
+      const statusNum = Number(status);
+      const statusMap: { [key: number]: { text: string; color: string } } = {
+        1: { text: 'In Progress', color: '#faad14' },     // 授信中
+        2: { text: 'Approved', color: '#52c41a' },        // 授信通过
+        3: { text: 'Rejected', color: '#f5222d' },        // 授信拒绝
+      };
+      
+      const statusInfo = statusMap[statusNum];
+      if (statusInfo) {
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: `${statusInfo.color}15`,
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+      return status;
+    };
+    
+    // partner_order_status字段映射 (合作伙伴订单状态)
+    const getPartnerOrderStatusDisplay = (status: any) => {
+      const statusNum = Number(status);
+      const statusMap: { [key: number]: { text: string; color: string } } = {
+        1: { text: 'Not Disbursed', color: '#faad14' },       // 未放款
+        2: { text: 'Disbursed', color: '#52c41a' },           // 放款成功
+        3: { text: 'Repaid', color: '#1890ff' },              // 已还款
+        4: { text: 'Overdue', color: '#f5222d' },             // 逾期
+        5: { text: 'Disbursement Failed', color: '#ff4d4f' }, // 放款失败
+        6: { text: 'Pending Signature', color: '#722ed1' },   // 待签名
+      };
+      
+      const statusInfo = statusMap[statusNum];
+      if (statusInfo) {
+        return (
+          <span style={{ 
+            color: statusInfo.color, 
+            fontWeight: 'bold',
+            padding: '2px 8px',
+            borderRadius: '4px',
+            backgroundColor: `${statusInfo.color}15`,
+          }}>
+            {statusInfo.text}
+          </span>
+        );
+      }
+      return status;
+    };
+    
+    return Object.keys(data[0]).map((key) => ({
+      title: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      dataIndex: key,
+      key: key,
+      width: key.includes('time') || key.includes('at') ? 180 : 
+             copyableFields.includes(key.toLowerCase()) ? 200 :
+             key.toLowerCase() === 'response' ? 150 :
+             key.toLowerCase() === 'status' ? 120 :
+             key.toLowerCase() === 'is_new_user' ? 140 :
+             key.toLowerCase() === 'recognition_status' ? 130 :
+             key.toLowerCase() === 'credit_status' ? 130 :
+             key.toLowerCase() === 'partner_order_status' ? 160 :
+             key.toLowerCase().includes('verify_status') ? 130 :
+             longTextFields.includes(key.toLowerCase()) ? 150 : 120,
+      render: (val: any) => {
+        if (val === null || val === undefined) return '-';
+        
+        // 处理JSON对象字段（如response等）
+        if (typeof val === 'object') {
+          const jsonStr = JSON.stringify(val, null, 2);
+          return (
+            <Tooltip title={<pre style={{ margin: 0, maxHeight: '400px', overflow: 'auto' }}>{jsonStr}</pre>} placement="topLeft" overlayStyle={{ maxWidth: '600px' }}>
+              <span 
+                style={{ 
+                  cursor: 'pointer', 
+                  color: '#1890ff',
+                  textDecoration: 'underline'
+                }}
+                onClick={() => copyToClipboard(jsonStr)}
+              >
+                {'{...}'} 点击复制
+              </span>
+            </Tooltip>
+          );
+        }
+        
+        // 处理JSON字符串字段（如partner_request_response、partner_response、result等）
+        if (key.toLowerCase().includes('response') || key.toLowerCase().includes('request') || key.toLowerCase().includes('result')) {
+          const strVal = String(val);
+          try {
+            // 尝试解析为JSON
+            const parsed = JSON.parse(strVal);
+            const jsonStr = JSON.stringify(parsed, null, 2);
+            // 显示JSON的前50个字符作为预览
+            const preview = jsonStr.substring(0, 50).replace(/\n/g, ' ');
+            return (
+              <Tooltip 
+                title={<pre style={{ margin: 0, maxHeight: '400px', overflow: 'auto', fontSize: '12px' }}>{jsonStr}</pre>} 
+                placement="topLeft" 
+                overlayStyle={{ maxWidth: '600px' }}
+              >
+                <span 
+                  style={{ 
+                    cursor: 'pointer', 
+                    color: '#1890ff',
+                    textDecoration: 'underline',
+                    fontWeight: 500
+                  }}
+                  onClick={() => copyToClipboard(jsonStr)}
+                >
+                  {preview}... <span style={{ fontSize: '11px', opacity: 0.8 }}>(Click to copy)</span>
+                </span>
+              </Tooltip>
+            );
+          } catch (e) {
+            // 如果不是有效JSON，也显示部分内容并允许复制
+            const displayText = strVal.length > 30 ? `${strVal.substring(0, 30)}...` : strVal;
+            return (
+              <Tooltip title="Click to copy full content" placement="topLeft">
+                <span 
+                  style={{ 
+                    cursor: 'pointer', 
+                    color: '#1890ff',
+                    textDecoration: 'underline'
+                  }}
+                  onClick={() => copyToClipboard(strVal)}
+                >
+                  {displayText}
+                </span>
+              </Tooltip>
+            );
+          }
+        }
+        
+        // 处理is_new_user字段
+        if (key.toLowerCase() === 'is_new_user') {
+          return getIsNewUserDisplay(val);
+        }
+        
+        // 处理id_card_verify_status、face_verify_status、liveness_verify_status字段
+        if (key.toLowerCase().includes('verify_status')) {
+          return getVerifyStatusDisplay(val);
+        }
+        
+        // 处理partner_order_status字段
+        if (key.toLowerCase() === 'partner_order_status') {
+          return getPartnerOrderStatusDisplay(val);
+        }
+        
+        // 处理credit_status字段
+        if (key.toLowerCase() === 'credit_status') {
+          return getCreditStatusDisplay(val);
+        }
+        
+        // 处理recognition_status字段
+        if (key.toLowerCase() === 'recognition_status') {
+          return getRecognitionStatusDisplay(val);
+        }
+        
+        // 处理status字段
+        if (key.toLowerCase() === 'status') {
+          return getStatusDisplay(val);
+        }
+        
+        // 处理时间字段（需要验证是否为有效日期）
+        if (typeof val === 'string' && (key.includes('time') || key.includes('at'))) {
+          const date = dayjs(val);
+          // 验证日期是否有效
+          if (date.isValid()) {
+            return date.format('YYYY-MM-DD HH:mm:ss');
+          }
+          // 如果不是有效日期，返回原始值（可能是status等其他字段）
+          return val;
+        }
+        
+        // 处理金额和数量字段
+        if (typeof val === 'number' && (key.includes('amount') || key.includes('count'))) {
+          return val.toLocaleString();
+        }
+        
+        const strVal = String(val);
+        
+        // 处理可复制字段（如token）- 点击复制（始终显示）
+        if (copyableFields.includes(key.toLowerCase())) {
+          const displayText = strVal.length > 20 ? `${strVal.substring(0, 20)}...` : strVal;
+          return (
+            <Tooltip title={strVal.length > 20 ? "Click to copy" : strVal} placement="topLeft">
+              <span 
+                style={{ 
+                  cursor: 'pointer', 
+                  color: '#1890ff',
+                  textDecoration: 'underline'
+                }}
+                onClick={() => copyToClipboard(strVal)}
+              >
+                {displayText}
+              </span>
+            </Tooltip>
+          );
+        }
+        
+        // 处理超长文本字段 - 悬停查看
+        if (longTextFields.includes(key.toLowerCase()) && strVal.length > 20) {
+          return (
+            <Tooltip title={strVal} placement="topLeft">
+              <span style={{ cursor: 'pointer' }}>
+                {strVal.substring(0, 20)}...
+              </span>
+            </Tooltip>
+          );
+        }
+        
+        // 处理其他超长文本 - 悬停查看
+        if (strVal.length > 50) {
+          return (
+            <Tooltip title={strVal} placement="topLeft">
+              <span style={{ cursor: 'pointer' }}>
+                {strVal.substring(0, 50)}...
+              </span>
+            </Tooltip>
+          );
+        }
+        
+        return strVal;
+      },
+    }));
   };
 
   // 下载当前数据
@@ -274,6 +686,22 @@ const InternalTransferData: React.FC = () => {
       key: 'loan_repaid_count',
       render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
       sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => (a.loan_repaid_count || 0) - (b.loan_repaid_count || 0),
+    },
+    {
+      title: t('common.actions'),
+      key: 'actions',
+      fixed: 'right' as const,
+      width: 100,
+      render: (_: any, record: InternalTransferRecord) => (
+        <Button
+          type="link"
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => handleViewDetails(record)}
+        >
+          {t('common.details')}
+        </Button>
+      ),
     },
   ];
 
@@ -591,6 +1019,196 @@ const InternalTransferData: React.FC = () => {
           }}
         />
       </Card>
+
+      {/* 详情Modal - 动态展示所有字段 */}
+      <Modal
+        title={`${t('internalTransfer.detailTitle')} - ${selectedDate}`}
+        open={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setActiveTabKey('register'); // 关闭时重置到第一个Tab
+        }}
+        footer={null}
+        width={1200}
+        style={{ top: 20 }}
+      >
+        <Tabs
+          activeKey={activeTabKey}
+          onChange={handleTabChange}
+          type="card"
+          tabBarStyle={{ 
+            marginBottom: 16,
+            overflow: 'auto',
+            whiteSpace: 'nowrap'
+          }}
+          tabBarExtraContent={{
+            left: (
+              <Button
+                size="small"
+                icon={<LeftOutlined />}
+                onClick={() => {
+                  const keys = [
+                    'register', 'real_name_auth', 'credit_info', 'push_total',
+                    'info_push', 'credit_success', 'loan_success', 'loan_approved', 'loan_repaid'
+                  ];
+                  const currentIndex = keys.indexOf(activeTabKey);
+                  if (currentIndex > 0) {
+                    handleTabChange(keys[currentIndex - 1]);
+                  }
+                }}
+                disabled={activeTabKey === 'register'}
+                style={{ marginRight: 8 }}
+              />
+            ),
+            right: (
+              <Button
+                size="small"
+                icon={<RightOutlined />}
+                onClick={() => {
+                  const keys = [
+                    'register', 'real_name_auth', 'credit_info', 'push_total',
+                    'info_push', 'credit_success', 'loan_success', 'loan_approved', 'loan_repaid'
+                  ];
+                  const currentIndex = keys.indexOf(activeTabKey);
+                  if (currentIndex < keys.length - 1) {
+                    handleTabChange(keys[currentIndex + 1]);
+                  }
+                }}
+                disabled={activeTabKey === 'loan_repaid'}
+                style={{ marginLeft: 8 }}
+              />
+            ),
+          }}
+          items={[
+            {
+              key: 'register',
+              label: `${t('internalTransfer.registerCount')} (${selectedRecord?.register_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.register || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.register || [])}
+                />
+              ),
+            },
+            {
+              key: 'real_name_auth',
+              label: `${t('internalTransfer.realNameAuthCount')} (${selectedRecord?.real_name_auth_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.real_name_auth || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.real_name_auth || [])}
+                />
+              ),
+            },
+            {
+              key: 'credit_info',
+              label: `${t('internalTransfer.creditInfoCount')} (${selectedRecord?.credit_info_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.credit_info || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.credit_info || [])}
+                />
+              ),
+            },
+            {
+              key: 'push_total',
+              label: `${t('internalTransfer.pushTotalCount')} (${selectedRecord?.push_total_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.push_total || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.push_total || [])}
+                />
+              ),
+            },
+            {
+              key: 'info_push',
+              label: `${t('internalTransfer.infoPushCount')} (${selectedRecord?.info_push_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.info_push || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.info_push || [])}
+                />
+              ),
+            },
+            {
+              key: 'credit_success',
+              label: `${t('internalTransfer.creditSuccessCount')} (${selectedRecord?.credit_success_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.credit_success || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.credit_success || [])}
+                />
+              ),
+            },
+            {
+              key: 'loan_success',
+              label: `${t('internalTransfer.loanSuccessCount')} (${selectedRecord?.loan_success_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.loan_success || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.loan_success || [])}
+                />
+              ),
+            },
+            {
+              key: 'loan_approved',
+              label: `${t('internalTransfer.loanApprovedCount')} (${selectedRecord?.loan_approved_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.loan_approved || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.loan_approved || [])}
+                />
+              ),
+            },
+            {
+              key: 'loan_repaid',
+              label: `${t('internalTransfer.loanRepaidCount')} (${selectedRecord?.loan_repaid_count || 0})`,
+              children: (
+                <Table
+                  dataSource={detailData.loan_repaid || []}
+                  loading={detailLoading}
+                  size="small"
+                  scroll={{ x: 'max-content', y: 400 }}
+                  pagination={{ pageSize: 10 }}
+                  columns={generateDynamicColumns(detailData.loan_repaid || [])}
+                />
+              ),
+            },
+          ]}
+        />
+      </Modal>
     </div>
   );
 };

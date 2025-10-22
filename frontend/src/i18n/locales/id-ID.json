@@ -1,5 +1,8 @@
 {
   "common": {
+    "actions": "Aksi",
+    "details": "Detail",
+    "noData": "Tidak Ada Data",
     "loading": "Memuat...",
     "search": "Cari",
     "reset": "Reset",
@@ -101,6 +104,25 @@
       "loanSuccess": "Jumlah Pengajuan Pinjaman",
       "loanApproved": "Jumlah Pinjaman Disetujui",
       "loanRepaid": "Pinjaman Dilunasi"
+    },
+    "detailTitle": "Detail Data",
+    "details": {
+      "userId": "ID Pengguna",
+      "eventTime": "Waktu Event",
+      "deviceId": "ID Perangkat",
+      "ipAddress": "Alamat IP",
+      "eventName": "Nama Event",
+      "recognitionStatus": "Status Pengenalan",
+      "fullName": "Nama Lengkap",
+      "idCardNumber": "Nomor KTP",
+      "status": "Status",
+      "partnerName": "Mitra",
+      "creditStatus": "Status Kredit",
+      "creditAmount": "Jumlah Kredit",
+      "orderNo": "Nomor Pesanan",
+      "loanAmount": "Jumlah Pinjaman",
+      "partnerOrderStatus": "Status Pesanan",
+      "repaymentAmount": "Jumlah Pembayaran"
     }
   },
   "attributionData": {

@@ -138,6 +138,11 @@ class ApiService {
     return response.data;
   }
 
+  async getInternalTransferDetails(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/internal-transfer-details', { params });
+    return response.data;
+  }
+
   // 归因数据相关
   async getAttributionAppIds(): Promise<ApiResponse<string[]>> {
     const response = await this.api.get('/attribution-app-ids');

@@ -57,6 +57,18 @@ const AdjustData: React.FC = () => {
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
   
+  // 检测是否为移动端
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   const currentItems = selectedItems[dataSource];
   const currentAllEvents = allEventNames[dataSource];
   
@@ -360,14 +372,14 @@ const AdjustData: React.FC = () => {
         width: 180,
         fixed: 'left' as const,
         render: (source: string) => (
-          <span style={{ 
+        <span style={{ 
             fontSize: '13px',
             fontWeight: 500,
             color: '#262626'
-          }}>
+        }}>
             {source}
-          </span>
-        ),
+        </span>
+      ),
         filters: selectedMediaSources.map(s => ({ text: s, value: s })),
         onFilter: (value: any, record: any) => record.media_source === value,
       });
@@ -383,7 +395,7 @@ const AdjustData: React.FC = () => {
           title: item.name,
           dataIndex: fieldName,
           key: fieldName,
-          width: 120,
+          width: isMobile ? 90 : 120,
           align: 'right' as const,
           render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
           sorter: (a: any, b: any) => (a[fieldName] || 0) - (b[fieldName] || 0),
@@ -396,9 +408,9 @@ const AdjustData: React.FC = () => {
         const field2 = `event_${sanitized2}`;
         
         return {
-          title: <span><FunnelPlotOutlined /> {item.event1} → {item.event2}</span>,
+          title: isMobile ? <span><FunnelPlotOutlined /></span> : <span><FunnelPlotOutlined /> {item.event1} → {item.event2}</span>,
           key: `conversion_${sanitized1}_${sanitized2}`,
-          width: 140,
+          width: isMobile ? 80 : 140,
           align: 'center' as const,
           render: (record: any) => {
             const val1 = record[field1] || 0;
@@ -417,7 +429,7 @@ const AdjustData: React.FC = () => {
     });
 
     return [...baseColumns, ...itemColumns];
-  }, [currentItems, pagination, t]);
+  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources]);
 
   const transformedChartData = useMemo(() => {
     return allData
@@ -599,9 +611,9 @@ const AdjustData: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: isMobile ? '0' : '24px' }}>
       {/* 数据源选择和筛选区域 */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: isMobile ? 12 : 16 }}>
         {/* 第一行：数据源、日期、按钮 */}
         <div style={{ 
           display: 'flex', 
@@ -964,7 +976,7 @@ const AdjustData: React.FC = () => {
         open={settingsVisible}
         onOk={applySettings}
         onCancel={() => setSettingsVisible(false)}
-        width={800}
+        width={isMobile ? '100%' : 800}
         okText={t('attributionData.applyFilter')}
         cancelText={t('common.cancel')}
       >

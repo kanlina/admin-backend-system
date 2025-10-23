@@ -43,6 +43,18 @@ const InternalTransferData: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [activeTabKey, setActiveTabKey] = useState('register');
   const [selectedRecord, setSelectedRecord] = useState<InternalTransferRecord | null>(null);
+  
+  // 检测是否为移动端
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
 
   useEffect(() => {
@@ -600,8 +612,8 @@ const InternalTransferData: React.FC = () => {
     {
       title: t('internalTransfer.rowNumber'),
       key: 'rowNumber',
-      width: 80,
-      fixed: 'left' as const,
+      width: isMobile ? 50 : 80,
+      fixed: isMobile ? false : 'left' as const,
       render: (_: any, __: any, index: number) => {
         // 使用当前分页状态计算序号
         const currentPage = pagination.current || 1;
@@ -614,11 +626,11 @@ const InternalTransferData: React.FC = () => {
       title: t('common.date'),
       dataIndex: 'query_date',
       key: 'query_date',
-      width: 120,
-      fixed: 'left' as const,
+      width: isMobile ? 100 : 120,
+      fixed: isMobile ? false : 'left' as const,
       render: (date: string) => {
         if (!date) return '-';
-        return dayjs(date).format('YYYY-MM-DD');
+        return dayjs(date).format(isMobile ? 'MM-DD' : 'YYYY-MM-DD');
       },
       sorter: (a: InternalTransferRecord, b: InternalTransferRecord) => {
         return dayjs(a.query_date).valueOf() - dayjs(b.query_date).valueOf();
@@ -690,8 +702,8 @@ const InternalTransferData: React.FC = () => {
     {
       title: t('common.actions'),
       key: 'actions',
-      fixed: 'right' as const,
-      width: 100,
+      fixed: isMobile ? false : 'right' as const,
+      width: isMobile ? 70 : 100,
       render: (_: any, record: InternalTransferRecord) => (
         <Button
           type="link"
@@ -699,7 +711,7 @@ const InternalTransferData: React.FC = () => {
           icon={<EyeOutlined />}
           onClick={() => handleViewDetails(record)}
         >
-          {t('common.details')}
+          {isMobile ? '' : t('common.details')}
         </Button>
       ),
     },
@@ -856,9 +868,9 @@ const InternalTransferData: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: isMobile ? '0' : '24px' }}>
       {/* 筛选区域 */}
-      <Card style={{ marginBottom: 16 }}>
+      <Card style={{ marginBottom: isMobile ? 12 : 16 }}>
         <Space wrap>
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('internalTransfer.dateRange')}：</span>
           <RangePicker
@@ -1029,8 +1041,8 @@ const InternalTransferData: React.FC = () => {
           setActiveTabKey('register'); // 关闭时重置到第一个Tab
         }}
         footer={null}
-        width={1200}
-        style={{ top: 20 }}
+        width={isMobile ? '100%' : 1200}
+        style={{ top: isMobile ? 0 : 20, maxWidth: isMobile ? '100vw' : '1200px' }}
       >
         <Tabs
           activeKey={activeTabKey}

@@ -253,10 +253,8 @@ const AdjustData: React.FC = () => {
         if (item.type === 'event') {
           headers.push(item.name);
         } else if (item.type === 'funnel' && item.event1 && item.event2) {
-          // 漏斗列包含3个子列
-          headers.push(`${item.event1} → ${item.event2} (${item.event1})`);
-          headers.push(`${item.event1} → ${item.event2} (${item.event2})`);
-          headers.push(`${item.event1} → ${item.event2} (转化率)`);
+          // 漏斗列只显示转化率
+          headers.push(`${item.event1} → ${item.event2}`);
         }
       });
 
@@ -273,16 +271,14 @@ const AdjustData: React.FC = () => {
             const sanitizedName = selectedItem.name.replace(/[^a-zA-Z0-9_]/g, '_');
             row.push(item[`event_${sanitizedName}`] || 0);
           } else if (selectedItem.type === 'funnel' && selectedItem.event1 && selectedItem.event2) {
-            // 漏斗：输出事件1数量、事件2数量、转化率
+            // 漏斗：只输出转化率
             const sanitizedName1 = selectedItem.event1.replace(/[^a-zA-Z0-9_]/g, '_');
             const sanitizedName2 = selectedItem.event2.replace(/[^a-zA-Z0-9_]/g, '_');
             const val1 = Number(item[`event_${sanitizedName1}`]) || 0;
             const val2 = Number(item[`event_${sanitizedName2}`]) || 0;
             const conversionRate = val1 > 0 ? ((val2 / val1) * 100).toFixed(2) : '0.00';
             
-            row.push(val1); // 事件1数量
-            row.push(val2); // 事件2数量
-            row.push(`${conversionRate}%`); // 转化率
+            row.push(`${conversionRate}%`); // 只输出转化率
           }
         });
         
@@ -387,11 +383,13 @@ const AdjustData: React.FC = () => {
           title: item.name,
           dataIndex: fieldName,
           key: fieldName,
+          width: 120,
+          align: 'right' as const,
           render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
           sorter: (a: any, b: any) => (a[fieldName] || 0) - (b[fieldName] || 0),
         };
       } else {
-        // 漏斗列（分组列）
+        // 漏斗列（只显示转化率，不重复显示事件）
         const sanitized1 = item.event1!.replace(/[^a-zA-Z0-9_]/g, '_');
         const sanitized2 = item.event2!.replace(/[^a-zA-Z0-9_]/g, '_');
         const field1 = `event_${sanitized1}`;
@@ -399,35 +397,21 @@ const AdjustData: React.FC = () => {
         
         return {
           title: <span><FunnelPlotOutlined /> {item.event1} → {item.event2}</span>,
-          key: `funnel_${sanitized1}_${sanitized2}`,
-          children: [
-            {
-              title: item.event1,
-              dataIndex: field1,
-              key: `${field1}_in_funnel`,
-              width: 100,
-              render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
-            },
-            {
-              title: item.event2,
-              dataIndex: field2,
-              key: `${field2}_in_funnel`,
-              width: 100,
-              render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
-            },
-            {
-              title: '转化率',
-              key: `conversion_${sanitized1}_${sanitized2}`,
-              width: 90,
-              render: (record: any) => {
-                const val1 = record[field1] || 0;
-                const val2 = record[field2] || 0;
-                if (val1 === 0) return <span style={{ color: '#999' }}>-</span>;
-                const rate = (val2 / val1 * 100).toFixed(2);
-                return <span style={{ color: '#1890ff', fontWeight: 500 }}>{rate}%</span>;
-              },
-            },
-          ],
+          key: `conversion_${sanitized1}_${sanitized2}`,
+          width: 140,
+          align: 'center' as const,
+          render: (record: any) => {
+            const val1 = record[field1] || 0;
+            const val2 = record[field2] || 0;
+            if (val1 === 0) return <span style={{ color: '#999' }}>-</span>;
+            const rate = (val2 / val1 * 100).toFixed(2);
+            return <span style={{ color: '#1890ff', fontWeight: 500 }}>{rate}%</span>;
+          },
+          sorter: (a: any, b: any) => {
+            const rate1 = (a[field1] || 0) > 0 ? ((a[field2] || 0) / (a[field1] || 0)) : 0;
+            const rate2 = (b[field1] || 0) > 0 ? ((b[field2] || 0) / (b[field1] || 0)) : 0;
+            return rate1 - rate2;
+          },
         };
       }
     });
@@ -922,6 +906,7 @@ const AdjustData: React.FC = () => {
           dataSource={data}
           loading={loading}
           rowKey="id"
+          scroll={{ x: 'max-content' }}
           rowClassName={(record: any, index: number) => {
             // 为同一天的数据添加相同的背景色
             const classes: string[] = [];
@@ -969,7 +954,6 @@ const AdjustData: React.FC = () => {
             }
           }}
           bordered
-          scroll={{ x: 1200 }}
           size="middle"
         />
       </Card>

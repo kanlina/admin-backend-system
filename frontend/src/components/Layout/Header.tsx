@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layout, Avatar, Dropdown, Button, Space } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,12 @@ import LanguageSwitcher from '../LanguageSwitcher';
 
 const { Header: AntHeader } = Layout;
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  isMobile?: boolean;
+  onMenuClick?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ isMobile = false, onMenuClick }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,25 +79,43 @@ const Header: React.FC = () => {
   return (
     <AntHeader style={{ 
       background: '#fff', 
-      padding: '0 24px', 
+      padding: isMobile ? '0 12px' : '0 24px', 
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      height: '64px'
     }}>
-      <div style={{ 
-        fontSize: '20px', 
-        fontWeight: 'bold', 
-        color: '#1890ff' 
-      }}>
-        {getPageTitle()}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* 移动端菜单按钮 */}
+        {isMobile && (
+          <Button 
+            type="text" 
+            icon={<MenuOutlined style={{ fontSize: '18px' }} />}
+            onClick={onMenuClick}
+          />
+        )}
+        
+        <div style={{ 
+          fontSize: isMobile ? '16px' : '20px', 
+          fontWeight: 'bold', 
+          color: '#1890ff',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: isMobile ? '150px' : 'none'
+        }}>
+          {getPageTitle()}
+        </div>
       </div>
       
-      <Space>
+      <Space size={isMobile ? 'small' : 'middle'}>
         <LanguageSwitcher />
-        <span style={{ color: '#666' }}>
-          {t('common.welcome')}，{user?.username}
-        </span>
+        {!isMobile && (
+          <span style={{ color: '#666' }}>
+            {t('common.welcome')}，{user?.username}
+          </span>
+        )}
         <Dropdown
           menu={{ items: userMenuItems }}
           placement="bottomRight"

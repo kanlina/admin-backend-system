@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from 'antd';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -10,14 +10,35 @@ interface AppLayoutProps {
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sidebar />
+      <Sidebar 
+        isMobile={isMobile} 
+        visible={sidebarVisible} 
+        onClose={() => setSidebarVisible(false)} 
+      />
       <Layout>
-        <Header />
+        <Header 
+          isMobile={isMobile} 
+          onMenuClick={() => setSidebarVisible(true)} 
+        />
         <Content style={{ 
-          margin: '24px 16px', 
-          padding: 24, 
+          margin: isMobile ? '12px 8px' : '24px 16px', 
+          padding: isMobile ? 12 : 24, 
           background: '#fff',
           borderRadius: '8px',
           minHeight: 'calc(100vh - 112px)'

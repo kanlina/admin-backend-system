@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Drawer } from 'antd';
 import { 
   DashboardOutlined, 
   UserOutlined, 
@@ -19,7 +19,13 @@ import { useTranslation } from 'react-i18next';
 
 const { Sider } = Layout;
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isMobile?: boolean;
+  visible?: boolean;
+  onClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isMobile = false, visible = false, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -91,16 +97,13 @@ const Sidebar: React.FC = () => {
 
   const handleMenuClick = ({ key }: { key: string }) => {
     navigate(key);
+    if (isMobile && onClose) {
+      onClose(); // 移动端点击菜单后关闭Drawer
+    }
   };
 
-  return (
-    <Sider 
-      width={200} 
-      style={{ 
-        background: '#fff',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
-      }}
-    >
+  const menuContent = (
+    <>
       {/* Logo和项目名称 */}
       <div style={{
         padding: '16px',
@@ -135,10 +138,38 @@ const Sidebar: React.FC = () => {
       <Menu
         mode="inline"
         selectedKeys={[location.pathname]}
-        style={{ height: 'calc(100% - 80px)', borderRight: 0 }}
+        style={{ height: isMobile ? 'auto' : 'calc(100% - 80px)', borderRight: 0 }}
         items={menuItems}
         onClick={handleMenuClick}
       />
+    </>
+  );
+
+  // 移动端使用Drawer
+  if (isMobile) {
+    return (
+      <Drawer
+        placement="left"
+        onClose={onClose}
+        open={visible}
+        bodyStyle={{ padding: 0 }}
+        width={250}
+      >
+        {menuContent}
+      </Drawer>
+    );
+  }
+
+  // 桌面端使用Sider
+  return (
+    <Sider 
+      width={200} 
+      style={{ 
+        background: '#fff',
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+      }}
+    >
+      {menuContent}
     </Sider>
   );
 };

@@ -8,6 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: admin-backend-api
     environment:
+      TZ: Asia/Shanghai
       NODE_ENV: production
       DATABASE_URL: mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23zo.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin?ssl=true
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
@@ -26,6 +27,7 @@ services:
       dockerfile: Dockerfile
     container_name: admin-backend-web
     environment:
+      TZ: Asia/Shanghai
       VITE_API_URL: http://localhost:3001/api
     ports:
       - "3000:80"

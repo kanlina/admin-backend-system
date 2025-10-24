@@ -6,6 +6,7 @@ services:
     container_name: admin-backend-api-dev
     restart: unless-stopped
     environment:
+      - TZ=Asia/Shanghai
       - NODE_ENV=development
       - PORT=3001
       - DATABASE_URL=mysql://pk_credit_core_pro_user:qie7rjuzn5nvs35t3znhdk7lamsgh0%40@rm-d9j40fh5e5ny3vr23.mysql.ap-southeast-5.rds.aliyuncs.com:3306/pk_credit_admin
@@ -43,6 +44,8 @@ services:
     image: ghcr.io/kanlina/admin-backend-system-frontend:develop
     container_name: admin-backend-web-dev
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
     ports:
       - "3000:3000"
     volumes:

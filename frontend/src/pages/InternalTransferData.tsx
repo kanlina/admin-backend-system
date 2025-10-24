@@ -367,19 +367,23 @@ const InternalTransferData: React.FC = () => {
     };
     
     return Object.keys(data[0]).map((key) => ({
-      title: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      title: (
+        <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>
+          {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+        </div>
+      ),
       dataIndex: key,
       key: key,
-      width: key.includes('time') || key.includes('at') ? 180 : 
-             copyableFields.includes(key.toLowerCase()) ? 200 :
-             key.toLowerCase() === 'response' ? 150 :
+      width: key.includes('time') || key.includes('at') ? 170 : 
+             copyableFields.includes(key.toLowerCase()) ? 170 :
+             key.toLowerCase() === 'response' ? 140 :
              key.toLowerCase() === 'status' ? 120 :
-             key.toLowerCase() === 'is_new_user' ? 140 :
-             key.toLowerCase() === 'recognition_status' ? 130 :
-             key.toLowerCase() === 'credit_status' ? 130 :
-             key.toLowerCase() === 'partner_order_status' ? 160 :
-             key.toLowerCase().includes('verify_status') ? 130 :
-             longTextFields.includes(key.toLowerCase()) ? 150 : 120,
+             key.toLowerCase() === 'is_new_user' ? 120 :
+             key.toLowerCase() === 'recognition_status' ? 120 :
+             key.toLowerCase() === 'credit_status' ? 120 :
+             key.toLowerCase() === 'partner_order_status' ? 130 :
+             key.toLowerCase().includes('verify_status') ? 120 :
+             longTextFields.includes(key.toLowerCase()) ? 140 : 120,
       render: (val: any) => {
         if (val === null || val === undefined) return '-';
         

@@ -18,11 +18,14 @@ interface SelectedItem {
 }
 
 const SELECTED_EVENTS_STORAGE_KEY = 'attribution_selected_items_v4';
+const QUERY_STATE_STORAGE_KEY = 'attribution_query_state_v1';
+const DATA_CACHE_STORAGE_KEY = 'attribution_data_cache_v1';
 
 const AdjustData: React.FC = () => {
   const { t } = useTranslation();
   const [dataSource, setDataSource] = useState<DataSource>('appsflyer');
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const [data, setData] = useState<any[]>([]);
   const [allData, setAllData] = useState<any[]>([]); // 存储所有数据用于图表和下载
@@ -86,10 +89,146 @@ const AdjustData: React.FC = () => {
     return Array.from(eventSet);
   }, [currentItems]);
 
+  // 保存查询状态到 localStorage
+  const saveQueryState = () => {
+    try {
+      const queryState = {
+        dataSource,
+        dateRange: dateRange ? {
+          start: dateRange[0].format('YYYY-MM-DD'),
+          end: dateRange[1].format('YYYY-MM-DD')
+        } : null,
+        selectedAppId,
+        selectedMediaSources,
+        showChart,
+        pagination: {
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          totalPages: pagination.totalPages
+        },
+        timestamp: Date.now()
+      };
+      localStorage.setItem(QUERY_STATE_STORAGE_KEY, JSON.stringify(queryState));
+    } catch (error) {
+      console.error('保存查询状态失败:', error);
+    }
+  };
+
+  // 保存数据到 localStorage
+  const saveDataCache = () => {
+    try {
+      const dataCache = {
+        data,
+        allData,
+        timestamp: Date.now()
+      };
+      // 限制保存的数据量，避免 localStorage 溢出
+      const cacheString = JSON.stringify(dataCache);
+      if (cacheString.length < 5 * 1024 * 1024) { // 限制 5MB
+        localStorage.setItem(DATA_CACHE_STORAGE_KEY, cacheString);
+      } else {
+        console.warn('数据缓存过大，跳过保存');
+      }
+    } catch (error) {
+      console.error('保存数据缓存失败:', error);
+    }
+  };
+
+  // 从 localStorage 恢复查询状态
+  const restoreQueryState = () => {
+    try {
+      const savedState = localStorage.getItem(QUERY_STATE_STORAGE_KEY);
+      if (savedState) {
+        const queryState = JSON.parse(savedState);
+        
+        // 检查是否在24小时内
+        const isRecent = queryState.timestamp && (Date.now() - queryState.timestamp < 24 * 60 * 60 * 1000);
+        
+        if (isRecent) {
+          if (queryState.dataSource) {
+            setDataSource(queryState.dataSource);
+          }
+          if (queryState.dateRange) {
+            setDateRange([
+              dayjs(queryState.dateRange.start),
+              dayjs(queryState.dateRange.end)
+            ]);
+          }
+          if (queryState.selectedAppId) {
+            setSelectedAppId(queryState.selectedAppId);
+          }
+          if (queryState.selectedMediaSources) {
+            setSelectedMediaSources(queryState.selectedMediaSources);
+          }
+          if (queryState.showChart !== undefined) {
+            setShowChart(queryState.showChart);
+          }
+          if (queryState.pagination) {
+            setPagination(queryState.pagination);
+          }
+          
+          return true; // 表示成功恢复了状态
+        }
+      }
+    } catch (error) {
+      console.error('恢复查询状态失败:', error);
+    }
+    return false;
+  };
+
+  // 从 localStorage 恢复数据缓存
+  const restoreDataCache = () => {
+    try {
+      const savedCache = localStorage.getItem(DATA_CACHE_STORAGE_KEY);
+      if (savedCache) {
+        const dataCache = JSON.parse(savedCache);
+        
+        // 检查是否在24小时内
+        const isRecent = dataCache.timestamp && (Date.now() - dataCache.timestamp < 24 * 60 * 60 * 1000);
+        
+        if (isRecent && dataCache.data && dataCache.allData) {
+          setData(dataCache.data);
+          setAllData(dataCache.allData);
+          console.log('✅ 成功恢复数据缓存:', {
+            dataLength: dataCache.data.length,
+            allDataLength: dataCache.allData.length
+          });
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('恢复数据缓存失败:', error);
+    }
+    return false;
+  };
+
   useEffect(() => {
-    loadAllEventNames('adjust');
-    loadAllEventNames('appsflyer');
-    loadFilterOptions();
+    const initPage = async () => {
+      await loadAllEventNames('adjust');
+      await loadAllEventNames('appsflyer');
+      await loadFilterOptions();
+      
+      // 恢复查询状态
+      const hasRestoredState = restoreQueryState();
+      // 尝试恢复数据缓存
+      const hasRestoredData = restoreDataCache();
+      
+      setIsInitialized(true);
+      
+      // 如果恢复了状态但没有恢复数据，需要重新查询
+      if (hasRestoredState && !hasRestoredData) {
+        setTimeout(() => {
+          // 触发一次数据查询
+          console.log('🔄 检测到保存的查询状态但没有数据缓存，重新查询数据');
+          fetchData(true);
+        }, 500);
+      } else if (hasRestoredState && hasRestoredData) {
+        console.log('✅ 成功恢复查询状态和数据，无需重新查询');
+      }
+    };
+    
+    initPage();
   }, []);
 
   const loadFilterOptions = async () => {
@@ -110,11 +249,12 @@ const AdjustData: React.FC = () => {
     }
   };
 
+  // 自动查询数据的 effect
   useEffect(() => {
-    if (currentEvents.length > 0) {
-    fetchData();
+    if (isInitialized && currentEvents.length > 0) {
+      fetchData();
     }
-  }, [pagination.current, pagination.pageSize, dataSource]);
+  }, [pagination.current, pagination.pageSize, dataSource, isInitialized]);
 
   const loadAllEventNames = async (source: DataSource) => {
     try {
@@ -156,6 +296,8 @@ const AdjustData: React.FC = () => {
     const storageKey = `${SELECTED_EVENTS_STORAGE_KEY}_${dataSource}`;
     localStorage.setItem(storageKey, JSON.stringify(items));
     setSelectedItems(prev => ({ ...prev, [dataSource]: items }));
+    // 保存查询状态
+    setTimeout(() => saveQueryState(), 100);
   };
 
   const fetchData = async (resetPagination = false) => {
@@ -231,6 +373,12 @@ const AdjustData: React.FC = () => {
           }));
           setAllData(formattedAllData);
         }
+        
+        // 保存数据缓存和查询状态
+        setTimeout(() => {
+          saveQueryState();
+          saveDataCache();
+        }, 100);
         
         message.success(t('attributionData.dataLoaded', { count: formattedData.length }));
       } else {
@@ -319,6 +467,8 @@ const AdjustData: React.FC = () => {
   const handleDataSourceChange = (source: DataSource) => {
     setDataSource(source);
     setPagination(prev => ({ ...prev, current: 1 }));
+    // 保存状态
+    setTimeout(() => saveQueryState(), 100);
   };
 
   const columns = useMemo(() => {
@@ -392,11 +542,18 @@ const AdjustData: React.FC = () => {
         const fieldName = `event_${sanitizedName}`;
         
         return {
-          title: item.name,
+          title: (
+            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>
+              {item.name}
+            </div>
+          ),
           dataIndex: fieldName,
           key: fieldName,
-          width: isMobile ? 90 : 120,
+          width: isMobile ? 90 : 135,
           align: 'right' as const,
+          ellipsis: {
+            showTitle: true,
+          },
           render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
           sorter: (a: any, b: any) => (a[fieldName] || 0) - (b[fieldName] || 0),
         };
@@ -408,10 +565,19 @@ const AdjustData: React.FC = () => {
         const field2 = `event_${sanitized2}`;
         
         return {
-          title: isMobile ? <span><FunnelPlotOutlined /></span> : <span><FunnelPlotOutlined /> {item.event1} → {item.event2}</span>,
+          title: isMobile ? (
+            <span><FunnelPlotOutlined /></span>
+          ) : (
+            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3', textAlign: 'center' }}>
+              <FunnelPlotOutlined /> {item.event1} → {item.event2}
+            </div>
+          ),
           key: `conversion_${sanitized1}_${sanitized2}`,
-          width: isMobile ? 80 : 140,
+          width: isMobile ? 80 : 145,
           align: 'center' as const,
+          ellipsis: {
+            showTitle: true,
+          },
           render: (record: any) => {
             const val1 = record[field1] || 0;
             const val2 = record[field2] || 0;
@@ -653,7 +819,11 @@ const AdjustData: React.FC = () => {
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dateRange')}：</span>
             <RangePicker
               value={dateRange}
-              onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+              onChange={(dates) => {
+                setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null);
+                // 保存状态
+                setTimeout(() => saveQueryState(), 100);
+              }}
             placeholder={[t('attributionData.startDate'), t('attributionData.endDate')]}
             style={{ width: '240px' }}
           />
@@ -662,6 +832,7 @@ const AdjustData: React.FC = () => {
             type="primary"
             onClick={async () => {
               console.log('确认筛选，开始查询数据...');
+              saveQueryState(); // 保存查询状态
               await fetchData(true);
               message.success(t('attributionData.filterApplied'));
             }}
@@ -812,7 +983,10 @@ const AdjustData: React.FC = () => {
                   type="primary"
                   icon={<EyeOutlined />}
                   size="small"
-                  onClick={() => setShowChart(false)}
+                  onClick={() => {
+                    setShowChart(false);
+                    setTimeout(() => saveQueryState(), 100);
+                  }}
                   title={t('attributionData.chartControls.hideChart')}
                 />
                 <Button
@@ -865,6 +1039,7 @@ const AdjustData: React.FC = () => {
                   size="small"
                   onClick={() => {
                     setShowChart(true);
+                    setTimeout(() => saveQueryState(), 100);
                   }}
                   title={t('attributionData.chartControls.showChart')}
                 />
@@ -912,6 +1087,11 @@ const AdjustData: React.FC = () => {
           .date-group-separator {
             border-top: 2px solid #d9d9d9 !important;
           }
+          .ant-table-thead > tr > th {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
         `}</style>
         <Table
           columns={columns}
@@ -955,6 +1135,8 @@ const AdjustData: React.FC = () => {
                 current: page,
                 pageSize: pageSize || prev.pageSize
               }));
+              // 保存状态
+              setTimeout(() => saveQueryState(), 100);
             },
             onShowSizeChange: (_, size) => {
               console.log('页面大小变化:', { size, currentPagination: pagination });
@@ -963,6 +1145,8 @@ const AdjustData: React.FC = () => {
                 current: 1,
                 pageSize: size
               }));
+              // 保存状态
+              setTimeout(() => saveQueryState(), 100);
             }
           }}
           bordered
@@ -1145,7 +1329,11 @@ const AdjustData: React.FC = () => {
             <Select
               placeholder={t('attributionData.allAppIds')}
               value={selectedAppId}
-              onChange={setSelectedAppId}
+              onChange={(value) => {
+                setSelectedAppId(value);
+                // 保存状态
+                setTimeout(() => saveQueryState(), 100);
+              }}
               style={{ width: '100%' }}
               allowClear
               showSearch
@@ -1168,7 +1356,11 @@ const AdjustData: React.FC = () => {
               mode="multiple"
               placeholder={t('attributionData.allMediaSources')}
               value={selectedMediaSources}
-              onChange={setSelectedMediaSources}
+              onChange={(value) => {
+                setSelectedMediaSources(value);
+                // 保存状态
+                setTimeout(() => saveQueryState(), 100);
+              }}
               style={{ width: '100%' }}
               allowClear
               showSearch

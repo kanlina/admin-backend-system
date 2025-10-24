@@ -1,11 +1,17 @@
 # 使用 Node.js 18 官方镜像（Debian基础）
 FROM node:18-slim
 
-# 安装必要的系统依赖（包括 OpenSSL）
+# 设置时区为上海
+ENV TZ=Asia/Shanghai
+
+# 安装必要的系统依赖（包括 OpenSSL 和时区数据）
 RUN apt-get update && apt-get install -y \
     openssl \
     ca-certificates \
     curl \
+    tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录

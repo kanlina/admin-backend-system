@@ -1,6 +1,12 @@
 # 构建阶段
 FROM node:18-alpine as builder
 
+# 设置时区为上海
+ENV TZ=Asia/Shanghai
+RUN apk add --no-cache tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
+
 # 设置工作目录
 WORKDIR /app
 
@@ -21,6 +27,12 @@ RUN npm run build
 
 # 生产阶段 - 使用简单的静态文件服务器
 FROM node:18-alpine
+
+# 设置时区为上海
+ENV TZ=Asia/Shanghai
+RUN apk add --no-cache tzdata \
+    && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
 
 # 安装serve包用于静态文件服务
 RUN npm install -g serve

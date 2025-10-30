@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllAppNames, getAllMediaSources, getAllEventNames, getAttributionData, getAttributionChartData, getComparisonData } from '../controllers/attributionDataController';
+import { getAllAppNames, getAllMediaSources, getAllAdSequences, getAllEventNames, getAttributionData, getAttributionChartData, getComparisonData } from '../controllers/attributionDataController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -9,6 +9,9 @@ router.get('/attribution-app-ids', authenticateToken, getAllAppNames);
 
 // 获取所有 media_source
 router.get('/attribution-media-sources', authenticateToken, getAllMediaSources);
+
+// 获取所有 广告序列 (af_c_id)
+router.get('/attribution-ad-sequences', authenticateToken, getAllAdSequences);
 
 // 获取所有事件类型
 router.get('/attribution-event-names', authenticateToken, getAllEventNames);

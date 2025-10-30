@@ -343,13 +343,18 @@ const AdjustData: React.FC = () => {
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
         if (selectedAppId) params.appId = selectedAppId;
-        // 从配对中提取媒体与广告序列（广告序列支持多选）
+        // 从配对中提取媒体与广告序列（混合模式：有的选了序列，有的没选）
         const pairMedias = Array.from(new Set(mediaAdPairs.map(p => p.media).filter(Boolean))) as string[];
         const pairAdPairs = mediaAdPairs
           .filter(p => p.media && p.ad && (p.ad as string[]).length > 0)
           .flatMap(p => (p.ad as string[]).map(ad => `${p.media}|${ad}`));
+        const mediasWithoutAd = mediaAdPairs
+          .filter(p => p.media && (!p.ad || (p.ad as string[]).length === 0))
+          .map(p => p.media) as string[];
+        
         if (pairMedias.length > 0) params.mediaSource = pairMedias.join(',');
         if (pairAdPairs.length > 0) params.adPairs = pairAdPairs.join(',');
+        if (mediasWithoutAd.length > 0) params.mediasWithoutAd = mediasWithoutAd.join(',');
       }
 
       // 同时获取图表所需的全部数据
@@ -525,8 +530,8 @@ const AdjustData: React.FC = () => {
       }
     }
 
-    // 媒体合并：同一天内相同媒体的连续行合并（当存在媒体选择时）
-    if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || mediaAdPairs.some(p => p.media))) {
+    // 媒体合并：同一天内相同媒体的连续行合并（当存在媒体配对时）
+    if (dataSource === 'appsflyer' && mediaAdPairs.some(p => p.media)) {
       let i = 0;
       while (i < data.length) {
         const day = data[i]?.query_date;
@@ -590,8 +595,9 @@ const AdjustData: React.FC = () => {
       },
     ];
 
-    // 如果是回调数据源且存在媒体选择（多选或成对配置），添加媒体渠道列
-    if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || mediaAdPairs.some(p => p.media))) {
+    // 如果是回调数据源且存在媒体选择（从配对中提取），添加媒体渠道列
+    const hasAnyMedia = mediaAdPairs.some(p => p.media);
+    if (dataSource === 'appsflyer' && hasAnyMedia) {
       baseColumns.push({
         title: t('attributionData.mediaSource'),
         dataIndex: 'media_source',
@@ -614,18 +620,13 @@ const AdjustData: React.FC = () => {
             props: { rowSpan: span }
           } as any;
         },
-        filters: (
-          selectedMediaSources.length > 0
-            ? selectedMediaSources
-            : Array.from(new Set(mediaAdPairs.map(p => p.media).filter(Boolean))) as string[]
-        ).map(s => ({ text: s, value: s })),
+        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
         onFilter: (value: any, record: any) => record.media_source === value,
       });
     }
 
-    // 如果是回调数据源且存在广告序列选择（来自配对），添加广告序列列
-    const hasSelectedAds = mediaAdPairs.some(p => p.media && p.ad && (p.ad as string[]).length > 0);
-    if (dataSource === 'appsflyer' && hasSelectedAds) {
+    // 如果是回调数据源且存在媒体选择，总是添加广告序列列（未选序列时显示ALL）
+    if (dataSource === 'appsflyer' && hasAnyMedia) {
       baseColumns.push({
         title: t('attributionData.adSequence'),
         dataIndex: 'ad_sequence',
@@ -998,7 +999,7 @@ const AdjustData: React.FC = () => {
         </div>
 
         {/* 第二行：筛选条件显示区域 */}
-        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (
+        {dataSource === 'appsflyer' && (selectedAppId || mediaAdPairs.length > 0) && (
           <div style={{ 
             padding: '12px 16px', 
             background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', 
@@ -1054,54 +1055,63 @@ const AdjustData: React.FC = () => {
                       app_id: {selectedAppId}
                     </Tag>
                   )}
-                  {selectedMediaSources.map(source => (
-                    <Tag 
-                      key={source}
-                      color="orange"
-                      closable
-                      onClose={() => {
-                        const newSources = selectedMediaSources.filter(s => s !== source);
-                        setSelectedMediaSources(newSources);
-                        message.success(`已移除媒体渠道: ${source}`);
-                      }}
-                      style={{ 
-                        margin: 0,
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        background: '#fff7e6',
-                        borderColor: '#ffa940',
-                        color: '#d46b08'
-                      }}
-                    >
-                      媒体: {source}
-                    </Tag>
-                  ))}
-                  {selectedAdSequences.map(seq => (
-                    <Tag 
-                      key={seq}
-                      color="geekblue" 
-                      closable
-                      onClose={() => {
-                        const newSeq = selectedAdSequences.filter(s => s !== seq);
-                        setSelectedAdSequences(newSeq);
-                        message.success(`已移除广告序列: ${seq}`);
-                      }}
-                      style={{ 
-                        margin: 0,
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        background: '#f0f5ff',
-                        borderColor: '#2f54eb',
-                        color: '#1d39c4'
-                      }}
-                    >
-                      广告序列: {seq}
-                    </Tag>
-                  ))}
+                  {mediaAdPairs.map((pair) => {
+                    if (!pair.media) return null;
+                    const hasAds = pair.ad && (pair.ad as string[]).length > 0;
+                    return (
+                      <React.Fragment key={pair.id}>
+                        <Tag 
+                          color="orange"
+                          closable
+                          onClose={() => {
+                            setMediaAdPairs(prev => prev.filter(p => p.id !== pair.id));
+                            message.success(`已移除媒体渠道: ${pair.media}`);
+                          }}
+                          style={{ 
+                            margin: 0,
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            background: '#fff7e6',
+                            borderColor: '#ffa940',
+                            color: '#d46b08'
+                          }}
+                        >
+                          媒体: {pair.media}
+                        </Tag>
+                        {hasAds && (pair.ad as string[]).map(seq => (
+                          <Tag 
+                            key={`${pair.id}_${seq}`}
+                            color="geekblue"
+                            closable
+                            onClose={() => {
+                              const newPairs = [...mediaAdPairs];
+                              const pairIdx = newPairs.findIndex(p => p.id === pair.id);
+                              if (pairIdx >= 0) {
+                                const newAds = (newPairs[pairIdx].ad as string[]).filter(a => a !== seq);
+                                newPairs[pairIdx] = { ...newPairs[pairIdx], ad: newAds };
+                                setMediaAdPairs(newPairs);
+                                message.success(`已移除广告序列: ${seq}`);
+                              }
+                            }}
+                            style={{ 
+                              margin: 0,
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                              background: '#f0f5ff',
+                              borderColor: '#2f54eb',
+                              color: '#1d39c4'
+                            }}
+                          >
+                            广告序列: {seq}
+                          </Tag>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
           </Space>
               </div>
               <Button 
@@ -1112,6 +1122,7 @@ const AdjustData: React.FC = () => {
                   setSelectedAppId(undefined);
                   setSelectedMediaSources([]);
                   setSelectedAdSequences([]);
+                  setMediaAdPairs([]);
                   message.success(t('attributionData.filterCleared'));
                 }}
                 style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}

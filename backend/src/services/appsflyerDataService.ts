@@ -110,7 +110,8 @@ export const appsflyerDataService = {
     mediaSource?: string,
     adSequence?: string,
     granularity: 'day' | 'hour' = 'day',
-    adPairs?: string
+    adPairs?: string,
+    mediasWithoutAd?: string
   ) {
     const validPage = Math.max(1, parseInt(page.toString()));
     const validPageSize = Math.min(Math.max(1, parseInt(pageSize.toString())), 100);
@@ -141,7 +142,7 @@ export const appsflyerDataService = {
       // 构建app_id筛选条件
       const appIdWhere = appId ? `AND app_id = '${appId.replace(/'/g, "''")}'` : '';
 
-      // 若提供了配对参数，按配对生成组合；否则媒体×广告序列笛卡尔
+      // 解析配对（媒体+广告序列）
       const pairs: Array<{ media: string; ad: string } > = (adPairs || '')
         .split(',')
         .map(p => p.trim())
@@ -152,10 +153,23 @@ export const appsflyerDataService = {
         })
         .filter(pa => pa.media && pa.ad);
 
+      // 解析仅媒体（不选广告序列，查全部）
+      const mediasOnly = (mediasWithoutAd || '')
+        .split(',')
+        .map(m => m.trim())
+        .filter(Boolean);
+
       let comboIndex = 0;
-      const combos = pairs.length > 0
-        ? pairs.map(pa => ({ mediaVal: pa.media, adVal: pa.ad }))
-        : mediaValues.flatMap(mediaVal => adValues.map(adVal => ({ mediaVal, adVal })));
+      // 组合：精确配对 + 仅媒体（ad=ALL）
+      const combos = [
+        ...pairs.map(pa => ({ mediaVal: pa.media, adVal: pa.ad })),
+        ...mediasOnly.map(m => ({ mediaVal: m, adVal: 'ALL' }))
+      ];
+      
+      // 如果没有任何配对或仅媒体，则使用笛卡尔
+      if (combos.length === 0) {
+        combos.push(...mediaValues.flatMap(mediaVal => adValues.map(adVal => ({ mediaVal, adVal }))));
+      }
 
       const perDimensionQueries = combos.map(({ mediaVal, adVal }) => {
         const escapedMedia = mediaVal.replace(/'/g, "''");
@@ -279,7 +293,8 @@ export const appsflyerDataService = {
     mediaSource?: string,
     adSequence?: string,
     granularity: 'day' | 'hour' = 'day',
-    adPairs?: string
+    adPairs?: string,
+    mediasWithoutAd?: string
   ) {
     // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
     const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
@@ -298,6 +313,8 @@ export const appsflyerDataService = {
       const adValues = adSequence 
         ? adSequence.split(',').map(s => s.trim()).filter(s => s)
         : ['ALL'];
+      
+      // 解析配对（媒体+广告序列）
       const pairs: Array<{ media: string; ad: string } > = (adPairs || '')
         .split(',')
         .map(p => p.trim())
@@ -308,14 +325,26 @@ export const appsflyerDataService = {
         })
         .filter(pa => pa.media && pa.ad);
 
+      // 解析仅媒体（不选广告序列，查全部）
+      const mediasOnly = (mediasWithoutAd || '')
+        .split(',')
+        .map(m => m.trim())
+        .filter(Boolean);
+
       // 构建app_id筛选条件
       const appIdWhere = appId ? `AND app_id = '${appId.replace(/'/g, "''")}'` : '';
 
-      // 为每个媒体×广告序列组合生成独立的查询
       let comboIndex = 0;
-      const combos = pairs.length > 0
-        ? pairs.map(pa => ({ mediaVal: pa.media, adVal: pa.ad }))
-        : mediaValues.flatMap(mediaVal => adValues.map(adVal => ({ mediaVal, adVal })));
+      // 组合：精确配对 + 仅媒体（ad=ALL）
+      const combos = [
+        ...pairs.map(pa => ({ mediaVal: pa.media, adVal: pa.ad })),
+        ...mediasOnly.map(m => ({ mediaVal: m, adVal: 'ALL' }))
+      ];
+      
+      // 如果没有任何配对或仅媒体，则使用笛卡尔
+      if (combos.length === 0) {
+        combos.push(...mediaValues.flatMap(mediaVal => adValues.map(adVal => ({ mediaVal, adVal }))));
+      }
 
       const perDimensionQueries = combos.map(({ mediaVal, adVal }) => {
         const escapedMedia = mediaVal.replace(/'/g, "''");

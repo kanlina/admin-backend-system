@@ -58,11 +58,13 @@ const AdjustData: React.FC = () => {
   const [allAppIds, setAllAppIds] = useState<string[]>([]);
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
   const [allAdSequences, setAllAdSequences] = useState<string[]>([]);
+  const [mediaToAdSeqs, setMediaToAdSeqs] = useState<Record<string, string[]>>({});
   const [mediaLoading, setMediaLoading] = useState<boolean>(false);
   const [adSeqLoading, setAdSeqLoading] = useState<boolean>(false);
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
   const [selectedAdSequences, setSelectedAdSequences] = useState<string[]>([]);
+  const [mediaAdPairs, setMediaAdPairs] = useState<Array<{ id: string; media?: string; ad?: string[] }>>([]);
   
   // 检测是否为移动端
   const [isMobile, setIsMobile] = useState(false);
@@ -263,6 +265,33 @@ const AdjustData: React.FC = () => {
     }
   };
 
+  const loadAdSequencesByMedia = async (mediaList: string[]) => {
+    try {
+      setAdSeqLoading(true);
+      const mediaParam = mediaList && mediaList.length > 0 ? mediaList.join(',') : undefined;
+      const res = await apiService.getAttributionAdSequences({ mediaSource: mediaParam });
+      if (res.success && res.data) {
+        const list: string[] = Array.isArray(res.data) ? res.data : [];
+        setAllAdSequences(list);
+      }
+    } catch (e) {
+      console.error('按媒体加载广告序列失败:', e);
+    } finally {
+      setAdSeqLoading(false);
+    }
+  };
+
+  const loadAdSequencesForSingleMedia = async (media: string) => {
+    try {
+      const res = await apiService.getAttributionAdSequences({ mediaSource: media });
+      if (res.success && Array.isArray(res.data)) {
+        setMediaToAdSeqs(prev => ({ ...prev, [media]: res.data as string[] }));
+      }
+    } catch (e) {
+      console.error('加载单个媒体的广告序列失败:', e);
+    }
+  };
+
   // 自动查询数据的 effect
   useEffect(() => {
     if (isInitialized && currentEvents.length > 0) {
@@ -338,12 +367,13 @@ const AdjustData: React.FC = () => {
       // 添加筛选条件（仅回调数据源）
       if (dataSource === 'appsflyer') {
         if (selectedAppId) params.appId = selectedAppId;
-        if (selectedMediaSources && selectedMediaSources.length > 0) {
-          params.mediaSource = selectedMediaSources.join(',');
-        }
-        if (selectedAdSequences && selectedAdSequences.length > 0) {
-          params.adSequence = selectedAdSequences.join(',');
-        }
+        // 从配对中提取媒体与广告序列（广告序列支持多选）
+        const pairMedias = Array.from(new Set(mediaAdPairs.map(p => p.media).filter(Boolean))) as string[];
+        const pairAdPairs = mediaAdPairs
+          .filter(p => p.media && p.ad && (p.ad as string[]).length > 0)
+          .flatMap(p => (p.ad as string[]).map(ad => `${p.media}|${ad}`));
+        if (pairMedias.length > 0) params.mediaSource = pairMedias.join(',');
+        if (pairAdPairs.length > 0) params.adPairs = pairAdPairs.join(',');
       }
 
       // 同时获取图表所需的全部数据
@@ -453,11 +483,18 @@ const AdjustData: React.FC = () => {
             // 漏斗：只输出转化率
             const sanitizedName1 = selectedItem.event1.replace(/[^a-zA-Z0-9_]/g, '_');
             const sanitizedName2 = selectedItem.event2.replace(/[^a-zA-Z0-9_]/g, '_');
-            const val1 = Number(item[`event_${sanitizedName1}`]) || 0;
-            const val2 = Number(item[`event_${sanitizedName2}`]) || 0;
-            const conversionRate = val1 > 0 ? ((val2 / val1) * 100).toFixed(2) : '0.00';
-            
-            row.push(`${conversionRate}%`); // 只输出转化率
+            const raw1 = item[`event_${sanitizedName1}`];
+            const raw2 = item[`event_${sanitizedName2}`];
+            const val1 = Number(raw1);
+            const val2 = Number(raw2);
+            let out = '-';
+            if (Number.isFinite(val1) && Number.isFinite(val2) && val1 > 0) {
+              const ratio = val2 / val1;
+              if (Number.isFinite(ratio) && !Number.isNaN(ratio)) {
+                out = `${(ratio * 100).toFixed(2)}%`;
+              }
+            }
+            row.push(out);
           }
         });
         
@@ -512,8 +549,8 @@ const AdjustData: React.FC = () => {
       }
     }
 
-    // 媒体合并：同一天内相同媒体的连续行合并（仅当选择了媒体渠道时）
-    if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+    // 媒体合并：同一天内相同媒体的连续行合并（当存在媒体选择时）
+    if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || mediaAdPairs.some(p => p.media))) {
       let i = 0;
       while (i < data.length) {
         const day = data[i]?.query_date;
@@ -577,8 +614,8 @@ const AdjustData: React.FC = () => {
       },
     ];
 
-    // 如果是回调数据源且选择了媒体渠道，添加媒体渠道列
-    if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+    // 如果是回调数据源且存在媒体选择（多选或成对配置），添加媒体渠道列
+    if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || mediaAdPairs.some(p => p.media))) {
       baseColumns.push({
         title: t('attributionData.mediaSource'),
         dataIndex: 'media_source',
@@ -601,13 +638,18 @@ const AdjustData: React.FC = () => {
             props: { rowSpan: span }
           } as any;
         },
-        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
+        filters: (
+          selectedMediaSources.length > 0
+            ? selectedMediaSources
+            : Array.from(new Set(mediaAdPairs.map(p => p.media).filter(Boolean))) as string[]
+        ).map(s => ({ text: s, value: s })),
         onFilter: (value: any, record: any) => record.media_source === value,
       });
     }
 
-    // 如果是回调数据源且选择了广告序列，添加广告序列列（可与媒体渠道并存）
-    if (dataSource === 'appsflyer' && selectedAdSequences.length > 0) {
+    // 如果是回调数据源且存在广告序列选择（来自配对），添加广告序列列
+    const hasSelectedAds = mediaAdPairs.some(p => p.media && p.ad && (p.ad as string[]).length > 0);
+    if (dataSource === 'appsflyer' && hasSelectedAds) {
       baseColumns.push({
         title: t('attributionData.adSequence'),
         dataIndex: 'ad_sequence',
@@ -672,10 +714,18 @@ const AdjustData: React.FC = () => {
             showTitle: true,
           },
           render: (record: any) => {
-            const val1 = record[field1] || 0;
-            const val2 = record[field2] || 0;
-            if (val1 === 0) return <span style={{ color: '#999' }}>-</span>;
-            const rate = (val2 / val1 * 100).toFixed(2);
+            const raw1 = record[field1];
+            const raw2 = record[field2];
+            const val1 = Number(raw1);
+            const val2 = Number(raw2);
+            if (!Number.isFinite(val1) || !Number.isFinite(val2) || val1 <= 0) {
+              return <span style={{ color: '#999' }}>-</span>;
+            }
+            const ratio = val2 / val1;
+            if (!Number.isFinite(ratio) || Number.isNaN(ratio)) {
+              return <span style={{ color: '#999' }}>-</span>;
+            }
+            const rate = (ratio * 100).toFixed(2);
             return <span style={{ color: '#1890ff', fontWeight: 500 }}>{rate}%</span>;
           },
           sorter: (a: any, b: any) => {
@@ -688,7 +738,7 @@ const AdjustData: React.FC = () => {
     });
 
     return [...baseColumns, ...itemColumns];
-  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources, selectedAdSequences]);
+  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources, mediaAdPairs]);
 
   const transformedChartData = useMemo(() => {
     return allData
@@ -1479,65 +1529,60 @@ const AdjustData: React.FC = () => {
           </div>
 
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.mediaSource')}（Media Source）</div>
-            <Select
-              mode="multiple"
-              placeholder={t('attributionData.allMediaSources')}
-              loading={mediaLoading}
-              notFoundContent={mediaLoading ? t('attributionData.loadingOptions') : undefined}
-              value={selectedMediaSources}
-              onChange={(value) => {
-                setSelectedMediaSources(value);
-                // 保存状态
-                setTimeout(() => saveQueryState(), 100);
-              }}
-              style={{ width: '100%' }}
-              allowClear
-              disabled={mediaLoading}
-              showSearch
-              maxTagCount="responsive"
-              filterOption={(input, option) => {
-                const label = option?.children;
-                return String(label || '').toLowerCase().includes(input.toLowerCase());
-              }}
-            >
-              {allMediaSources.map(source => (
-                <Select.Option key={source} value={source}>
-                  {source}
-                </Select.Option>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.mediaSource')} × {t('attributionData.adSequence')}</div>
+            <Space direction="vertical" style={{ width: '100%' }} size="small">
+              {mediaAdPairs.map((pair, idx) => (
+                <Space key={pair.id} align="baseline" style={{ width: '100%' }}>
+                  <Select
+                    placeholder={t('attributionData.selectMediaSource')}
+                    value={pair.media}
+                    loading={mediaLoading}
+                    style={{ width: 220 }}
+                    showSearch
+                    onChange={async (val) => {
+                      const newPairs = [...mediaAdPairs];
+                      newPairs[idx] = { ...newPairs[idx], media: val, ad: [] };
+                      setMediaAdPairs(newPairs);
+                      await loadAdSequencesForSingleMedia(val);
+                      setTimeout(() => saveQueryState(), 100);
+                    }}
+                    filterOption={(input, option) => String(option?.children || '').toLowerCase().includes(input.toLowerCase())}
+                  >
+                    {allMediaSources.map(source => (
+                      <Select.Option key={source} value={source}>{source}</Select.Option>
+                    ))}
+                  </Select>
+                  <Select
+                    mode="multiple"
+                    placeholder={t('attributionData.allAdSequences')}
+                    value={pair.ad}
+                    loading={adSeqLoading}
+                    style={{ width: 260 }}
+                    disabled={!pair.media}
+                    showSearch
+                    onChange={(val) => {
+                      const newPairs = [...mediaAdPairs];
+                      newPairs[idx] = { ...newPairs[idx], ad: val };
+                      setMediaAdPairs(newPairs);
+                      setTimeout(() => saveQueryState(), 100);
+                    }}
+                    filterOption={(input, option) => String(option?.children || '').toLowerCase().includes(input.toLowerCase())}
+                  >
+                    {(pair.media ? (mediaToAdSeqs[pair.media] || []) : []).map(seq => (
+                      <Select.Option key={seq} value={seq}>{seq}</Select.Option>
+                    ))}
+                  </Select>
+                  <Button danger size="small" onClick={() => {
+                    setMediaAdPairs(prev => prev.filter(p => p.id !== pair.id));
+                    setTimeout(() => saveQueryState(), 100);
+                  }}>{t('common.delete')}</Button>
+                </Space>
               ))}
-            </Select>
-          </div>
-
-          <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.adSequence')}（af_c_id）</div>
-            <Select
-              mode="multiple"
-              placeholder={t('attributionData.allAdSequences')}
-              loading={adSeqLoading}
-              notFoundContent={adSeqLoading ? t('attributionData.loadingOptions') : undefined}
-              value={selectedAdSequences}
-              onChange={(value) => {
-                setSelectedAdSequences(value);
-                // 保存状态
+              <Button size="small" onClick={() => {
+                setMediaAdPairs(prev => [...prev, { id: `${Date.now()}_${Math.random()}`, media: undefined, ad: undefined }]);
                 setTimeout(() => saveQueryState(), 100);
-              }}
-              style={{ width: '100%' }}
-              allowClear
-              disabled={adSeqLoading}
-              showSearch
-              maxTagCount="responsive"
-              filterOption={(input, option) => {
-                const label = option?.children;
-                return String(label || '').toLowerCase().includes(input.toLowerCase());
-              }}
-            >
-              {allAdSequences.map(seq => (
-                <Select.Option key={seq} value={seq}>
-                  {seq}
-                </Select.Option>
-              ))}
-            </Select>
+              }}>{t('common.add')}</Button>
+            </Space>
           </div>
 
           {(selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (

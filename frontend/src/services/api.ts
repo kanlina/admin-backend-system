@@ -154,8 +154,8 @@ class ApiService {
     return response.data;
   }
 
-  async getAttributionAdSequences(): Promise<ApiResponse<string[]>> {
-    const response = await this.api.get('/attribution-ad-sequences');
+  async getAttributionAdSequences(params?: { mediaSource?: string }): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-ad-sequences', { params });
     return response.data;
   }
 

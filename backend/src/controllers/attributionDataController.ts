@@ -97,7 +97,7 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs } = req.query;
+    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs, mediasWithoutAd } = req.query;
     
     console.log('========================================');
     console.log('📊 [归因数据] 收到请求');
@@ -110,7 +110,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
       appId,
       mediaSource,
       adSequence,
-      adPairs
+      adPairs,
+      mediasWithoutAd
     });
     
     const result = dataSource === 'adjust'
@@ -129,7 +130,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
           mediaSource as string,
           adSequence as string,
           undefined,
-          adPairs as string
+          adPairs as string,
+          mediasWithoutAd as string
         );
 
     console.log('✅ [归因数据] 查询成功');
@@ -163,7 +165,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
 
 export const getAttributionChartData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs } = req.query;
+    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs, mediasWithoutAd } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustChartData(
@@ -177,7 +179,8 @@ export const getAttributionChartData = async (req: Request, res: Response) => {
           mediaSource as string,
           adSequence as string,
           undefined,
-          adPairs as string
+          adPairs as string,
+          mediasWithoutAd as string
         );
 
     res.json({

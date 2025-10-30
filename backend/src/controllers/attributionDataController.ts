@@ -42,6 +42,26 @@ export const getAllMediaSources = async (req: Request, res: Response) => {
   }
 };
 
+// 获取所有 ad_sequence (af_c_id)
+export const getAllAdSequences = async (req: Request, res: Response) => {
+  try {
+    const sequences = await appsflyerDataService.getAllAdSequences();
+
+    res.json({
+      success: true,
+      data: sequences,
+      message: '获取广告序列列表成功'
+    });
+  } catch (error) {
+    console.error('获取广告序列列表失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取广告序列列表失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
 // 获取所有可用的事件类型
 export const getAllEventNames = async (req: Request, res: Response) => {
   try {
@@ -76,7 +96,7 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource } = req.query;
+    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource, adSequence } = req.query;
     
     console.log('========================================');
     console.log('📊 [归因数据] 收到请求');
@@ -87,7 +107,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
       pageSize,
       dataSource,
       appId,
-      mediaSource
+      mediaSource,
+      adSequence
     });
     
     const result = dataSource === 'adjust'
@@ -103,7 +124,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
           parseInt(page as string),
           parseInt(pageSize as string),
           appId as string,
-          mediaSource as string
+          mediaSource as string,
+          adSequence as string
         );
 
     console.log('✅ [归因数据] 查询成功');
@@ -137,7 +159,7 @@ export const getAttributionData = async (req: Request, res: Response) => {
 
 export const getAttributionChartData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource } = req.query;
+    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource, adSequence } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustChartData(
@@ -148,7 +170,8 @@ export const getAttributionChartData = async (req: Request, res: Response) => {
           startDate as string,
           endDate as string,
           appId as string,
-          mediaSource as string
+          mediaSource as string,
+          adSequence as string
         );
 
     res.json({

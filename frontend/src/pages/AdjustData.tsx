@@ -57,8 +57,12 @@ const AdjustData: React.FC = () => {
   // 筛选条件状态（仅用于回调数据）
   const [allAppIds, setAllAppIds] = useState<string[]>([]);
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
+  const [allAdSequences, setAllAdSequences] = useState<string[]>([]);
+  const [mediaLoading, setMediaLoading] = useState<boolean>(false);
+  const [adSeqLoading, setAdSeqLoading] = useState<boolean>(false);
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
+  const [selectedAdSequences, setSelectedAdSequences] = useState<string[]>([]);
   
   // 检测是否为移动端
   const [isMobile, setIsMobile] = useState(false);
@@ -233,9 +237,12 @@ const AdjustData: React.FC = () => {
 
   const loadFilterOptions = async () => {
     try {
-      const [appIdsRes, mediaSourcesRes] = await Promise.all([
+      setMediaLoading(true);
+      setAdSeqLoading(true);
+      const [appIdsRes, mediaSourcesRes, adSeqRes] = await Promise.all([
         apiService.getAttributionAppIds(),
-        apiService.getAttributionMediaSources()
+        apiService.getAttributionMediaSources(),
+        apiService.getAttributionAdSequences()
       ]);
       
       if (appIdsRes.success && appIdsRes.data) {
@@ -244,8 +251,15 @@ const AdjustData: React.FC = () => {
       if (mediaSourcesRes.success && mediaSourcesRes.data) {
         setAllMediaSources(mediaSourcesRes.data);
       }
+      if (adSeqRes.success && adSeqRes.data) {
+        setAllAdSequences(adSeqRes.data);
+      }
     } catch (error) {
       console.error('加载筛选选项失败:', error);
+    }
+    finally {
+      setMediaLoading(false);
+      setAdSeqLoading(false);
     }
   };
 
@@ -327,6 +341,9 @@ const AdjustData: React.FC = () => {
         if (selectedMediaSources && selectedMediaSources.length > 0) {
           params.mediaSource = selectedMediaSources.join(',');
         }
+        if (selectedAdSequences && selectedAdSequences.length > 0) {
+          params.adSequence = selectedAdSequences.join(',');
+        }
       }
 
       // 同时获取图表所需的全部数据
@@ -404,8 +421,9 @@ const AdjustData: React.FC = () => {
 
       // 构建表头（包含事件和漏斗，按照currentItems的顺序）
       const headers = [t('attributionData.downloadHeaders.date')];
-      if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
-        headers.push(t('attributionData.mediaSource'));
+      if (dataSource === 'appsflyer') {
+        if (selectedMediaSources.length > 0) headers.push(t('attributionData.mediaSource'));
+        if (selectedAdSequences.length > 0) headers.push(t('attributionData.adSequence'));
       }
       
       // 添加所有列（事件和漏斗）
@@ -421,8 +439,9 @@ const AdjustData: React.FC = () => {
       // 构建数据行
       const csvRows = allData.map(item => {
         const row = [item.query_date];
-        if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
-          row.push(item.media_source || '');
+        if (dataSource === 'appsflyer') {
+          if (selectedMediaSources.length > 0) row.push(item.media_source || '');
+          if (selectedAdSequences.length > 0) row.push(item.ad_sequence || '');
         }
         
         currentItems.forEach(selectedItem => {
@@ -472,6 +491,50 @@ const AdjustData: React.FC = () => {
   };
 
   const columns = useMemo(() => {
+    // 预计算行合并的 rowSpan
+    const dateRowSpan: number[] = [];
+    const mediaRowSpan: number[] = [];
+
+    // 日期合并：同一天的连续行合并
+    {
+      let i = 0;
+      while (i < data.length) {
+        const start = i;
+        const d = data[i]?.query_date;
+        let count = 1;
+        i++;
+        while (i < data.length && data[i]?.query_date === d) {
+          count++;
+          i++;
+        }
+        dateRowSpan[start] = count;
+        for (let k = start + 1; k < start + count; k++) dateRowSpan[k] = 0;
+      }
+    }
+
+    // 媒体合并：同一天内相同媒体的连续行合并（仅当选择了媒体渠道时）
+    if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+      let i = 0;
+      while (i < data.length) {
+        const day = data[i]?.query_date;
+        let j = i;
+        // 遍历同一天内
+        while (j < data.length && data[j]?.query_date === day) {
+          const start = j;
+          const media = data[j]?.media_source;
+          let count = 1;
+          j++;
+          while (j < data.length && data[j]?.query_date === day && data[j]?.media_source === media) {
+            count++;
+            j++;
+          }
+          mediaRowSpan[start] = count;
+          for (let k = start + 1; k < start + count; k++) mediaRowSpan[k] = 0;
+        }
+        i = j;
+      }
+    }
+
     const baseColumns: any[] = [
       {
         title: t('attributionData.rowNumber'),
@@ -492,20 +555,21 @@ const AdjustData: React.FC = () => {
         width: 140,
         fixed: 'left' as const,
         render: (date: string, _: any, index: number) => {
-          if (!date) return '-';
-          
-          // 判断是否是该日期的第一行
-          const isFirstOfDate = index === 0 || data[index - 1]?.query_date !== date;
-          
-          return (
-            <div style={{ 
-              fontWeight: isFirstOfDate ? 600 : 400,
-              fontSize: '13px',
-              color: isFirstOfDate ? '#262626' : '#8c8c8c'
-            }}>
-              {isFirstOfDate ? dayjs(date).format('YYYY-MM-DD') : ''}
-        </div>
-          );
+          const span = dateRowSpan[index] ?? 1;
+          const isFirst = span > 0;
+          const content = date ? dayjs(date).format('YYYY-MM-DD') : '-';
+          return {
+            children: (
+              <div style={{ 
+                fontWeight: isFirst ? 600 : 400,
+                fontSize: '13px',
+                color: isFirst ? '#262626' : '#8c8c8c'
+              }}>
+                {isFirst ? content : ''}
+              </div>
+            ),
+            props: { rowSpan: span }
+          } as any;
         },
         sorter: (a: any, b: any) => {
           return dayjs(a.query_date).valueOf() - dayjs(b.query_date).valueOf();
@@ -521,17 +585,46 @@ const AdjustData: React.FC = () => {
         key: 'media_source',
         width: 180,
         fixed: 'left' as const,
-        render: (source: string) => (
-        <span style={{ 
+        render: (source: string, _: any, index: number) => {
+          const span = mediaRowSpan[index] ?? 1;
+          const isFirst = span > 0;
+          return {
+            children: isFirst ? (
+              <span style={{ 
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#262626'
+              }}>
+                {source}
+              </span>
+            ) : null,
+            props: { rowSpan: span }
+          } as any;
+        },
+        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
+        onFilter: (value: any, record: any) => record.media_source === value,
+      });
+    }
+
+    // 如果是回调数据源且选择了广告序列，添加广告序列列（可与媒体渠道并存）
+    if (dataSource === 'appsflyer' && selectedAdSequences.length > 0) {
+      baseColumns.push({
+        title: t('attributionData.adSequence'),
+        dataIndex: 'ad_sequence',
+        key: 'ad_sequence',
+        width: 200,
+        fixed: 'left' as const,
+        render: (seq: string) => (
+          <span style={{ 
             fontSize: '13px',
             fontWeight: 500,
             color: '#262626'
-        }}>
-            {source}
-        </span>
-      ),
-        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
-        onFilter: (value: any, record: any) => record.media_source === value,
+          }}>
+            {seq}
+          </span>
+        ),
+        filters: selectedAdSequences.map(s => ({ text: s, value: s })),
+        onFilter: (value: any, record: any) => record.ad_sequence === value,
       });
     }
 
@@ -595,7 +688,7 @@ const AdjustData: React.FC = () => {
     });
 
     return [...baseColumns, ...itemColumns];
-  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources]);
+  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources, selectedAdSequences]);
 
   const transformedChartData = useMemo(() => {
     return allData
@@ -605,10 +698,17 @@ const AdjustData: React.FC = () => {
           const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
           const value = Number(item[`event_${sanitizedName}`]) || 0;
           
-          // 如果有多个媒体渠道，在category中包含媒体渠道信息
-          const category = (dataSource === 'appsflyer' && selectedMediaSources.length > 0 && item.media_source)
-            ? `${item.media_source} - ${eventName}`
-            : eventName;
+          // 分类：支持媒体与广告序列双维度
+          let category = eventName;
+          if (dataSource === 'appsflyer') {
+            if (selectedMediaSources.length > 0 && selectedAdSequences.length > 0 && item.media_source && item.ad_sequence) {
+              category = `${item.media_source} | ${item.ad_sequence} - ${eventName}`;
+            } else if (selectedMediaSources.length > 0 && item.media_source) {
+              category = `${item.media_source} - ${eventName}`;
+            } else if (selectedAdSequences.length > 0 && item.ad_sequence) {
+              category = `${item.ad_sequence} - ${eventName}`;
+            }
+          }
           
           return {
             date: item.query_date,
@@ -617,7 +717,7 @@ const AdjustData: React.FC = () => {
           };
         });
       });
-  }, [allData, currentEvents, dataSource, selectedMediaSources]);
+  }, [allData, currentEvents, dataSource, selectedMediaSources, selectedAdSequences]);
 
   const chartConfig = {
     data: transformedChartData,
@@ -872,7 +972,7 @@ const AdjustData: React.FC = () => {
         </div>
 
         {/* 第二行：筛选条件显示区域 */}
-        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0) && (
+        {dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (
           <div style={{ 
             padding: '12px 16px', 
             background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', 
@@ -952,6 +1052,30 @@ const AdjustData: React.FC = () => {
                       媒体: {source}
                     </Tag>
                   ))}
+                  {selectedAdSequences.map(seq => (
+                    <Tag 
+                      key={seq}
+                      color="geekblue" 
+                      closable
+                      onClose={() => {
+                        const newSeq = selectedAdSequences.filter(s => s !== seq);
+                        setSelectedAdSequences(newSeq);
+                        message.success(`已移除广告序列: ${seq}`);
+                      }}
+                      style={{ 
+                        margin: 0,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        background: '#f0f5ff',
+                        borderColor: '#2f54eb',
+                        color: '#1d39c4'
+                      }}
+                    >
+                      广告序列: {seq}
+                    </Tag>
+                  ))}
           </Space>
               </div>
               <Button 
@@ -961,6 +1085,7 @@ const AdjustData: React.FC = () => {
                 onClick={() => {
                   setSelectedAppId(undefined);
                   setSelectedMediaSources([]);
+                  setSelectedAdSequences([]);
                   message.success(t('attributionData.filterCleared'));
                 }}
                 style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}
@@ -1103,10 +1228,13 @@ const AdjustData: React.FC = () => {
             // 为同一天的数据添加相同的背景色
             const classes: string[] = [];
             
-            if (dataSource === 'appsflyer' && selectedMediaSources.length > 0) {
+            if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || selectedAdSequences.length > 0)) {
               // 根据日期分组
               const dateIndex = data.findIndex(item => item.query_date === record.query_date);
-              const dateGroupIndex = Math.floor(dateIndex / selectedMediaSources.length);
+              const mediaCount = selectedMediaSources.length > 0 ? selectedMediaSources.length : 1;
+              const adCount = selectedAdSequences.length > 0 ? selectedAdSequences.length : 1;
+              const dimensionCount = mediaCount * adCount;
+              const dateGroupIndex = Math.floor(dateIndex / dimensionCount);
               classes.push(dateGroupIndex % 2 === 0 ? 'date-group-even' : 'date-group-odd');
               
               // 为每个日期组的第一行添加分隔线
@@ -1355,6 +1483,8 @@ const AdjustData: React.FC = () => {
             <Select
               mode="multiple"
               placeholder={t('attributionData.allMediaSources')}
+              loading={mediaLoading}
+              notFoundContent={mediaLoading ? t('attributionData.loadingOptions') : undefined}
               value={selectedMediaSources}
               onChange={(value) => {
                 setSelectedMediaSources(value);
@@ -1363,6 +1493,7 @@ const AdjustData: React.FC = () => {
               }}
               style={{ width: '100%' }}
               allowClear
+              disabled={mediaLoading}
               showSearch
               maxTagCount="responsive"
               filterOption={(input, option) => {
@@ -1378,7 +1509,38 @@ const AdjustData: React.FC = () => {
             </Select>
           </div>
 
-          {(selectedAppId || selectedMediaSources.length > 0) && (
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.adSequence')}（af_c_id）</div>
+            <Select
+              mode="multiple"
+              placeholder={t('attributionData.allAdSequences')}
+              loading={adSeqLoading}
+              notFoundContent={adSeqLoading ? t('attributionData.loadingOptions') : undefined}
+              value={selectedAdSequences}
+              onChange={(value) => {
+                setSelectedAdSequences(value);
+                // 保存状态
+                setTimeout(() => saveQueryState(), 100);
+              }}
+              style={{ width: '100%' }}
+              allowClear
+              disabled={adSeqLoading}
+              showSearch
+              maxTagCount="responsive"
+              filterOption={(input, option) => {
+                const label = option?.children;
+                return String(label || '').toLowerCase().includes(input.toLowerCase());
+              }}
+            >
+              {allAdSequences.map(seq => (
+                <Select.Option key={seq} value={seq}>
+                  {seq}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+
+          {(selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (
             <div style={{ 
               padding: '12px', 
               background: '#f0f5ff', 
@@ -1397,6 +1559,11 @@ const AdjustData: React.FC = () => {
                     媒体: <strong>{selectedMediaSources.join(', ')}</strong>
                   </span>
                 )}
+                {selectedAdSequences.length > 0 && (
+                  <span style={{ fontSize: '13px', color: '#1890ff' }}>
+                    广告序列: <strong>{selectedAdSequences.join(', ')}</strong>
+                  </span>
+                )}
               </Space>
               <div style={{ marginTop: 8 }}>
                 <Button 
@@ -1405,6 +1572,7 @@ const AdjustData: React.FC = () => {
                   onClick={() => {
                     setSelectedAppId(undefined);
                     setSelectedMediaSources([]);
+                    setSelectedAdSequences([]);
                     message.success('已清除筛选条件');
                   }}
                 >

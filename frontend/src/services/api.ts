@@ -154,6 +154,11 @@ class ApiService {
     return response.data;
   }
 
+  async getAttributionAdSequences(): Promise<ApiResponse<string[]>> {
+    const response = await this.api.get('/attribution-ad-sequences');
+    return response.data;
+  }
+
   async getAttributionEventNames(dataSource: 'adjust' | 'appsflyer' = 'adjust'): Promise<ApiResponse<string[]>> {
     const response = await this.api.get('/attribution-event-names', { params: { dataSource } });
     return response.data;

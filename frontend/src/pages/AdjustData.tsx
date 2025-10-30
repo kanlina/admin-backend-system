@@ -57,10 +57,8 @@ const AdjustData: React.FC = () => {
   // 筛选条件状态（仅用于回调数据）
   const [allAppIds, setAllAppIds] = useState<string[]>([]);
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
-  const [allAdSequences, setAllAdSequences] = useState<string[]>([]);
   const [mediaToAdSeqs, setMediaToAdSeqs] = useState<Record<string, string[]>>({});
   const [mediaLoading, setMediaLoading] = useState<boolean>(false);
-  const [adSeqLoading, setAdSeqLoading] = useState<boolean>(false);
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
   const [selectedAdSequences, setSelectedAdSequences] = useState<string[]>([]);
@@ -240,11 +238,9 @@ const AdjustData: React.FC = () => {
   const loadFilterOptions = async () => {
     try {
       setMediaLoading(true);
-      setAdSeqLoading(true);
-      const [appIdsRes, mediaSourcesRes, adSeqRes] = await Promise.all([
+      const [appIdsRes, mediaSourcesRes] = await Promise.all([
         apiService.getAttributionAppIds(),
-        apiService.getAttributionMediaSources(),
-        apiService.getAttributionAdSequences()
+        apiService.getAttributionMediaSources()
       ]);
       
       if (appIdsRes.success && appIdsRes.data) {
@@ -253,31 +249,11 @@ const AdjustData: React.FC = () => {
       if (mediaSourcesRes.success && mediaSourcesRes.data) {
         setAllMediaSources(mediaSourcesRes.data);
       }
-      if (adSeqRes.success && adSeqRes.data) {
-        setAllAdSequences(adSeqRes.data);
-      }
     } catch (error) {
       console.error('加载筛选选项失败:', error);
     }
     finally {
       setMediaLoading(false);
-      setAdSeqLoading(false);
-    }
-  };
-
-  const loadAdSequencesByMedia = async (mediaList: string[]) => {
-    try {
-      setAdSeqLoading(true);
-      const mediaParam = mediaList && mediaList.length > 0 ? mediaList.join(',') : undefined;
-      const res = await apiService.getAttributionAdSequences({ mediaSource: mediaParam });
-      if (res.success && res.data) {
-        const list: string[] = Array.isArray(res.data) ? res.data : [];
-        setAllAdSequences(list);
-      }
-    } catch (e) {
-      console.error('按媒体加载广告序列失败:', e);
-    } finally {
-      setAdSeqLoading(false);
     }
   };
 
@@ -1556,7 +1532,6 @@ const AdjustData: React.FC = () => {
                     mode="multiple"
                     placeholder={t('attributionData.allAdSequences')}
                     value={pair.ad}
-                    loading={adSeqLoading}
                     style={{ width: 260 }}
                     disabled={!pair.media}
                     showSearch

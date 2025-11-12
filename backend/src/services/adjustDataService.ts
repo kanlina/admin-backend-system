@@ -5,9 +5,11 @@ export const adjustDataService = {
   async getAllEventNames() {
     try {
       const sql = `
-        SELECT DISTINCT event_name 
-        FROM adjust_event_record 
-        WHERE event_name IS NOT NULL AND event_name != ''
+        SELECT DISTINCT event_name
+        FROM adjust_event_config
+        WHERE is_enabled = 1
+          AND event_name IS NOT NULL
+          AND event_name <> ''
         ORDER BY event_name ASC
       `;
       
@@ -35,7 +37,7 @@ export const adjustDataService = {
     const validPageSize = Math.min(Math.max(1, parseInt(pageSize.toString())), 100);
     
     // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
-    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 10 DAY)';
     const defaultEndDate = endDate ? `'${endDate}'` : 'CURDATE()';
     
     try {
@@ -134,7 +136,7 @@ export const adjustDataService = {
   // 获取 Adjust 图表数据（不分页）
   async getAdjustChartData(startDate?: string, endDate?: string) {
     // 处理日期参数，如果是具体日期则加引号，如果是SQL函数则不加
-    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+    const defaultStartDate = startDate ? `'${startDate}'` : 'DATE_SUB(CURDATE(), INTERVAL 10 DAY)';
     const defaultEndDate = endDate ? `'${endDate}'` : 'CURDATE()';
     
     try {

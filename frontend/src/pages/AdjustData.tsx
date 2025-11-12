@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag } from 'antd';
-import { EyeOutlined, DownloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag, Segmented } from 'antd';
+import { EyeOutlined, DownloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined, MenuOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { apiService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import type { FavoriteAdSequence } from '../types';
 
 const { RangePicker } = DatePicker;
 
@@ -23,6 +25,7 @@ const DATA_CACHE_STORAGE_KEY = 'attribution_data_cache_v1';
 
 const AdjustData: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [dataSource, setDataSource] = useState<DataSource>('appsflyer');
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -49,6 +52,7 @@ const AdjustData: React.FC = () => {
   const [showChart, setShowChart] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
+  const [tableLayout, setTableLayout] = useState<'default' | 'transposed'>('default');
   
   // 漏斗选择器状态
   const [funnelEvent1, setFunnelEvent1] = useState<string | undefined>(undefined);
@@ -59,13 +63,20 @@ const AdjustData: React.FC = () => {
   const [allMediaSources, setAllMediaSources] = useState<string[]>([]);
   const [mediaToAdSeqs, setMediaToAdSeqs] = useState<Record<string, string[]>>({});
   const [mediaLoading, setMediaLoading] = useState<boolean>(false);
+  const [adSequenceLoading, setAdSequenceLoading] = useState<Record<string, boolean>>({});
   const [selectedAppId, setSelectedAppId] = useState<string | undefined>(undefined);
   const [selectedMediaSources, setSelectedMediaSources] = useState<string[]>([]); // 改为数组支持多选
   const [selectedAdSequences, setSelectedAdSequences] = useState<string[]>([]);
   const [mediaAdPairs, setMediaAdPairs] = useState<Array<{ id: string; media?: string; ad?: string[] }>>([]);
+  const [favoriteAdSequences, setFavoriteAdSequences] = useState<Record<string, FavoriteAdSequence[]>>({});
+  const [selectedUserType, setSelectedUserType] = useState<string | undefined>(undefined);
   
   // 检测是否为移动端
   const [isMobile, setIsMobile] = useState(false);
+  const dragItemIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const restoredFromCacheRef = useRef(false);
+  const cacheRestoreMessageRef = useRef<(() => void) | null>(null);
   
   useEffect(() => {
     const checkMobile = () => {
@@ -93,6 +104,8 @@ const AdjustData: React.FC = () => {
     return Array.from(eventSet);
   }, [currentItems]);
 
+  const hasEvents = currentEvents.length > 0;
+
   // 保存查询状态到 localStorage
   const saveQueryState = () => {
     try {
@@ -104,6 +117,7 @@ const AdjustData: React.FC = () => {
         } : null,
         selectedAppId,
         selectedMediaSources,
+        selectedUserType,
         showChart,
         pagination: {
           current: pagination.current,
@@ -165,6 +179,9 @@ const AdjustData: React.FC = () => {
           if (queryState.selectedMediaSources) {
             setSelectedMediaSources(queryState.selectedMediaSources);
           }
+          if (queryState.selectedUserType !== undefined) {
+            setSelectedUserType(queryState.selectedUserType);
+          }
           if (queryState.showChart !== undefined) {
             setShowChart(queryState.showChart);
           }
@@ -187,17 +204,27 @@ const AdjustData: React.FC = () => {
       const savedCache = localStorage.getItem(DATA_CACHE_STORAGE_KEY);
       if (savedCache) {
         const dataCache = JSON.parse(savedCache);
-        
+
         // 检查是否在24小时内
         const isRecent = dataCache.timestamp && (Date.now() - dataCache.timestamp < 24 * 60 * 60 * 1000);
-        
+
         if (isRecent && dataCache.data && dataCache.allData) {
+          cacheRestoreMessageRef.current?.();
+          cacheRestoreMessageRef.current = message.loading(t('attributionData.cacheRestoring'), 0);
+          setLoading(true);
           setData(dataCache.data);
           setAllData(dataCache.allData);
+          restoredFromCacheRef.current = true;
           console.log('✅ 成功恢复数据缓存:', {
             dataLength: dataCache.data.length,
-            allDataLength: dataCache.allData.length
+            allDataLength: dataCache.allData.length,
           });
+          setTimeout(() => {
+            cacheRestoreMessageRef.current?.();
+            cacheRestoreMessageRef.current = null;
+            setLoading(false);
+            message.success(t('attributionData.cacheRestored'));
+          }, 300);
           return true;
         }
       }
@@ -206,6 +233,56 @@ const AdjustData: React.FC = () => {
     }
     return false;
   };
+
+  useEffect(() => {
+    if (!user?.id) {
+      setFavoriteAdSequences({});
+      return;
+    }
+    const fetchFavorites = async () => {
+      try {
+        const response = await apiService.getAttributionFavorites();
+        if (response.success && response.data) {
+          setFavoriteAdSequences(response.data);
+        } else {
+          setFavoriteAdSequences({});
+        }
+      } catch (error) {
+        console.error('加载收藏广告序列失败:', error);
+        setFavoriteAdSequences({});
+      }
+    };
+    fetchFavorites();
+  }, [user?.id]);
+
+  const toggleFavoriteAdSequence = async (media: string, seq: string) => {
+    if (!media || !seq) return;
+    if (!user?.id) {
+      message.warning('请先登录后再进行收藏操作');
+      return;
+    }
+    try {
+      const response = await apiService.toggleAttributionFavorite({ mediaSource: media, adSequence: seq });
+      if (response.success && response.data) {
+        setFavoriteAdSequences(response.data.favorites || {});
+        const actionMessage = response.data.added ? `${media} / ${seq} 已加入收藏` : `${media} / ${seq} 已取消收藏`;
+        message.success(actionMessage);
+      } else {
+        message.error(response.message || '更新收藏失败');
+      }
+    } catch (error) {
+      console.error('更新收藏广告序列失败:', error);
+      message.error('更新收藏失败，请稍后再试');
+    }
+  };
+
+  const handleFavoriteIconClick =
+    (media?: string, seq?: string) => (event: React.MouseEvent<HTMLSpanElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!media || !seq) return;
+      void toggleFavoriteAdSequence(media, seq);
+    };
 
   useEffect(() => {
     const initPage = async () => {
@@ -258,22 +335,38 @@ const AdjustData: React.FC = () => {
   };
 
   const loadAdSequencesForSingleMedia = async (media: string) => {
+    if (!media) return;
     try {
+      setAdSequenceLoading(prev => ({ ...prev, [media]: true }));
       const res = await apiService.getAttributionAdSequences({ mediaSource: media });
       if (res.success && Array.isArray(res.data)) {
         setMediaToAdSeqs(prev => ({ ...prev, [media]: res.data as string[] }));
       }
     } catch (e) {
       console.error('加载单个媒体的广告序列失败:', e);
+      message.error('加载广告序列失败，请稍后再试');
+    } finally {
+      setAdSequenceLoading(prev => ({ ...prev, [media]: false }));
     }
   };
 
   // 自动查询数据的 effect
   useEffect(() => {
-    if (isInitialized && currentEvents.length > 0) {
-      fetchData();
+    if (isInitialized && hasEvents) {
+      if (restoredFromCacheRef.current) {
+        restoredFromCacheRef.current = false;
+        return;
+      }
+      fetchData(true);
     }
-  }, [pagination.current, pagination.pageSize, dataSource, isInitialized]);
+  }, [dataSource, isInitialized, hasEvents]);
+
+  useEffect(() => {
+    return () => {
+      cacheRestoreMessageRef.current?.();
+      cacheRestoreMessageRef.current = null;
+    };
+  }, []);
 
   const loadAllEventNames = async (source: DataSource) => {
     try {
@@ -319,7 +412,71 @@ const AdjustData: React.FC = () => {
     setTimeout(() => saveQueryState(), 100);
   };
 
+  const resetDragState = () => {
+    dragItemIndexRef.current = null;
+    setDragOverIndex(null);
+  };
+
+  const reorderSelectedItems = (from: number, to: number) => {
+    const updated = Array.from(currentItems);
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
+    saveSelectedItems(updated);
+  };
+
+  const handleDragStartItem = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    dragItemIndexRef.current = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragEnterItem = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (dragItemIndexRef.current !== null && dragItemIndexRef.current !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragOverItem = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (dragItemIndexRef.current !== null) {
+      event.dataTransfer.dropEffect = 'move';
+      if (dragOverIndex !== index) {
+        setDragOverIndex(index);
+      }
+    }
+  };
+
+  const handleDropOnItem = (index: number) => (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (dragItemIndexRef.current === null) {
+      resetDragState();
+      return;
+    }
+    const from = dragItemIndexRef.current;
+    if (from !== index) {
+      reorderSelectedItems(from, index);
+    }
+    resetDragState();
+  };
+
+  const handleDropAtEnd = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (dragItemIndexRef.current === null) {
+      resetDragState();
+      return;
+    }
+    const from = dragItemIndexRef.current;
+    reorderSelectedItems(from, currentItems.length);
+    resetDragState();
+  };
+
+  const handleDragEndItem = () => {
+    resetDragState();
+  };
+
   const fetchData = async (resetPagination = false) => {
+    restoredFromCacheRef.current = false;
     if (currentEvents.length === 0) {
       console.log('⚠️ 没有选择任何事件，跳过数据查询');
       setData([]);
@@ -355,65 +512,68 @@ const AdjustData: React.FC = () => {
         if (pairMedias.length > 0) params.mediaSource = pairMedias.join(',');
         if (pairAdPairs.length > 0) params.adPairs = pairAdPairs.join(',');
         if (mediasWithoutAd.length > 0) params.mediasWithoutAd = mediasWithoutAd.join(',');
+        if (selectedUserType !== undefined) params.reloanStatus = selectedUserType;
       }
 
-      // 同时获取图表所需的全部数据
+      // 获取全部数据（用于表格分页和图表）
       const allDataParams: any = { ...params, page: 1, pageSize: 1000 };
 
-      console.log('📊 开始查询归因数据，参数:', params, '已选事件:', currentEvents);
-      
-      // 并行请求表格数据和全部数据
-      const [response, allResponse] = await Promise.all([
-        apiService.getAttributionData(params),
-        apiService.getAttributionData(allDataParams)
-      ]);
-      
-      console.log('📥 API响应:', {
-        success: response.success,
-        dataType: typeof response.data,
-        dataLength: Array.isArray(response.data) ? response.data.length : 'not array',
-        data: response.data,
-        pagination: response.pagination,
-        eventNames: (response as any).eventNames
-      });
-      
-      if (response.success && response.data && response.pagination) {
-        const formattedData = response.data.map((item: any, index: number) => ({
-          id: ((response.pagination!.page - 1) * response.pagination!.limit + index + 1).toString(),
+      console.log('📊 开始查询归因数据，参数:', allDataParams, '已选事件:', currentEvents);
+
+      const allResponse = await apiService.getAttributionData(allDataParams);
+
+      if (allResponse.success && Array.isArray(allResponse.data)) {
+        const formattedAllData = allResponse.data.map((item: any, index: number) => ({
+          id: (index + 1).toString(),
           ...item
         }));
-        
-        console.log('✅ 格式化后的数据:', formattedData.slice(0, 2));
-        
-        setData(formattedData);
-        setPagination({
-          current: response.pagination.page,
-          pageSize: response.pagination.limit,
-          total: response.pagination.total,
-          totalPages: response.pagination.totalPages
-        });
 
-        // 保存全部数据用于图表和下载
-        if (allResponse.success && allResponse.data) {
-          const formattedAllData = allResponse.data.map((item: any, index: number) => ({
-            id: (index + 1).toString(),
-            ...item
-          }));
-          setAllData(formattedAllData);
+        const totalCount = formattedAllData.length;
+        const pageSize = pagination.pageSize || 10;
+        const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 0;
+
+        let nextCurrent = resetPagination ? 1 : (pagination.current || 1);
+        if (totalPages > 0) {
+          nextCurrent = Math.max(1, Math.min(nextCurrent, totalPages));
+        } else {
+          nextCurrent = 1;
         }
-        
-        // 保存数据缓存和查询状态
+
+        const startIndex = (nextCurrent - 1) * pageSize;
+        const pageSlice = formattedAllData.slice(startIndex, startIndex + pageSize).map((item: any, idx: number) => ({
+          ...item,
+          id: item.id ?? `${startIndex + idx + 1}`
+        }));
+
+        console.log('✅ 成功获取数据，共:', totalCount, '条，当前页数据:', pageSlice.length, '条');
+
+        setAllData(formattedAllData);
+        setData(pageSlice);
+        setPagination(prev => ({
+          ...prev,
+          current: nextCurrent,
+          pageSize,
+          total: totalCount,
+          totalPages
+        }));
+
         setTimeout(() => {
           saveQueryState();
           saveDataCache();
         }, 100);
-        
-        message.success(t('attributionData.dataLoaded', { count: formattedData.length }));
+
+        message.success(t('attributionData.dataLoaded', { count: pageSlice.length }));
       } else {
-        console.error('❌ API响应格式错误:', response);
+        console.error('❌ API响应格式错误:', allResponse);
         message.error(t('attributionData.dataFormatError'));
         setData([]);
         setAllData([]);
+        setPagination(prev => ({
+          ...prev,
+          current: 1,
+          total: 0,
+          totalPages: 0
+        }));
       }
     } catch (error) {
       console.error('API请求错误:', error);
@@ -422,6 +582,45 @@ const AdjustData: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const updatePagedData = useCallback(() => {
+    const totalCount = allData.length;
+    const pageSize = pagination.pageSize || 10;
+    const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 0;
+
+    if (pagination.total !== totalCount || pagination.totalPages !== totalPages) {
+      setPagination(prev => ({
+        ...prev,
+        total: totalCount,
+        totalPages
+      }));
+    }
+
+    const desiredCurrent = totalPages > 0 ? Math.max(1, Math.min(pagination.current || 1, totalPages)) : 1;
+    if ((pagination.current || 1) !== desiredCurrent) {
+      setPagination(prev => ({
+        ...prev,
+        current: desiredCurrent
+      }));
+      return;
+    }
+
+    if (totalCount === 0) {
+      setData([]);
+      return;
+    }
+
+    const startIndex = (desiredCurrent - 1) * pageSize;
+    const pageSlice = allData.slice(startIndex, startIndex + pageSize).map((item: any, idx: number) => ({
+      ...item,
+      id: item.id ?? `${startIndex + idx + 1}`
+    }));
+    setData(pageSlice);
+  }, [allData, pagination.current, pagination.pageSize, pagination.total, pagination.totalPages]);
+
+  useEffect(() => {
+    updatePagedData();
+  }, [updatePagedData]);
 
   const downloadData = () => {
     try {
@@ -508,20 +707,281 @@ const AdjustData: React.FC = () => {
     setTimeout(() => saveQueryState(), 100);
   };
 
+  const comboEntries = useMemo(() => {
+    return data.map((record, index) => {
+      const comboKeyParts = [record?.query_date ?? `row-${index}`];
+      if (dataSource === 'appsflyer') {
+        comboKeyParts.push(record?.media_source ?? 'ALL');
+        comboKeyParts.push(record?.ad_sequence ?? 'ALL');
+      }
+      return {
+        key: comboKeyParts.join('||') || `combo-${index}`,
+        record,
+      };
+    });
+  }, [data, dataSource]);
+
+  const transposedData = useMemo(() => {
+    if (!currentItems.length) return [];
+
+    return currentItems.map((item, idx) => {
+      const baseRow: any = {
+        id: `${item.type}-${idx}`,
+        eventName: item.type === 'event' ? item.name : `${item.event1} → ${item.event2}`,
+        eventType: item.type,
+      };
+
+      comboEntries.forEach(({ key, record }) => {
+        if (!record) {
+          baseRow[key] = null;
+          return;
+        }
+
+        if (item.type === 'event') {
+          const sanitizedName = item.name.replace(/[^a-zA-Z0-9_]/g, '_');
+          const fieldName = `event_${sanitizedName}`;
+          const rawValue = Number(record[fieldName] ?? 0);
+          baseRow[key] = {
+            rawValue,
+            formatted: rawValue.toLocaleString(),
+          };
+        } else {
+          const sanitized1 = item.event1!.replace(/[^a-zA-Z0-9_]/g, '_');
+          const sanitized2 = item.event2!.replace(/[^a-zA-Z0-9_]/g, '_');
+          const field1 = `event_${sanitized1}`;
+          const field2 = `event_${sanitized2}`;
+          const count1 = Number(record[field1] ?? 0);
+          const count2 = Number(record[field2] ?? 0);
+          const rate = count1 > 0 ? count2 / count1 : 0;
+          baseRow[key] = {
+            rawValue: rate,
+            formatted: count1 > 0 ? `${(rate * 100).toFixed(2)}%` : '-',
+            sourceValue: count1,
+            targetValue: count2,
+          };
+        }
+      });
+
+      return baseRow;
+    });
+  }, [comboEntries, currentItems]);
+
+  const transposedColumns = useMemo(() => {
+    const baseColumns: any[] = [
+      {
+        title: t('attributionData.rowNumber'),
+        key: 'rowNumber',
+        width: 80,
+        fixed: 'left' as const,
+        render: (_: any, __: any, index: number) => index + 1,
+      },
+      {
+        title: t('attributionData.eventName'),
+        dataIndex: 'eventName',
+        key: 'eventName',
+        width: 220,
+        fixed: 'left' as const,
+        render: (value: string, record: any) => (
+          <Space size={6}>
+            {record.eventType === 'funnel' && <FunnelPlotOutlined style={{ color: '#fa8c16' }} />}
+            <span style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{value}</span>
+          </Space>
+        ),
+      },
+    ];
+
+    const dateGroupMap = new Map<string, { date: string; combos: Array<{ key: string; record: any }> }>();
+
+    comboEntries.forEach(entry => {
+      const rawDate = entry.record?.query_date ?? '';
+      const dateKey = rawDate ? dayjs(rawDate).format('YYYY-MM-DD') : '-';
+      if (!dateGroupMap.has(dateKey)) {
+        dateGroupMap.set(dateKey, { date: dateKey, combos: [] });
+      }
+      dateGroupMap.get(dateKey)!.combos.push(entry);
+    });
+
+    const dateGroups = Array.from(dateGroupMap.values()).sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf());
+
+    dateGroups.forEach(group => {
+      if (dataSource !== 'appsflyer') {
+        const combos = group.combos;
+        if (!combos.length) return;
+        const columnKey = combos[0].key;
+        baseColumns.push({
+          title: group.date,
+          dataIndex: columnKey,
+          key: columnKey,
+          align: 'right' as const,
+          width: 160,
+          render: (cell: any, record: any) => {
+            if (!cell) return <span style={{ color: '#999' }}>-</span>;
+            if (record.eventType === 'funnel') {
+              return (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 600, color: cell.rawValue > 0 ? '#fa8c16' : '#8c8c8c' }}>{cell.formatted}</div>
+                  <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                    {(cell.targetValue ?? 0).toLocaleString()} / {(cell.sourceValue ?? 0).toLocaleString()}
+                  </div>
+                </div>
+              );
+            }
+            return <span style={{ fontWeight: 600 }}>{cell.formatted}</span>;
+          },
+        });
+      } else {
+        const renderValueCell = (cell: any, record: any) => {
+          if (!cell) return <span style={{ color: '#999' }}>-</span>;
+          if (record.eventType === 'funnel') {
+            return (
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 600, color: cell.rawValue > 0 ? '#fa8c16' : '#8c8c8c' }}>{cell.formatted}</div>
+                <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                  {(cell.targetValue ?? 0).toLocaleString()} / {(cell.sourceValue ?? 0).toLocaleString()}
+                </div>
+              </div>
+            );
+          }
+          return <span style={{ fontWeight: 600 }}>{cell.formatted}</span>;
+        };
+
+        const mediaGroupMap = new Map<
+          string,
+          {
+            mediaKey: string;
+            display: string;
+            combos: Array<typeof group.combos[number]>;
+          }
+        >();
+
+        group.combos.forEach(entry => {
+          const keyParts = entry.key?.split('||') ?? [];
+          const keyMedia = keyParts[1] ?? '';
+
+          const rawMedia = String(
+            entry.record?.media_source ??
+              entry.record?.media_source_name ??
+              entry.record?.media_name ??
+              keyMedia ??
+              ''
+          ).trim();
+
+          const mediaDisplay =
+            rawMedia && rawMedia !== 'ALL'
+              ? rawMedia
+              : t('attributionData.allMediaSources') ?? 'ALL';
+
+          const mediaKey = rawMedia || keyMedia || '__UNSPECIFIED_MEDIA__';
+
+          if (!mediaGroupMap.has(mediaKey)) {
+            mediaGroupMap.set(mediaKey, {
+              mediaKey,
+              display: mediaDisplay,
+              combos: [],
+            });
+          }
+          mediaGroupMap.get(mediaKey)!.combos.push(entry);
+        });
+
+        const mediaColumns = Array.from(mediaGroupMap.values()).map(mediaGroup => {
+          if (mediaGroup.combos.length === 1) {
+            const entry = mediaGroup.combos[0];
+            const keyParts = entry.key?.split('||') ?? [];
+            const keyAd = keyParts[2] ?? '';
+
+            const rawAd = String(
+              entry.record?.ad_sequence ??
+                entry.record?.af_c_id ??
+                entry.record?.campaign ??
+                keyAd ??
+                ''
+            ).trim();
+
+            const adDisplay =
+              rawAd && rawAd !== 'ALL'
+                ? rawAd
+                : t('attributionData.allAdSequences') ?? 'ALL';
+
+            return {
+              title: (
+                <div style={{ textAlign: 'center', whiteSpace: 'normal' }}>
+                  <div>{mediaGroup.display}</div>
+                  <div style={{ fontSize: 12, color: '#8c8c8c' }}>{adDisplay}</div>
+                </div>
+              ),
+              dataIndex: entry.key,
+              key: `${group.date}-${mediaGroup.mediaKey}`,
+              align: 'right' as const,
+              width: 180,
+              render: renderValueCell,
+            };
+          }
+
+          const adColumns = mediaGroup.combos.map(entry => {
+            const keyParts = entry.key?.split('||') ?? [];
+            const keyAd = keyParts[2] ?? '';
+
+            const rawAd = String(
+              entry.record?.ad_sequence ??
+                entry.record?.af_c_id ??
+                entry.record?.campaign ??
+                keyAd ??
+                ''
+            ).trim();
+
+            const adDisplay =
+              rawAd && rawAd !== 'ALL'
+                ? rawAd
+                : t('attributionData.allAdSequences') ?? 'ALL';
+
+            return {
+              title: (
+                <div style={{ textAlign: 'center', whiteSpace: 'normal' }}>
+                  <div>{adDisplay}</div>
+                </div>
+              ),
+              dataIndex: entry.key,
+              key: `${group.date}-${mediaGroup.mediaKey}-${entry.key}`,
+              align: 'right' as const,
+              width: 180,
+              render: renderValueCell,
+            };
+          });
+
+          return {
+            title: (
+              <div style={{ textAlign: 'center', whiteSpace: 'normal' }}>
+                <div>{mediaGroup.display}</div>
+              </div>
+            ),
+            key: `${group.date}-${mediaGroup.mediaKey}`,
+            children: adColumns,
+          };
+        });
+
+        baseColumns.push({
+          title: group.date,
+          key: `date-${group.date}`,
+          children: mediaColumns,
+        });
+      }
+    });
+
+    return baseColumns;
+  }, [comboEntries, dataSource, t]);
+
   const columns = useMemo(() => {
-    // 预计算行合并的 rowSpan
     const dateRowSpan: number[] = [];
     const mediaRowSpan: number[] = [];
 
-    // 日期合并：同一天的连续行合并
     {
       let i = 0;
       while (i < data.length) {
         const start = i;
-        const d = data[i]?.query_date;
+        const dateValue = data[i]?.query_date;
         let count = 1;
         i++;
-        while (i < data.length && data[i]?.query_date === d) {
+        while (i < data.length && data[i]?.query_date === dateValue) {
           count++;
           i++;
         }
@@ -530,26 +990,21 @@ const AdjustData: React.FC = () => {
       }
     }
 
-    // 媒体合并：同一天内相同媒体的连续行合并（当存在媒体配对时）
-    if (dataSource === 'appsflyer' && mediaAdPairs.some(p => p.media)) {
+    if (dataSource === 'appsflyer') {
+      // 按媒体资源合并，不按日期分组
       let i = 0;
       while (i < data.length) {
-        const day = data[i]?.query_date;
-        let j = i;
-        // 遍历同一天内
-        while (j < data.length && data[j]?.query_date === day) {
-          const start = j;
-          const media = data[j]?.media_source;
-          let count = 1;
-          j++;
-          while (j < data.length && data[j]?.query_date === day && data[j]?.media_source === media) {
-            count++;
-            j++;
-          }
-          mediaRowSpan[start] = count;
-          for (let k = start + 1; k < start + count; k++) mediaRowSpan[k] = 0;
+        const start = i;
+        const media = data[i]?.media_source;
+        let count = 1;
+        i++;
+        // 继续查找相同媒体资源的所有行（不管日期）
+        while (i < data.length && data[i]?.media_source === media) {
+          count++;
+          i++;
         }
-        i = j;
+        mediaRowSpan[start] = count;
+        for (let k = start + 1; k < start + count; k++) mediaRowSpan[k] = 0;
       }
     }
 
@@ -578,86 +1033,97 @@ const AdjustData: React.FC = () => {
           const content = date ? dayjs(date).format('YYYY-MM-DD') : '-';
           return {
             children: (
-              <div style={{ 
-                fontWeight: isFirst ? 600 : 400,
-                fontSize: '13px',
-                color: isFirst ? '#262626' : '#8c8c8c'
-              }}>
+              <div
+                style={{
+                  fontWeight: isFirst ? 600 : 400,
+                  fontSize: '13px',
+                  color: isFirst ? '#262626' : '#8c8c8c',
+                }}
+              >
                 {isFirst ? content : ''}
               </div>
             ),
-            props: { rowSpan: span }
+            props: { rowSpan: span },
           } as any;
         },
-        sorter: (a: any, b: any) => {
-          return dayjs(a.query_date).valueOf() - dayjs(b.query_date).valueOf();
-        },
+        sorter: (a: any, b: any) => dayjs(a.query_date).valueOf() - dayjs(b.query_date).valueOf(),
       },
     ];
 
-    // 如果是回调数据源且存在媒体选择（从配对中提取），添加媒体渠道列
-    const hasAnyMedia = mediaAdPairs.some(p => p.media);
-    if (dataSource === 'appsflyer' && hasAnyMedia) {
+    const shouldShowMediaColumn = dataSource === 'appsflyer';
+    if (shouldShowMediaColumn) {
       baseColumns.push({
         title: t('attributionData.mediaSource'),
         dataIndex: 'media_source',
         key: 'media_source',
         width: 180,
         fixed: 'left' as const,
-        render: (source: string, _: any, index: number) => {
+        render: (source: string, record: any, index: number) => {
           const span = mediaRowSpan[index] ?? 1;
           const isFirst = span > 0;
+          const rawMedia = String(
+            source ??
+              record?.media_source ??
+              record?.media_source_name ??
+              record?.media_name ??
+              ''
+          ).trim();
+          const displayMedia =
+            rawMedia && rawMedia !== 'ALL'
+              ? rawMedia
+              : t('attributionData.allMediaSources') ?? 'ALL';
           return {
             children: isFirst ? (
-              <span style={{ 
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#262626'
-              }}>
-                {source}
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#262626',
+                }}
+              >
+                {displayMedia}
               </span>
             ) : null,
-            props: { rowSpan: span }
+            props: { rowSpan: span },
           } as any;
         },
-        filters: selectedMediaSources.map(s => ({ text: s, value: s })),
-        onFilter: (value: any, record: any) => record.media_source === value,
       });
-    }
 
-    // 如果是回调数据源且存在媒体选择，总是添加广告序列列（未选序列时显示ALL）
-    if (dataSource === 'appsflyer' && hasAnyMedia) {
       baseColumns.push({
         title: t('attributionData.adSequence'),
         dataIndex: 'ad_sequence',
         key: 'ad_sequence',
         width: 200,
         fixed: 'left' as const,
-        render: (seq: string) => (
-          <span style={{ 
-            fontSize: '13px',
-            fontWeight: 500,
-            color: '#262626'
-          }}>
-            {seq}
-          </span>
-        ),
-        filters: selectedAdSequences.map(s => ({ text: s, value: s })),
-        onFilter: (value: any, record: any) => record.ad_sequence === value,
+        render: (seq: string) => {
+          const rawSeq = String(seq ?? '').trim();
+          const displaySeq =
+            rawSeq && rawSeq !== 'ALL'
+              ? rawSeq
+              : t('attributionData.allAdSequences') ?? 'ALL';
+          return (
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#262626',
+              }}
+            >
+              {displaySeq}
+            </span>
+          );
+        },
       });
     }
 
-    // 按照用户排序生成列
     const itemColumns = currentItems.map(item => {
       if (item.type === 'event') {
         const sanitizedName = item.name.replace(/[^a-zA-Z0-9_]/g, '_');
         const fieldName = `event_${sanitizedName}`;
-        
+
         return {
           title: (
-            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>
-              {item.name}
-            </div>
+            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3' }}>{item.name}</div>
           ),
           dataIndex: fieldName,
           key: fieldName,
@@ -666,56 +1132,58 @@ const AdjustData: React.FC = () => {
           ellipsis: {
             showTitle: true,
           },
-          render: (value: number) => (value !== undefined && value !== null) ? value.toLocaleString() : '0',
+          render: (value: number) => (value !== undefined && value !== null ? value.toLocaleString() : '0'),
           sorter: (a: any, b: any) => (a[fieldName] || 0) - (b[fieldName] || 0),
         };
-      } else {
-        // 漏斗列（只显示转化率，不重复显示事件）
-        const sanitized1 = item.event1!.replace(/[^a-zA-Z0-9_]/g, '_');
-        const sanitized2 = item.event2!.replace(/[^a-zA-Z0-9_]/g, '_');
-        const field1 = `event_${sanitized1}`;
-        const field2 = `event_${sanitized2}`;
-        
-        return {
-          title: isMobile ? (
-            <span><FunnelPlotOutlined /></span>
-          ) : (
-            <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3', textAlign: 'center' }}>
-              <FunnelPlotOutlined /> {item.event1} → {item.event2}
-            </div>
-          ),
-          key: `conversion_${sanitized1}_${sanitized2}`,
-          width: isMobile ? 80 : 145,
-          align: 'center' as const,
-          ellipsis: {
-            showTitle: true,
-          },
-          render: (record: any) => {
-            const raw1 = record[field1];
-            const raw2 = record[field2];
-            const val1 = Number(raw1);
-            const val2 = Number(raw2);
-            if (!Number.isFinite(val1) || !Number.isFinite(val2) || val1 <= 0) {
-              return <span style={{ color: '#999' }}>-</span>;
-            }
-            const ratio = val2 / val1;
-            if (!Number.isFinite(ratio) || Number.isNaN(ratio)) {
-              return <span style={{ color: '#999' }}>-</span>;
-            }
-            const rate = (ratio * 100).toFixed(2);
-            return <span style={{ color: '#1890ff', fontWeight: 500 }}>{rate}%</span>;
-          },
-          sorter: (a: any, b: any) => {
-            const rate1 = (a[field1] || 0) > 0 ? ((a[field2] || 0) / (a[field1] || 0)) : 0;
-            const rate2 = (b[field1] || 0) > 0 ? ((b[field2] || 0) / (b[field1] || 0)) : 0;
-            return rate1 - rate2;
-          },
-        };
       }
+
+      const sanitized1 = item.event1!.replace(/[^a-zA-Z0-9_]/g, '_');
+      const sanitized2 = item.event2!.replace(/[^a-zA-Z0-9_]/g, '_');
+      const field1 = `event_${sanitized1}`;
+      const field2 = `event_${sanitized2}`;
+
+      return {
+        title: isMobile ? (
+          <span>
+            <FunnelPlotOutlined />
+          </span>
+        ) : (
+          <div style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: '1.3', textAlign: 'center' }}>
+            <FunnelPlotOutlined /> {item.event1} → {item.event2}
+          </div>
+        ),
+        key: `conversion_${sanitized1}_${sanitized2}`,
+        width: isMobile ? 80 : 145,
+        align: 'center' as const,
+        ellipsis: {
+          showTitle: true,
+        },
+        render: (_: any, record: any) => {
+          const total = record[field1] || 0;
+          const completed = record[field2] || 0;
+          if (!total) {
+            return <span style={{ color: '#8c8c8c' }}>0%</span>;
+          }
+          const percent = (completed / total) * 100;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <span style={{ fontWeight: 600, color: percent > 0 ? '#fa8c16' : '#8c8c8c' }}>{percent.toFixed(2)}%</span>
+              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                ({completed.toLocaleString()} / {total.toLocaleString()})
+              </span>
+            </div>
+          );
+        },
+        sorter: (a: any, b: any) => {
+          const rate1 = (a[field1] || 0) > 0 ? (a[field2] || 0) / (a[field1] || 0) : 0;
+          const rate2 = (b[field1] || 0) > 0 ? (b[field2] || 0) / (b[field1] || 0) : 0;
+          return rate1 - rate2;
+        },
+      };
     });
 
     return [...baseColumns, ...itemColumns];
-  }, [currentItems, pagination, t, isMobile, dataSource, selectedMediaSources, mediaAdPairs]);
+  }, [currentItems, pagination, t, isMobile, dataSource, mediaAdPairs, data]);
 
   const transformedChartData = useMemo(() => {
     return allData
@@ -916,7 +1384,7 @@ const AdjustData: React.FC = () => {
           marginBottom: (dataSource === 'appsflyer' && (selectedAppId || selectedMediaSources.length > 0)) ? 16 : 0
         }}>
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dataSource')}：</span>
-          <Button.Group>
+          <Space.Compact>
             <Button
               type={dataSource === 'appsflyer' ? 'primary' : 'default'}
               onClick={() => handleDataSourceChange('appsflyer')}
@@ -941,7 +1409,7 @@ const AdjustData: React.FC = () => {
             >
               {t('attributionData.reported')}
             </Button>
-          </Button.Group>
+          </Space.Compact>
           
           <span style={{ fontWeight: 'bold', color: '#333' }}>{t('attributionData.dateRange')}：</span>
             <RangePicker
@@ -971,6 +1439,7 @@ const AdjustData: React.FC = () => {
               console.log('重置筛选条件...');
               setDateRange(null);
               setPagination(prev => ({ ...prev, current: 1 }));
+              setSelectedUserType(undefined);
               await fetchData(true);
               message.success(t('attributionData.filterCleared'));
             }}
@@ -999,7 +1468,7 @@ const AdjustData: React.FC = () => {
         </div>
 
         {/* 第二行：筛选条件显示区域 */}
-        {dataSource === 'appsflyer' && (selectedAppId || mediaAdPairs.length > 0) && (
+        {dataSource === 'appsflyer' && (selectedAppId || mediaAdPairs.length > 0 || selectedUserType !== undefined) && (
           <div style={{ 
             padding: '12px 16px', 
             background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%)', 
@@ -1053,6 +1522,29 @@ const AdjustData: React.FC = () => {
                       }}
                     >
                       app_id: {selectedAppId}
+                    </Tag>
+                  )}
+                  {selectedUserType !== undefined && (
+                    <Tag
+                      color="blue"
+                      closable
+                      onClose={() => {
+                        setSelectedUserType(undefined);
+                        setTimeout(() => saveQueryState(), 100);
+                        message.success(t('attributionData.userType.cleared'));
+                      }}
+                      style={{
+                        margin: 0,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        background: '#e6f7ff',
+                        borderColor: '#1890ff',
+                        color: '#0958d9',
+                      }}
+                    >
+                      {t('attributionData.userType.label')}: {selectedUserType === '0' ? t('attributionData.userType.new') : t('attributionData.userType.returning')}
                     </Tag>
                   )}
                   {mediaAdPairs.map((pair) => {
@@ -1123,6 +1615,7 @@ const AdjustData: React.FC = () => {
                   setSelectedMediaSources([]);
                   setSelectedAdSequences([]);
                   setMediaAdPairs([]);
+                  setSelectedUserType(undefined);
                   message.success(t('attributionData.filterCleared'));
                 }}
                 style={{ padding: '0 8px', height: '24px', flexShrink: 0 }}
@@ -1234,8 +1727,37 @@ const AdjustData: React.FC = () => {
         )}
 
       {/* 数据表格区域 */}
-      <Card title={t('attributionData.tableTitle')}>
+      <Card
+        title={t('attributionData.tableTitle')}
+        extra={
+          <Segmented
+            options={[
+              { label: t('attributionData.tableViewDefault'), value: 'default' },
+              { label: t('attributionData.tableViewTranspose'), value: 'transposed' },
+            ]}
+            value={tableLayout}
+            onChange={value => setTableLayout(value as 'default' | 'transposed')}
+            style={{
+              backgroundColor: '#f5f5f5',
+            }}
+            className="table-view-segmented"
+          />
+        }
+      >
         <style>{`
+          .table-view-segmented .ant-segmented-item-selected {
+            background-color: #1890ff !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 4px rgba(24, 144, 255, 0.3) !important;
+          }
+          .table-view-segmented .ant-segmented-item-selected:hover {
+            background-color: #40a9ff !important;
+          }
+          .table-view-segmented .ant-segmented-item:not(.ant-segmented-item-selected):hover {
+            background-color: #e6f7ff !important;
+            color: #1890ff !important;
+          }
           .date-group-even {
             background-color: #fafafa !important;
           }
@@ -1255,68 +1777,104 @@ const AdjustData: React.FC = () => {
             text-overflow: ellipsis;
           }
         `}</style>
-        <Table
-          columns={columns}
-          dataSource={data}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
-          rowClassName={(record: any, index: number) => {
-            // 为同一天的数据添加相同的背景色
-            const classes: string[] = [];
-            
-            if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || selectedAdSequences.length > 0)) {
-              // 根据日期分组
-              const dateIndex = data.findIndex(item => item.query_date === record.query_date);
-              const mediaCount = selectedMediaSources.length > 0 ? selectedMediaSources.length : 1;
-              const adCount = selectedAdSequences.length > 0 ? selectedAdSequences.length : 1;
-              const dimensionCount = mediaCount * adCount;
-              const dateGroupIndex = Math.floor(dateIndex / dimensionCount);
-              classes.push(dateGroupIndex % 2 === 0 ? 'date-group-even' : 'date-group-odd');
-              
-              // 为每个日期组的第一行添加分隔线
-              const isFirstOfDate = index === 0 || data[index - 1]?.query_date !== record.query_date;
-              if (isFirstOfDate && index !== 0) {
-                classes.push('date-group-separator');
+        {tableLayout === 'default' ? (
+          <Table
+            columns={columns}
+            dataSource={data}
+            loading={loading}
+            rowKey="id"
+            scroll={{ x: 'max-content' }}
+            rowClassName={(record: any, index: number) => {
+              const classes: string[] = [];
+
+              if (dataSource === 'appsflyer' && (selectedMediaSources.length > 0 || selectedAdSequences.length > 0)) {
+                const dateIndex = data.findIndex(item => item.query_date === record.query_date);
+                const mediaCount = selectedMediaSources.length > 0 ? selectedMediaSources.length : 1;
+                const adCount = selectedAdSequences.length > 0 ? selectedAdSequences.length : 1;
+                const dimensionCount = mediaCount * adCount;
+                const dateGroupIndex = Math.floor(dateIndex / dimensionCount);
+                classes.push(dateGroupIndex % 2 === 0 ? 'date-group-even' : 'date-group-odd');
+
+                const isFirstOfDate = index === 0 || data[index - 1]?.query_date !== record.query_date;
+                if (isFirstOfDate && index !== 0) {
+                  classes.push('date-group-separator');
+                }
+              } else {
+                classes.push(index % 2 === 0 ? 'date-group-even' : 'date-group-odd');
               }
-            } else {
-              classes.push(index % 2 === 0 ? 'date-group-even' : 'date-group-odd');
-            }
-            
-            return classes.join(' ');
-          }}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
-            pageSizeOptions: ['10', '20', '50', '100'],
-            onChange: (page, pageSize) => {
-              console.log('分页变化:', { page, pageSize, currentPagination: pagination });
-              setPagination(prev => ({
-                ...prev,
-                current: page,
-                pageSize: pageSize || prev.pageSize
-              }));
-              // 保存状态
-              setTimeout(() => saveQueryState(), 100);
-            },
-            onShowSizeChange: (_, size) => {
-              console.log('页面大小变化:', { size, currentPagination: pagination });
-              setPagination(prev => ({
-                ...prev,
-                current: 1,
-                pageSize: size
-              }));
-              // 保存状态
-              setTimeout(() => saveQueryState(), 100);
-            }
-          }}
-          bordered
-          size="middle"
-        />
+
+              return classes.join(' ');
+            }}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => t('common.pageRangeWithTotal', { start: range[0], end: range[1], total }),
+              pageSizeOptions: ['10', '20', '50', '100'],
+              onChange: (page, pageSize) => {
+                setPagination(prev => ({
+                  ...prev,
+                  current: page,
+                  pageSize: pageSize || prev.pageSize,
+                }));
+                setTimeout(() => saveQueryState(), 100);
+              },
+              onShowSizeChange: (_, size) => {
+                setPagination(prev => ({
+                  ...prev,
+                  current: 1,
+                  pageSize: size,
+                }));
+                setTimeout(() => saveQueryState(), 100);
+              },
+            }}
+            bordered
+            size="middle"
+          />
+        ) : (
+          <Table
+            columns={transposedColumns}
+            dataSource={transposedData}
+            loading={loading}
+            rowKey="id"
+            scroll={{ x: 'max-content', y: 600 }}
+            rowClassName={(_: any, index: number) => (index % 2 === 0 ? 'date-group-even' : 'date-group-odd')}
+            onRow={() => ({ style: { cursor: 'default' } })}
+            pagination={false}
+            bordered
+            size="middle"
+            components={{
+              body: {
+                cell: (cellProps: any) => {
+                  const { children, column, record, index } = cellProps;
+                  if (column && column.key === 'eventName') {
+                    const isFirst = index === 0 || transposedData[index - 1]?.eventName !== record.eventName;
+                    const span = (() => {
+                      if (!isFirst) return 0;
+                      let count = 1;
+                      for (let i = index + 1; i < transposedData.length; i++) {
+                        if (transposedData[i].eventName === record.eventName) {
+                          count++;
+                        } else {
+                          break;
+                        }
+                      }
+                      return count;
+                    })();
+                    return (
+                      <td {...cellProps} rowSpan={span} style={{ verticalAlign: 'middle' }}>
+                        {span > 0 ? children : null}
+                      </td>
+                    );
+                  }
+                  return <td {...cellProps}>{children}</td>;
+                },
+              },
+            }}
+          />
+        )}
       </Card>
 
       {/* 事件选择模态框 */}
@@ -1406,69 +1964,107 @@ const AdjustData: React.FC = () => {
             </div>
           ) : (
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              {currentItems.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    marginBottom: '8px',
-                    background: item.type === 'funnel' ? '#fff7e6' : '#f5f5f5',
-                    borderRadius: '4px',
-                    border: `1px solid ${item.type === 'funnel' ? '#ffd591' : '#d9d9d9'}`
-                  }}
-                >
-                  <Space>
-                    <span style={{ 
-                      display: 'inline-flex',
+              {currentItems.map((item, index) => {
+                const key = `${item.type}-${item.type === 'event' ? item.name : `${item.event1}-${item.event2}`}-${index}`;
+                const isDragOver = dragOverIndex === index;
+                return (
+                  <div
+                    key={key}
+                    draggable
+                    onDragStart={handleDragStartItem(index)}
+                    onDragEnter={handleDragEnterItem(index)}
+                    onDragOver={handleDragOverItem(index)}
+                    onDrop={handleDropOnItem(index)}
+                    onDragEnd={handleDragEndItem}
+                    style={{
+                      display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 24,
-                      height: 24,
-                      background: item.type === 'funnel' ? '#fa8c16' : '#1890ff',
-                      color: 'white',
-                      borderRadius: '50%',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
-                    }}>
-                      {index + 1}
-                    </span>
-                    {item.type === 'funnel' ? (
-                      <span style={{ fontWeight: 500 }}>
-                        <FunnelPlotOutlined style={{ color: '#fa8c16', marginRight: 4 }} />
-                        {item.event1}/{item.event2}
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      marginBottom: '8px',
+                      background: item.type === 'funnel' ? '#fff7e6' : '#f5f5f5',
+                      borderRadius: '4px',
+                      border: `1px ${isDragOver ? 'dashed #1677ff' : item.type === 'funnel' ? '#ffd591' : '#d9d9d9'}`,
+                      boxShadow: isDragOver ? '0 6px 12px rgba(22,119,255,0.2)' : 'none',
+                      cursor: 'grab',
+                    }}
+                    title={t('attributionData.dragToReorder') ?? '拖拽调整顺序'}
+                  >
+                    <Space size="middle">
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 28,
+                          height: 28,
+                          borderRadius: '4px',
+                          background: '#e6f4ff',
+                          color: '#1677ff',
+                          cursor: 'grab',
+                        }}
+                      >
+                        <MenuOutlined />
                       </span>
-                    ) : (
-                      <span style={{ fontWeight: 500 }}>{item.name}</span>
-                    )}
-                  </Space>
-                  <Space>
-                    <Button
-                      size="small"
-                      icon={<ArrowUpOutlined />}
-                      onClick={() => moveItemUp(index)}
-                      disabled={index === 0}
-                      title={t('common.previous')}
-                    />
-                    <Button
-                      size="small"
-                      icon={<ArrowDownOutlined />}
-                      onClick={() => moveItemDown(index)}
-                      disabled={index === currentItems.length - 1}
-                      title={t('common.next')}
-                    />
-                    <Button
-                      size="small"
-                      danger
-                      icon={<CloseOutlined />}
-                      onClick={() => removeItem(index)}
-                      title={t('common.delete')}
-                    />
-                  </Space>
-                </div>
-              ))}
+                      <span style={{ 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 24,
+                        height: 24,
+                        background: item.type === 'funnel' ? '#fa8c16' : '#1890ff',
+                        color: 'white',
+                        borderRadius: '50%',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {index + 1}
+                      </span>
+                      {item.type === 'funnel' ? (
+                        <span style={{ fontWeight: 500 }}>
+                          <FunnelPlotOutlined style={{ color: '#fa8c16', marginRight: 4 }} />
+                          {item.event1}/{item.event2}
+                        </span>
+                      ) : (
+                        <span style={{ fontWeight: 500 }}>{item.name}</span>
+                      )}
+                    </Space>
+                    <Space>
+                      <Button
+                        size="small"
+                        icon={<ArrowUpOutlined />}
+                        onClick={() => moveItemUp(index)}
+                        disabled={index === 0}
+                        title={t('common.previous')}
+                      />
+                      <Button
+                        size="small"
+                        icon={<ArrowDownOutlined />}
+                        onClick={() => moveItemDown(index)}
+                        disabled={index === currentItems.length - 1}
+                        title={t('common.next')}
+                      />
+                      <Button
+                        size="small"
+                        danger
+                        icon={<CloseOutlined />}
+                        onClick={() => removeItem(index)}
+                        title={t('common.delete')}
+                      />
+                    </Space>
+                  </div>
+                );
+              })}
+              <div
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (dragItemIndexRef.current !== null) {
+                    setDragOverIndex(currentItems.length);
+                  }
+                }}
+                onDrop={handleDropAtEnd}
+                style={{ height: 12 }}
+              />
             </div>
           )}
         </div>
@@ -1516,6 +2112,23 @@ const AdjustData: React.FC = () => {
           </div>
 
           <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.userType.label')}</div>
+            <Select
+              placeholder={t('attributionData.userType.all')}
+              value={selectedUserType}
+              allowClear
+              style={{ width: '100%' }}
+              onChange={(value) => {
+                setSelectedUserType(value);
+                setTimeout(() => saveQueryState(), 100);
+              }}
+            >
+              <Select.Option value="0">{t('attributionData.userType.new')}</Select.Option>
+              <Select.Option value="1">{t('attributionData.userType.returning')}</Select.Option>
+            </Select>
+          </div>
+
+          <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>{t('attributionData.mediaSource')} × {t('attributionData.adSequence')}</div>
             <Space direction="vertical" style={{ width: '100%' }} size="small">
               {mediaAdPairs.map((pair, idx) => (
@@ -1545,6 +2158,7 @@ const AdjustData: React.FC = () => {
                     value={pair.ad}
                     style={{ width: 260 }}
                     disabled={!pair.media}
+                    loading={pair.media ? adSequenceLoading[pair.media] : false}
                     showSearch
                     onChange={(val) => {
                       const newPairs = [...mediaAdPairs];
@@ -1554,9 +2168,48 @@ const AdjustData: React.FC = () => {
                     }}
                     filterOption={(input, option) => String(option?.children || '').toLowerCase().includes(input.toLowerCase())}
                   >
-                    {(pair.media ? (mediaToAdSeqs[pair.media] || []) : []).map(seq => (
-                      <Select.Option key={seq} value={seq}>{seq}</Select.Option>
-                    ))}
+                    {(pair.media ? (mediaToAdSeqs[pair.media] || []) : []).length > 0 && pair.media
+                      ? (() => {
+                          const availableSeqs = mediaToAdSeqs[pair.media!] || [];
+                          const favoriteEntries = (favoriteAdSequences[pair.media!] || []).filter(entry =>
+                            availableSeqs.includes(entry.value),
+                          );
+                          const favoriteValues = favoriteEntries
+                            .sort((a, b) => b.favoritedAt - a.favoritedAt)
+                            .map(entry => entry.value);
+                          const remaining = availableSeqs.filter(seq => !favoriteValues.includes(seq));
+                          const displaySeqs = [...favoriteValues, ...remaining];
+                          return displaySeqs.map(seq => {
+                            const isFavorited = favoriteValues.includes(seq);
+                            return (
+                              <Select.Option key={seq} value={seq}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                  }}
+                                >
+                                  <span>{seq}</span>
+                                  <span
+                                    onMouseDown={handleFavoriteIconClick(pair.media!, seq)}
+                                    style={{
+                                      color: isFavorited ? '#faad14' : '#d9d9d9',
+                                      fontSize: 16,
+                                      cursor: 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                    }}
+                                    title={isFavorited ? '取消收藏' : '收藏此广告序列'}
+                                  >
+                                    {isFavorited ? <StarFilled /> : <StarOutlined />}
+                                  </span>
+                                </div>
+                              </Select.Option>
+                            );
+                          });
+                        })()
+                      : null}
                   </Select>
                   <Button danger size="small" onClick={() => {
                     setMediaAdPairs(prev => prev.filter(p => p.id !== pair.id));
@@ -1571,7 +2224,7 @@ const AdjustData: React.FC = () => {
             </Space>
           </div>
 
-          {(selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (
+      {(selectedAppId || selectedMediaSources.length > 0 || selectedAdSequences.length > 0) && (
             <div style={{ 
               padding: '12px', 
               background: '#f0f5ff', 
@@ -1614,6 +2267,7 @@ const AdjustData: React.FC = () => {
           )}
         </Space>
       </Modal>
+
     </div>
   );
 };

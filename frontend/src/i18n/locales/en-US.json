@@ -163,6 +163,31 @@
     "filterApplied": "Filter applied successfully",
     "filterCleared": "Filter cleared successfully",
     "dataLoaded": "Data loaded successfully, {{count}} records",
+    "cacheRestoring": "Restoring data from local cache…",
+    "cacheRestored": "Restored data from local cache",
+    "userType": {
+      "label": "User Type",
+      "all": "All Users",
+      "new": "New User",
+      "returning": "Returning User",
+      "cleared": "Cleared user type filter"
+    },
+    "details": {
+      "title": "Attribution Details",
+      "filters": "Active Filters",
+      "userId": "User ID",
+      "eventName": "Event Name",
+      "createdAt": "Occurred At",
+      "mediaSource": "Media Source",
+      "adSequence": "Ad Sequence",
+      "appId": "App ID",
+      "eventValueAppId": "event_value_app_id",
+      "eventValue": "event_value Payload",
+      "noData": "No detail data",
+      "error": "Failed to load attribution details",
+      "noDate": "Missing date information, unable to open details",
+      "unsupported": "Details are only available for the AppsFlyer data source"
+    },
     "dataFormatError": "Data format error",
     "networkError": "Network request failed, please check backend service",
     "chartDataError": "Failed to get chart data, please check backend service",
@@ -204,7 +229,9 @@
       "infoPush": "Information Push Success Count",
       "creditSuccess": "Credit Success Count",
       "loanSuccess": "Loan Submission Count"
-    }
+    },
+    "tableViewDefault": "List View",
+    "tableViewTranspose": "Pivot View"
   },
   "auth": {
     "login": "Login",

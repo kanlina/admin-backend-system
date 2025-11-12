@@ -18,6 +18,11 @@ export interface Tag {
   updatedAt: string;
 }
 
+export interface FavoriteAdSequence {
+  value: string;
+  favoritedAt: number;
+}
+
 
 export interface LoginRequest {
   username: string;

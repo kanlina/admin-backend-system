@@ -163,6 +163,31 @@
     "filterApplied": "筛选条件已应用",
     "filterCleared": "已清除筛选条件",
     "dataLoaded": "数据加载成功，共 {{count}} 条记录",
+    "cacheRestoring": "正在从本地缓存恢复数据…",
+    "cacheRestored": "已从本地缓存恢复数据",
+    "userType": {
+      "label": "新老用户",
+      "all": "全部用户",
+      "new": "新用户",
+      "returning": "老用户",
+      "cleared": "已清除新老用户筛选"
+    },
+    "details": {
+      "title": "归因明细",
+      "filters": "当前筛选条件",
+      "userId": "用户ID",
+      "eventName": "事件名称",
+      "createdAt": "发生时间",
+      "mediaSource": "媒体渠道",
+      "adSequence": "广告序列",
+      "appId": "App ID",
+      "eventValueAppId": "event_value_app_id",
+      "eventValue": "event_value 内容",
+      "noData": "暂无明细数据",
+      "error": "获取归因明细失败",
+      "noDate": "缺少明细日期，无法查看详情",
+      "unsupported": "当前仅支持 AppsFlyer 数据源的明细查看"
+    },
     "dataFormatError": "数据格式错误",
     "networkError": "网络请求失败，请检查后端服务",
     "chartDataError": "获取图表数据失败，请检查后端服务",
@@ -204,7 +229,9 @@
       "infoPush": "个人信息推送成功人数",
       "creditSuccess": "授信成功人数",
       "loanSuccess": "提交借款人数"
-    }
+    },
+    "tableViewDefault": "列表视图",
+    "tableViewTranspose": "透视视图"
   },
   "auth": {
     "login": "登录",

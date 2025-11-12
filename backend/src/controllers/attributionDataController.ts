@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { adjustDataService } from '../services/adjustDataService';
 import { appsflyerDataService } from '../services/appsflyerDataService';
+import { userPreferenceService } from '../services/userPreferenceService';
+import type { AuthenticatedRequest } from '../types';
 
 // 获取所有 app_id
 export const getAllAppNames = async (req: Request, res: Response) => {
@@ -67,13 +69,11 @@ export const getAllAdSequences = async (req: Request, res: Response) => {
 export const getAllEventNames = async (req: Request, res: Response) => {
   try {
     const { dataSource = 'adjust' } = req.query;
-    
+
     console.log('========================================');
     console.log('📋 [事件列表] 收到请求, 数据源:', dataSource);
     
-    const eventNames = dataSource === 'adjust' 
-      ? await adjustDataService.getAllEventNames()
-      : await appsflyerDataService.getAllEventNames();
+    const eventNames = await adjustDataService.getAllEventNames();
 
     console.log('✅ [事件列表] 查询成功, 事件数量:', eventNames.length);
     console.log('事件列表:', eventNames);
@@ -97,7 +97,19 @@ export const getAllEventNames = async (req: Request, res: Response) => {
 
 export const getAttributionData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, page = 1, pageSize = 10, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs, mediasWithoutAd } = req.query;
+    const {
+      startDate,
+      endDate,
+      page = 1,
+      pageSize = 10,
+      dataSource = 'adjust',
+      appId,
+      mediaSource,
+      adSequence,
+      adPairs,
+      mediasWithoutAd,
+      reloanStatus,
+    } = req.query;
     
     console.log('========================================');
     console.log('📊 [归因数据] 收到请求');
@@ -111,7 +123,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
       mediaSource,
       adSequence,
       adPairs,
-      mediasWithoutAd
+      mediasWithoutAd,
+      reloanStatus,
     });
     
     const result = dataSource === 'adjust'
@@ -131,7 +144,8 @@ export const getAttributionData = async (req: Request, res: Response) => {
           adSequence as string,
           undefined,
           adPairs as string,
-          mediasWithoutAd as string
+          mediasWithoutAd as string,
+          reloanStatus as string
         );
 
     console.log('✅ [归因数据] 查询成功');
@@ -165,7 +179,17 @@ export const getAttributionData = async (req: Request, res: Response) => {
 
 export const getAttributionChartData = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, dataSource = 'adjust', appId, mediaSource, adSequence, adPairs, mediasWithoutAd } = req.query;
+    const {
+      startDate,
+      endDate,
+      dataSource = 'adjust',
+      appId,
+      mediaSource,
+      adSequence,
+      adPairs,
+      mediasWithoutAd,
+      reloanStatus,
+    } = req.query;
     
     const result = dataSource === 'adjust'
       ? await adjustDataService.getAdjustChartData(
@@ -180,7 +204,8 @@ export const getAttributionChartData = async (req: Request, res: Response) => {
           adSequence as string,
           undefined,
           adPairs as string,
-          mediasWithoutAd as string
+          mediasWithoutAd as string,
+          reloanStatus as string
         );
 
     res.json({
@@ -239,6 +264,127 @@ export const getComparisonData = async (req: Request, res: Response) => {
       success: false,
       message: '获取对比数据失败',
       error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
+export const getAttributionDetails = async (req: Request, res: Response) => {
+  try {
+    const {
+      date,
+      page = 1,
+      pageSize = 10,
+      dataSource = 'appsflyer',
+      appId,
+      mediaSource,
+      adSequence,
+      reloanStatus,
+    } = req.query;
+
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: '缺少必要参数：date',
+      });
+    }
+
+    if (dataSource !== 'appsflyer') {
+      return res.status(400).json({
+        success: false,
+        message: '当前仅支持 AppsFlyer 数据源的归因明细',
+      });
+    }
+
+    const result = await appsflyerDataService.getAppsflyerDetails(
+      date as string,
+      parseInt(page as string),
+      parseInt(pageSize as string),
+      appId as string,
+      mediaSource as string,
+      adSequence as string,
+      reloanStatus as string
+    );
+
+    res.json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination,
+      message: '归因明细获取成功',
+    });
+  } catch (error) {
+    console.error('获取归因明细失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取归因明细失败',
+      error: error instanceof Error ? error.message : '未知错误',
+    });
+  }
+};
+
+export const getFavoriteAdSequences = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: '用户未认证',
+      });
+    }
+
+    const favorites = await userPreferenceService.getFavoriteAdSequences(req.user.id);
+    res.json({
+      success: true,
+      data: favorites,
+      message: '获取收藏广告序列成功',
+    });
+  } catch (error) {
+    console.error('获取收藏广告序列失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取收藏广告序列失败',
+      error: error instanceof Error ? error.message : '未知错误',
+    });
+  }
+};
+
+export const toggleFavoriteAdSequence = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: '用户未认证',
+      });
+    }
+
+    const { mediaSource, adSequence } = req.body || {};
+    if (!mediaSource || !adSequence) {
+      return res.status(400).json({
+        success: false,
+        message: '媒体渠道和广告序列不能为空',
+      });
+    }
+
+    const result = await userPreferenceService.toggleFavoriteAdSequence(
+      req.user.id,
+      String(mediaSource),
+      String(adSequence),
+    );
+
+    res.json({
+      success: true,
+      data: {
+        favorites: result.favorites,
+        added: result.added,
+        mediaSource: mediaSource,
+        adSequence: adSequence,
+      },
+      message: result.added ? '收藏成功' : '取消收藏成功',
+    });
+  } catch (error) {
+    console.error('更新收藏广告序列失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新收藏广告序列失败',
+      error: error instanceof Error ? error.message : '未知错误',
     });
   }
 };

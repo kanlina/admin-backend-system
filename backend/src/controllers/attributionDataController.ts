@@ -355,7 +355,73 @@ export const toggleFavoriteAdSequence = async (req: AuthenticatedRequest, res: R
       });
     }
 
-    const { mediaSource, adSequence } = req.body || {};
+    const { mediaSource, adSequence, additions, removals, favorites } = req.body || {};
+
+    if (Array.isArray(favorites)) {
+      const normalizedFavorites = favorites
+        .map((item: any) => ({
+          mediaSource: typeof item?.mediaSource === 'string' ? item.mediaSource : '',
+          adSequence: typeof item?.adSequence === 'string' ? item.adSequence : '',
+        }))
+        .filter(item => item.mediaSource && item.adSequence);
+
+      const favoritesMap = await userPreferenceService.replaceFavoriteAdSequences(
+        req.user.id,
+        normalizedFavorites,
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          favorites: favoritesMap,
+        },
+        message: '收藏状态更新成功',
+      });
+    }
+
+    const hasBatchPayload = Array.isArray(additions) || Array.isArray(removals);
+
+    if (hasBatchPayload) {
+      const normalizedAdditions = Array.isArray(additions)
+        ? additions
+            .map((item: any) => ({
+              mediaSource: typeof item?.mediaSource === 'string' ? item.mediaSource : '',
+              adSequence: typeof item?.adSequence === 'string' ? item.adSequence : '',
+            }))
+            .filter(item => item.mediaSource && item.adSequence)
+        : [];
+
+      const normalizedRemovals = Array.isArray(removals)
+        ? removals
+            .map((item: any) => ({
+              mediaSource: typeof item?.mediaSource === 'string' ? item.mediaSource : '',
+              adSequence: typeof item?.adSequence === 'string' ? item.adSequence : '',
+            }))
+            .filter(item => item.mediaSource && item.adSequence)
+        : [];
+
+      if (normalizedAdditions.length === 0 && normalizedRemovals.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: '收藏操作参数无效',
+        });
+      }
+
+      const favorites = await userPreferenceService.applyFavoriteOperations(
+        req.user.id,
+        normalizedAdditions,
+        normalizedRemovals,
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          favorites,
+        },
+        message: '收藏状态更新成功',
+      });
+    }
+
     if (!mediaSource || !adSequence) {
       return res.status(400).json({
         success: false,

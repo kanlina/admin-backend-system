@@ -10,6 +10,16 @@ export interface FavoriteAdSequenceEntry {
 
 export type FavoriteAdSequenceMap = Record<string, FavoriteAdSequenceEntry[]>;
 
+export interface FavoriteOperation {
+  mediaSource: string;
+  adSequence: string;
+}
+
+export interface FavoriteReplaceEntry {
+  mediaSource: string;
+  adSequence: string;
+}
+
 const normalizeFavorites = (raw: any): FavoriteAdSequenceMap => {
   if (!raw || typeof raw !== 'object') {
     return {};
@@ -109,6 +119,74 @@ export const userPreferenceService = {
 
     await this.saveFavoriteAdSequences(userId, favorites);
     return { favorites, added };
+  },
+
+  async applyFavoriteOperations(
+    userId: string,
+    additions: FavoriteOperation[] = [],
+    removals: FavoriteOperation[] = [],
+  ): Promise<FavoriteAdSequenceMap> {
+    const favorites = await this.getFavoriteAdSequences(userId);
+
+    additions.forEach(operation => {
+      const media = operation.mediaSource?.trim();
+      const seq = operation.adSequence?.trim();
+      if (!media || !seq) {
+        return;
+      }
+      const list = favorites[media] ? [...favorites[media]] : [];
+      const existingIndex = list.findIndex(entry => entry.value === seq);
+      if (existingIndex >= 0) {
+        // 更新收藏时间以确保最新排序
+        list.splice(existingIndex, 1);
+      }
+      list.unshift({ value: seq, favoritedAt: Date.now() });
+      favorites[media] = list.sort((a, b) => b.favoritedAt - a.favoritedAt);
+    });
+
+    removals.forEach(operation => {
+      const media = operation.mediaSource?.trim();
+      const seq = operation.adSequence?.trim();
+      if (!media || !seq || !favorites[media]) {
+        return;
+      }
+      const list = favorites[media].filter(entry => entry.value !== seq);
+      if (list.length > 0) {
+        favorites[media] = list;
+      } else {
+        delete favorites[media];
+      }
+    });
+
+    await this.saveFavoriteAdSequences(userId, favorites);
+    return favorites;
+  },
+
+  async replaceFavoriteAdSequences(
+    userId: string,
+    entries: FavoriteReplaceEntry[] = [],
+  ): Promise<FavoriteAdSequenceMap> {
+    const normalized: FavoriteAdSequenceMap = {};
+    entries.forEach(entry => {
+      const media = entry.mediaSource?.trim();
+      const seq = entry.adSequence?.trim();
+      if (!media || !seq) {
+        return;
+      }
+      if (!normalized[media]) {
+        normalized[media] = [];
+      }
+      normalized[media].push({ value: seq, favoritedAt: Date.now() });
+    });
+
+    Object.keys(normalized).forEach(media => {
+      normalized[media] = normalized[media]
+        .filter((entry, index, arr) => arr.findIndex(item => item.value === entry.value) === index)
+        .sort((a, b) => b.favoritedAt - a.favoritedAt);
+    });
+
+    await this.saveFavoriteAdSequences(userId, normalized);
+    return normalized;
   },
 };
 

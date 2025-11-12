@@ -23,9 +23,15 @@ interface SidebarProps {
   isMobile?: boolean;
   visible?: boolean;
   onClose?: () => void;
+  collapsed?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isMobile = false, visible = false, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isMobile = false,
+  visible = false,
+  onClose,
+  collapsed = false,
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -163,10 +169,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile = false, visible = false, on
   // 桌面端使用Sider
   return (
     <Sider 
-      width={200} 
+      width={200}
+      collapsedWidth={0}
+      collapsible
+      collapsed={collapsed}
+      trigger={null}
       style={{ 
         background: '#fff',
-        boxShadow: '2px 0 8px rgba(0,0,0,0.1)'
+        boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+        position: 'relative',
       }}
     >
       {menuContent}

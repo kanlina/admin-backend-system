@@ -78,48 +78,59 @@ export const internalTransferService = {
         LEFT JOIN (
             -- OCR全部识别完成人数统计（从user_ocr_record表查询首次完成face-recognition事件的去重用户）
             SELECT 
-                DATE(first_completion.created_at) AS date_col,
-                COUNT(DISTINCT first_completion.user_id) AS ocr_count
-            FROM (
-                SELECT 
-                    user_id,
-                    MIN(created_at) AS created_at
-                FROM user_ocr_record
-                WHERE event_name = 'face-recognition' 
-                    AND recognition_status = 1
-                GROUP BY user_id
-            ) AS first_completion
-            GROUP BY DATE(first_completion.created_at)
+                DATE(created_at) AS date_col,
+                COUNT(DISTINCT user_id) AS ocr_count
+                FROM user_info
+                WHERE face_vs_ktp_score >= 60 and liveness_score >= 60
+            GROUP BY DATE(created_at)
         ) ocr_stats ON ocr_stats.date_col = date_series.date_col
 
         LEFT JOIN (
             -- 个人信息提交人数统计（按verification_success_at字段统计认证成功的日期）
             SELECT 
-                DATE(verification_success_at) AS date_col,
-                COUNT(DISTINCT user_id) AS info_count
-            FROM user_info 
-            WHERE verification_success_at IS NOT NULL
-            GROUP BY DATE(verification_success_at)
+                DATE(created_at) AS date_col,
+               COUNT(DISTINCT(user_id)) AS info_count
+            FROM user_partner_bank_record
+            GROUP BY DATE(created_at)
         ) info_stats ON info_stats.date_col = date_series.date_col
 
         LEFT JOIN (
             -- 推送总人数统计
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS push_total_count
-            FROM user_upload_records
-            GROUP BY DATE(created_at)
-        ) push_total_stats ON push_total_stats.date_col = date_series.date_col
+          SELECT
+          DATE(upload_all.created_at) AS date_col,
+          COUNT(DISTINCT upload_all.user_id) AS push_total_count
+          FROM (
+          SELECT
+          user_id,
+          MIN(created_at) AS created_at
+          FROM user_upload_records
+          GROUP BY (user_id)
+          ) AS upload_all
+          GROUP BY DATE(upload_all.created_at)
+          ) push_total_stats ON push_total_stats.date_col = date_series.date_col
 
         LEFT JOIN (
+          SELECT
+          DATE(upload.created_at) AS date_col,
+          COUNT(DISTINCT upload.user_id) AS upload_count
+          FROM (
+          SELECT
+          user_id,
+          MIN(created_at) AS created_at
+          FROM user_upload_records
+          WHERE status = "success"
+          GROUP BY (user_id)
+          ) AS upload
+          GROUP BY DATE(upload.created_at)
+          ) upload_stats ON upload_stats.date_col = date_series.date_col
             -- 个人信息推送给合作伙伴人数统计
-            SELECT 
-                DATE(created_at) AS date_col,
-                COUNT(DISTINCT user_id) AS upload_count
-            FROM user_upload_records
-            WHERE status = "success"
-            GROUP BY DATE(created_at)
-        ) upload_stats ON upload_stats.date_col = date_series.date_col
+--             SELECT
+--           MIN(created_at) AS date_col,
+--                 COUNT(DISTINCT user_id) AS upload_count
+--             FROM user_upload_records
+--             WHERE status = "success"
+--             GROUP BY DATE(created_at)
+--         ) upload_stats ON upload_stats.date_col = date_series.date_col
 
         LEFT JOIN (
             -- 授信成功人数统计

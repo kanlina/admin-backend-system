@@ -1,6 +1,13 @@
 import React from 'react';
 import { Layout, Avatar, Dropdown, Button, Space } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, MenuOutlined } from '@ant-design/icons';
+import { 
+  UserOutlined, 
+  LogoutOutlined, 
+  SettingOutlined, 
+  MenuOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined
+} from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,9 +18,16 @@ const { Header: AntHeader } = Layout;
 interface HeaderProps {
   isMobile?: boolean;
   onMenuClick?: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ isMobile = false, onMenuClick }) => {
+const Header: React.FC<HeaderProps> = ({
+  isMobile = false,
+  onMenuClick,
+  isSidebarCollapsed = false,
+  onToggleSidebar,
+}) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -87,8 +101,15 @@ const Header: React.FC<HeaderProps> = ({ isMobile = false, onMenuClick }) => {
       height: '64px'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {!isMobile && onToggleSidebar && (
+          <Button
+            type="text"
+            icon={isSidebarCollapsed ? <MenuUnfoldOutlined style={{ fontSize: '18px' }} /> : <MenuFoldOutlined style={{ fontSize: '18px' }} />}
+            onClick={onToggleSidebar}
+          />
+        )}
         {/* 移动端菜单按钮 */}
-        {isMobile && (
+        {isMobile && onMenuClick && (
           <Button 
             type="text" 
             icon={<MenuOutlined style={{ fontSize: '18px' }} />}

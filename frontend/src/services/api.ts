@@ -184,12 +184,13 @@ class ApiService {
     return response.data;
   }
 
-  async toggleAttributionFavorite(data: { mediaSource: string; adSequence: string }): Promise<
+  async syncAttributionFavorites(data: {
+    favorites?: Array<{ mediaSource: string; adSequence: string }>;
+    additions?: Array<{ mediaSource: string; adSequence: string }>;
+    removals?: Array<{ mediaSource: string; adSequence: string }>;
+  }): Promise<
     ApiResponse<{
       favorites: Record<string, FavoriteAdSequence[]>;
-      added: boolean;
-      mediaSource: string;
-      adSequence: string;
     }>
   > {
     const response = await this.api.post('/attribution-favorites', data);

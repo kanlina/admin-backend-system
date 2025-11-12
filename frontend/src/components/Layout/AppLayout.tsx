@@ -12,10 +12,15 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const isNowMobile = window.innerWidth < 768;
+      setIsMobile(isNowMobile);
+      if (isNowMobile) {
+        setSidebarVisible(false);
+      }
     };
     
     checkMobile();
@@ -30,11 +35,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         isMobile={isMobile} 
         visible={sidebarVisible} 
         onClose={() => setSidebarVisible(false)} 
+        collapsed={!isMobile && sidebarCollapsed}
       />
       <Layout>
         <Header 
           isMobile={isMobile} 
           onMenuClick={() => setSidebarVisible(true)} 
+          isSidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed(prev => !prev)}
         />
         <Content style={{ 
           margin: isMobile ? '12px 8px' : '24px 16px', 

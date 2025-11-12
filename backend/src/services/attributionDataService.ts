@@ -2,23 +2,24 @@ import { createCoreDbConnection } from '../utils/database';
 
 export const attributionDataService = {
   // 获取所有事件类型（支持多数据源）
-  async getAllEventNames(dataSource: 'adjust' | 'appsflyer' = 'adjust') {
+  async getAllEventNames(_dataSource: 'adjust' | 'appsflyer' = 'adjust') {
     try {
-      const tableName = dataSource === 'adjust' ? 'adjust_event_record' : 'appsflyer_callback';
       const sql = `
         SELECT DISTINCT event_name 
-        FROM ${tableName}
-        WHERE event_name IS NOT NULL AND event_name != ''
+        FROM adjust_event_config
+        WHERE is_enabled = 1
+          AND event_name IS NOT NULL
+          AND event_name <> ''
         ORDER BY event_name ASC
       `;
       
-      console.log(`开始获取事件类型列表 [${dataSource}]...`);
+      console.log('开始获取事件类型列表 [adjust_event_config]...');
       const connection = await createCoreDbConnection();
       const [rows] = await connection.execute(sql);
       await connection.end();
       
       const eventNames = (rows as any[]).map(row => row.event_name);
-      console.log(`获取到事件类型 [${dataSource}]:`, eventNames.length, '个:', eventNames);
+      console.log('获取到事件类型 [adjust_event_config]:', eventNames.length, '个:', eventNames);
       
       return eventNames;
     } catch (error) {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import type { ApiResponse, LoginRequest, RegisterRequest, AuthResponse } from '../types';
+import type { ApiResponse, LoginRequest, RegisterRequest, AuthResponse, FavoriteAdSequence } from '../types';
 
 class ApiService {
   private api: AxiosInstance;
@@ -171,6 +171,28 @@ class ApiService {
 
   async getAttributionChartData(params?: any): Promise<ApiResponse<any[]>> {
     const response = await this.api.get('/attribution-chart', { params });
+    return response.data;
+  }
+
+  async getAttributionDetails(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/attribution-details', { params });
+    return response.data;
+  }
+
+  async getAttributionFavorites(): Promise<ApiResponse<Record<string, FavoriteAdSequence[]>>> {
+    const response = await this.api.get('/attribution-favorites');
+    return response.data;
+  }
+
+  async toggleAttributionFavorite(data: { mediaSource: string; adSequence: string }): Promise<
+    ApiResponse<{
+      favorites: Record<string, FavoriteAdSequence[]>;
+      added: boolean;
+      mediaSource: string;
+      adSequence: string;
+    }>
+  > {
+    const response = await this.api.post('/attribution-favorites', data);
     return response.data;
   }
 

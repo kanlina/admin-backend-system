@@ -163,6 +163,31 @@
     "filterApplied": "Filter berhasil diterapkan",
     "filterCleared": "Filter berhasil dihapus",
     "dataLoaded": "Data berhasil dimuat, {{count}} catatan",
+    "cacheRestoring": "Memulihkan data dari cache lokal…",
+    "cacheRestored": "Data dipulihkan dari cache lokal",
+    "userType": {
+      "label": "Jenis Pengguna",
+      "all": "Semua Pengguna",
+      "new": "Pengguna Baru",
+      "returning": "Pengguna Lama",
+      "cleared": "Filter jenis pengguna telah dihapus"
+    },
+    "details": {
+      "title": "Detail Atribusi",
+      "filters": "Kondisi Saat Ini",
+      "userId": "ID Pengguna",
+      "eventName": "Nama Event",
+      "createdAt": "Waktu Terjadi",
+      "mediaSource": "Sumber Media",
+      "adSequence": "Urutan Iklan",
+      "appId": "App ID",
+      "eventValueAppId": "event_value_app_id",
+      "eventValue": "Data event_value",
+      "noData": "Tidak ada data detail",
+      "error": "Gagal memuat detail atribusi",
+      "noDate": "Tanggal detail hilang, tidak dapat membuka detail",
+      "unsupported": "Detail hanya tersedia untuk sumber data AppsFlyer"
+    },
     "dataFormatError": "Format data salah",
     "networkError": "Permintaan jaringan gagal, silakan periksa layanan backend",
     "chartDataError": "Gagal mendapatkan data chart, silakan periksa layanan backend",
@@ -204,7 +229,9 @@
       "infoPush": "Jumlah Push Informasi Berhasil",
       "creditSuccess": "Jumlah Kredit Berhasil",
       "loanSuccess": "Jumlah Pengajuan Pinjaman"
-    }
+    },
+    "tableViewDefault": "Tampilan Daftar",
+    "tableViewTranspose": "Tampilan Pivot"
   },
   "auth": {
     "login": "Masuk",

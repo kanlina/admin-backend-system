@@ -1,5 +1,16 @@
 import express from 'express';
-import { getAllAppNames, getAllMediaSources, getAllAdSequences, getAllEventNames, getAttributionData, getAttributionChartData, getComparisonData } from '../controllers/attributionDataController';
+import {
+  getAllAppNames,
+  getAllMediaSources,
+  getAllAdSequences,
+  getAllEventNames,
+  getAttributionData,
+  getAttributionChartData,
+  getComparisonData,
+  getAttributionDetails,
+  getFavoriteAdSequences,
+  toggleFavoriteAdSequence,
+} from '../controllers/attributionDataController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -22,8 +33,15 @@ router.get('/attribution-data', authenticateToken, getAttributionData);
 // 获取归因图表数据
 router.get('/attribution-chart', authenticateToken, getAttributionChartData);
 
+// 获取归因明细
+router.get('/attribution-details', authenticateToken, getAttributionDetails);
+
 // 获取对比数据
 router.get('/attribution-comparison', authenticateToken, getComparisonData);
+
+// 收藏广告序列
+router.get('/attribution-favorites', authenticateToken, getFavoriteAdSequences);
+router.post('/attribution-favorites', authenticateToken, toggleFavoriteAdSequence);
 
 export default router;
 

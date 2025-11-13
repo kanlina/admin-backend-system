@@ -12,7 +12,9 @@ import {
   Popconfirm,
   Switch,
   Image,
-  Upload
+  Upload,
+  Tooltip,
+  Typography
 } from 'antd';
 import {
   EditOutlined,
@@ -26,10 +28,12 @@ import { apiService } from '../services/api';
 import dayjs from 'dayjs';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
+import { useTranslation } from 'react-i18next';
 
 const { Option } = Select;
+const { Text } = Typography;
 
-interface Content {
+interface NewsItem {
   id: number;
   title: string;
   subtitle?: string;
@@ -43,8 +47,9 @@ interface Content {
   alias?: string;
 }
 
-const Content: React.FC = () => {
-  const [contents, setContents] = useState<Content[]>([]);
+const NewsManagement: React.FC = () => {
+  const { t } = useTranslation();
+  const [contents, setContents] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -56,7 +61,7 @@ const Content: React.FC = () => {
   const [enabledFilter, setEnabledFilter] = useState<number | undefined>(undefined);
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editingContent, setEditingContent] = useState<Content | null>(null);
+  const [editingContent, setEditingContent] = useState<NewsItem | null>(null);
   const [form] = Form.useForm();
   const [detailForm] = Form.useForm();
   const [uploading, setUploading] = useState(false);
@@ -98,7 +103,7 @@ const Content: React.FC = () => {
         }));
       }
     } catch (error) {
-      message.error('获取内容列表失败');
+      message.error(t('news.messages.loadError'));
     } finally {
       setLoading(false);
     }
@@ -121,7 +126,7 @@ const Content: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleEdit = async (record: Content) => {
+  const handleEdit = async (record: NewsItem) => {
     try {
       setLoading(true);
       const response = await apiService.getContentById(record.id.toString());
@@ -132,7 +137,7 @@ const Content: React.FC = () => {
         setModalVisible(true);
       }
     } catch (error) {
-      message.error('获取内容详情失败');
+      message.error(t('news.messages.detailLoadError'));
     } finally {
       setLoading(false);
     }
@@ -142,29 +147,29 @@ const Content: React.FC = () => {
     try {
       const response = await apiService.deleteContent(id.toString());
       if (response.success) {
-        message.success('删除成功');
+        message.success(t('news.messages.deleteSuccess'));
         fetchContents();
       }
     } catch (error: any) {
-      message.error(error.response?.data?.message || '删除失败');
+      message.error(error.response?.data?.message || t('news.messages.deleteError'));
     }
   };
 
   const handleBatchDelete = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的内容');
+      message.warning(t('news.messages.selectWarning'));
       return;
     }
 
     try {
       const response = await apiService.deleteContents(selectedRowKeys.map(key => key.toString()));
       if (response.success) {
-        message.success('批量删除成功');
+        message.success(t('news.messages.batchDeleteSuccess'));
         setSelectedRowKeys([]);
         fetchContents();
       }
     } catch (error: any) {
-      message.error(error.response?.data?.message || '批量删除失败');
+      message.error(error.response?.data?.message || t('news.messages.batchDeleteError'));
     }
   };
 
@@ -176,7 +181,7 @@ const Content: React.FC = () => {
       if (editingContent) {
         const response = await apiService.updateContent(editingContent.id.toString(), values);
         if (response.success) {
-          message.success('更新成功');
+          message.success(t('news.messages.updateSuccess'));
           setModalVisible(false);
           setThumbnailPreview(null);
           fetchContents();
@@ -184,7 +189,7 @@ const Content: React.FC = () => {
       } else {
         const response = await apiService.createContent(values);
         if (response.success) {
-          message.success('创建成功');
+          message.success(t('news.messages.createSuccess'));
           setModalVisible(false);
           setThumbnailPreview(null);
           fetchContents();
@@ -194,7 +199,8 @@ const Content: React.FC = () => {
       if (error.errorFields) {
         return;
       }
-      message.error(error.response?.data?.message || '保存失败');
+      const fallbackMessage = editingContent ? t('news.messages.updateError') : t('news.messages.createError');
+      message.error(error.response?.data?.message || fallbackMessage);
     } finally {
       setLoading(false);
     }
@@ -205,16 +211,16 @@ const Content: React.FC = () => {
       const newEnabled = enabled === 1 ? 0 : 1;
       const response = await apiService.toggleContentEnabled(id.toString(), newEnabled);
       if (response.success) {
-        message.success('状态更新成功');
+        message.success(t('news.messages.statusUpdateSuccess'));
         fetchContents();
       }
     } catch (error) {
-      message.error('状态更新失败');
+      message.error(t('news.messages.statusUpdateError'));
       fetchContents();
     }
   };
 
-  const handleViewDetail = async (record: Content) => {
+  const handleViewDetail = async (record: NewsItem) => {
     try {
       setLoading(true);
       const response = await apiService.getContentById(record.id.toString());
@@ -225,7 +231,7 @@ const Content: React.FC = () => {
         setDetailModalVisible(true);
       }
     } catch (error) {
-      message.error('获取内容详情失败');
+      message.error(t('news.messages.detailLoadError'));
     } finally {
       setLoading(false);
     }
@@ -239,14 +245,14 @@ const Content: React.FC = () => {
       setLoading(true);
       const response = await apiService.updateContentDetail(editingContent.id.toString(), values.content);
       if (response.success) {
-        message.success('保存成功');
+        message.success(t('news.messages.detailSaveSuccess'));
         setDetailModalVisible(false);
         detailForm.resetFields();
         setDetailEditorValue('');
         fetchContents();
       }
     } catch (error) {
-      message.error('保存失败');
+      message.error(t('news.messages.detailSaveError'));
     } finally {
       setLoading(false);
     }
@@ -259,15 +265,15 @@ const Content: React.FC = () => {
       const response = await apiService.uploadContentImage(file, extension);
 
       if (!response.success) {
-        throw new Error(response.message || '上传失败');
+        throw new Error(response.message || t('news.messages.uploadError'));
       }
 
       const imageUrl = response.data?.url;
       form.setFieldsValue({ titleImg01: imageUrl });
       setThumbnailPreview(imageUrl || null);
-      message.success('图片上传成功');
+      message.success(t('news.messages.uploadSuccess'));
     } catch (error: any) {
-      message.error(error?.message || '图片上传失败');
+      message.error(error?.message || t('news.messages.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -352,44 +358,55 @@ const Content: React.FC = () => {
         editorContainerRef.current.innerHTML = '';
       }
     }
-  }, [detailModalVisible, detailEditorValue, detailForm]);
+  }, [detailModalVisible, detailEditorValue, detailForm, t]);
 
   const columns = [
     {
-      title: 'ID',
+      title: t('news.columns.id'),
       dataIndex: 'id',
       key: 'id',
       width: 80
     },
     {
-      title: '状态',
+      title: t('news.columns.status'),
       dataIndex: 'enabled',
       key: 'enabled',
-      width: 100,
-      render: (enabled: number, record: Content) => (
+      width: 110,
+      render: (enabled: number, record: NewsItem) => (
         <Switch
           checked={enabled === 1}
           onChange={() => handleToggleEnabled(record.id, enabled)}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
+          checkedChildren={t('news.status.enabled')}
+          unCheckedChildren={t('news.status.disabled')}
         />
       )
     },
     {
-      title: '标题',
+      title: t('news.columns.title'),
       dataIndex: 'title',
       key: 'title',
-      ellipsis: true
+      width: 220,
+      ellipsis: true,
+      render: (value: string) => {
+        const text = value || '-';
+        return (
+          <Tooltip title={text} placement="topLeft">
+            <Text ellipsis style={{ maxWidth: 200, display: 'block' }}>
+              {text}
+            </Text>
+          </Tooltip>
+        );
+      }
     },
     {
-      title: '缩略图',
+      title: t('news.columns.thumbnail'),
       dataIndex: 'titleImg01',
       key: 'titleImg01',
-      width: 100,
+      width: 120,
       render: (url: string) => url ? (
         <Image
           src={url}
-          alt="缩略图"
+          alt={t('news.columns.thumbnail')}
           width={60}
           height={60}
           style={{ objectFit: 'cover' }}
@@ -397,51 +414,57 @@ const Content: React.FC = () => {
       ) : '-'
     },
     {
-      title: '发布时间',
+      title: t('news.columns.publishedAt'),
       dataIndex: 'publishedAt',
       key: 'publishedAt',
-      width: 180,
+      width: 160,
       render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
     },
     {
-      title: 'URL路径',
+      title: t('news.columns.urlPath'),
       dataIndex: 'urlPath',
       key: 'urlPath',
-      ellipsis: true
+      width: 220,
+      ellipsis: true,
+      render: (value: string) => {
+        const text = value || '-';
+        return (
+          <Tooltip title={text} placement="topLeft">
+            <Text ellipsis style={{ maxWidth: 200, display: 'block' }}>
+              {text}
+            </Text>
+          </Tooltip>
+        );
+      }
     },
     {
-      title: '操作',
+      title: t('news.columns.actions'),
       key: 'action',
-      width: 200,
-      fixed: 'right' as const,
-      render: (_: any, record: Content) => (
-        <Space>
+      width: 220,
+      render: (_: any, record: NewsItem) => (
+        <Space size={8} style={{ whiteSpace: 'nowrap' }}>
           <Button
             type="link"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
-            编辑
+            {t('common.edit')}
           </Button>
           <Button
             type="link"
             icon={<FileTextOutlined />}
             onClick={() => handleViewDetail(record)}
           >
-            详情
+            {t('common.details')}
           </Button>
           <Popconfirm
-            title="确定要删除这条内容吗？"
+            title={t('news.confirm.delete')}
             onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
           >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-            >
-              删除
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              {t('common.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -451,34 +474,34 @@ const Content: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card>
+      <Card title={t('news.title')}>
         <Space style={{ marginBottom: 16 }} wrap>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={handleAdd}
           >
-            新增内容
+            {t('news.actions.add')}
           </Button>
           <Button
             danger
             disabled={selectedRowKeys.length === 0}
             onClick={handleBatchDelete}
           >
-            批量删除 ({selectedRowKeys.length})
+            {t('news.actions.batchDeleteWithCount', { count: selectedRowKeys.length })}
           </Button>
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchContents}
             loading={loading}
           >
-            刷新
+            {t('common.refresh')}
           </Button>
         </Space>
 
         <Space style={{ marginBottom: 16 }} wrap>
           <Input
-            placeholder="搜索标题"
+            placeholder={t('news.filters.searchTitlePlaceholder')}
             prefix={<SearchOutlined />}
             value={searchTitle}
             onChange={(e) => setSearchTitle(e.target.value)}
@@ -487,17 +510,17 @@ const Content: React.FC = () => {
             allowClear
           />
           <Select
-            placeholder="状态筛选"
+            placeholder={t('news.filters.statusPlaceholder')}
             value={enabledFilter}
             onChange={setEnabledFilter}
             allowClear
             style={{ width: 120 }}
           >
-            <Option value={1}>启用</Option>
-            <Option value={0}>禁用</Option>
+            <Option value={1}>{t('news.status.enabled')}</Option>
+            <Option value={0}>{t('news.status.disabled')}</Option>
           </Select>
           <Button type="primary" icon={<SearchOutlined />} onClick={fetchContents}>
-            查询
+            {t('common.search')}
           </Button>
         </Space>
 
@@ -506,13 +529,14 @@ const Content: React.FC = () => {
           dataSource={contents}
           loading={loading}
           rowKey="id"
+          tableLayout="fixed"
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('common.totalItems', { total }),
             pageSizeOptions: ['10', '20', '50', '100']
           }}
           onChange={handleTableChange}
@@ -520,13 +544,12 @@ const Content: React.FC = () => {
             selectedRowKeys,
             onChange: setSelectedRowKeys
           }}
-          scroll={{ x: 1200 }}
         />
       </Card>
 
       {/* 新增/编辑模态框 */}
       <Modal
-        title={editingContent ? '编辑内容' : '新增内容'}
+        title={editingContent ? t('news.modals.editTitle') : t('news.modals.addTitle')}
         open={modalVisible}
         onOk={handleSave}
         onCancel={() => {
@@ -546,32 +569,32 @@ const Content: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item
-            label="标题"
+            label={t('news.form.fields.title')}
             name="title"
-            rules={[{ required: true, message: '请输入标题' }]}
+            rules={[{ required: true, message: t('news.form.placeholders.title') }]}
           >
-            <Input placeholder="请输入标题" />
+            <Input placeholder={t('news.form.placeholders.title')} />
           </Form.Item>
           <Form.Item
-            label="副标题"
+            label={t('news.form.fields.subtitle')}
             name="subtitle"
           >
-            <Input placeholder="请输入副标题" />
+            <Input placeholder={t('news.form.placeholders.subtitle')} />
           </Form.Item>
           <Form.Item
-            label="作者"
+            label={t('news.form.fields.author')}
             name="author"
           >
-            <Input placeholder="请输入作者" />
+            <Input placeholder={t('news.form.placeholders.author')} />
           </Form.Item>
           <Form.Item
-            label="别名"
+            label={t('news.form.fields.alias')}
             name="alias"
           >
-            <Input placeholder="请输入别名（可选）" />
+            <Input placeholder={t('news.form.placeholders.alias')} />
           </Form.Item>
           <Form.Item
-            label="缩略图"
+            label={t('news.form.fields.thumbnail')}
             name="titleImg01"
           >
             <Space direction="vertical">
@@ -581,13 +604,13 @@ const Content: React.FC = () => {
                 accept="image/*"
               >
                 <Button loading={uploading} icon={<PlusOutlined />}>
-                  上传图片
+                  {t('news.upload.button')}
                 </Button>
               </Upload>
               {thumbnailPreview && (
                 <Image
                   src={thumbnailPreview}
-                  alt="预览"
+                  alt={t('news.form.fields.thumbnail')}
                   width={100}
                   height={100}
                   style={{ objectFit: 'cover' }}
@@ -597,12 +620,12 @@ const Content: React.FC = () => {
             </Space>
           </Form.Item>
           <Form.Item
-            label="状态"
+            label={t('news.form.fields.status')}
             name="enabled"
           >
             <Select>
-              <Option value={1}>启用</Option>
-              <Option value={0}>禁用</Option>
+              <Option value={1}>{t('news.status.enabled')}</Option>
+              <Option value={0}>{t('news.status.disabled')}</Option>
             </Select>
           </Form.Item>
         </Form>
@@ -610,7 +633,7 @@ const Content: React.FC = () => {
 
       {/* 内容详情编辑模态框 */}
       <Modal
-        title="编辑内容详情"
+        title={t('news.modals.detailTitle')}
         open={detailModalVisible}
         onOk={handleSaveDetail}
         onCancel={() => {
@@ -623,14 +646,14 @@ const Content: React.FC = () => {
       >
         <Form form={detailForm} layout="vertical">
           <Form.Item
-            label="内容"
+            label={t('news.form.fields.content')}
             required
             validateStatus={!detailEditorValue ? 'error' : undefined}
-            help={!detailEditorValue ? '请输入内容' : undefined}
+            help={!detailEditorValue ? t('news.detail.placeholder') : undefined}
           >
             <div ref={editorContainerRef} style={{ minHeight: 300 }} />
           </Form.Item>
-          <Form.Item name="content" rules={[{ required: true, message: '请输入内容' }]} style={{ display: 'none' }}>
+          <Form.Item name="content" rules={[{ required: true, message: t('news.detail.placeholder') }]} style={{ display: 'none' }}>
             <Input type="hidden" />
           </Form.Item>
         </Form>
@@ -639,5 +662,5 @@ const Content: React.FC = () => {
   );
 };
 
-export default Content;
+export default NewsManagement;
 

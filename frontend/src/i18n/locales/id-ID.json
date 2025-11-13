@@ -22,6 +22,7 @@
     "rows": "baris",
     "date": "Tanggal",
     "time": "Waktu",
+    "refresh": "Segarkan",
     "status": "Status",
     "action": "Aksi",
     "success": "Berhasil",
@@ -49,7 +50,8 @@
     "apiPartners": "Konfigurasi Mitra API",
     "cpiPartners": "Konfigurasi Mitra CPI",
     "logout": "Keluar",
-    "adminPanel": "Panel Admin"
+    "adminPanel": "Panel Admin",
+    "newsManagement": "Manajemen Berita"
   },
   "internalTransfer": {
     "title": "Pemantauan Data Transfer Internal",
@@ -488,6 +490,81 @@
       "required": "Silakan masukkan {{field}}",
       "url": "Silakan masukkan URL yang valid",
       "number": "Silakan masukkan angka yang valid"
+    }
+  },
+  "news": {
+    "title": "Manajemen Berita",
+    "filters": {
+      "searchTitlePlaceholder": "Cari judul berita",
+      "statusPlaceholder": "Filter status"
+    },
+    "status": {
+      "enabled": "Aktif",
+      "disabled": "Nonaktif"
+    },
+    "actions": {
+      "add": "Tambah Berita",
+      "batchDelete": "Hapus Massal",
+      "batchDeleteWithCount": "Hapus Massal ({{count}})"
+    },
+    "columns": {
+      "id": "ID",
+      "status": "Status",
+      "title": "Judul",
+      "thumbnail": "Gambar Mini",
+      "publishedAt": "Waktu Terbit",
+      "urlPath": "Jalur URL",
+      "actions": "Tindakan"
+    },
+    "modals": {
+      "addTitle": "Tambah Berita",
+      "editTitle": "Edit Berita",
+      "detailTitle": "Edit Konten Berita"
+    },
+    "form": {
+      "fields": {
+        "title": "Judul",
+        "subtitle": "Subjudul",
+        "author": "Penulis",
+        "alias": "Alias",
+        "thumbnail": "Gambar Mini",
+        "status": "Status",
+        "content": "Konten"
+      },
+      "placeholders": {
+        "title": "Masukkan judul",
+        "subtitle": "Masukkan subjudul",
+        "author": "Masukkan penulis",
+        "alias": "Masukkan alias (opsional)"
+      }
+    },
+    "messages": {
+      "loadError": "Gagal memuat daftar berita",
+      "deleteSuccess": "Berhasil dihapus",
+      "deleteError": "Gagal menghapus",
+      "selectWarning": "Silakan pilih setidaknya satu berita",
+      "batchDeleteSuccess": "Penghapusan massal berhasil",
+      "batchDeleteError": "Penghapusan massal gagal",
+      "updateSuccess": "Berhasil diperbarui",
+      "updateError": "Gagal memperbarui",
+      "createSuccess": "Berhasil dibuat",
+      "createError": "Gagal membuat",
+      "statusUpdateSuccess": "Status berhasil diperbarui",
+      "statusUpdateError": "Gagal memperbarui status",
+      "detailLoadError": "Gagal memuat detail berita",
+      "detailSaveSuccess": "Berhasil disimpan",
+      "detailSaveError": "Gagal menyimpan",
+      "uploadSuccess": "Gambar berhasil diunggah",
+      "uploadError": "Gagal mengunggah gambar"
+    },
+    "confirm": {
+      "delete": "Yakin ingin menghapus berita ini?"
+    },
+    "upload": {
+      "button": "Unggah Gambar"
+    },
+    "detail": {
+      "placeholder": "Masukkan konten (mendukung HTML)"
     }
   }
 }

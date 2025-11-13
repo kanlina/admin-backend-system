@@ -22,6 +22,7 @@
     "rows": "rows",
     "date": "Date",
     "time": "Time",
+    "refresh": "Refresh",
     "status": "Status",
     "action": "Action",
     "success": "Success",
@@ -49,7 +50,8 @@
     "apiPartners": "API Partners Configuration",
     "cpiPartners": "CPI Partners Configuration",
     "logout": "Logout",
-    "adminPanel": "Admin Panel"
+    "adminPanel": "Admin Panel",
+    "newsManagement": "News Management"
   },
   "internalTransfer": {
     "title": "Internal Transfer Data Monitoring",
@@ -488,6 +490,81 @@
       "required": "Please enter {{field}}",
       "url": "Please enter a valid URL",
       "number": "Please enter a valid number"
+    }
+  },
+  "news": {
+    "title": "News Management",
+    "filters": {
+      "searchTitlePlaceholder": "Search news title",
+      "statusPlaceholder": "Filter by status"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "actions": {
+      "add": "Add News",
+      "batchDelete": "Batch Delete",
+      "batchDeleteWithCount": "Batch Delete ({{count}})"
+    },
+    "columns": {
+      "id": "ID",
+      "status": "Status",
+      "title": "Title",
+      "thumbnail": "Thumbnail",
+      "publishedAt": "Published At",
+      "urlPath": "URL Path",
+      "actions": "Actions"
+    },
+    "modals": {
+      "addTitle": "Add News",
+      "editTitle": "Edit News",
+      "detailTitle": "Edit News Content"
+    },
+    "form": {
+      "fields": {
+        "title": "Title",
+        "subtitle": "Subtitle",
+        "author": "Author",
+        "alias": "Alias",
+        "thumbnail": "Thumbnail",
+        "status": "Status",
+        "content": "Content"
+      },
+      "placeholders": {
+        "title": "Enter title",
+        "subtitle": "Enter subtitle",
+        "author": "Enter author",
+        "alias": "Enter alias (optional)"
+      }
+    },
+    "messages": {
+      "loadError": "Failed to load news list",
+      "deleteSuccess": "Deleted successfully",
+      "deleteError": "Failed to delete",
+      "selectWarning": "Please select at least one news item",
+      "batchDeleteSuccess": "Batch delete succeeded",
+      "batchDeleteError": "Batch delete failed",
+      "updateSuccess": "Updated successfully",
+      "updateError": "Failed to update",
+      "createSuccess": "Created successfully",
+      "createError": "Failed to create",
+      "statusUpdateSuccess": "Status updated successfully",
+      "statusUpdateError": "Failed to update status",
+      "detailLoadError": "Failed to load news detail",
+      "detailSaveSuccess": "Saved successfully",
+      "detailSaveError": "Failed to save",
+      "uploadSuccess": "Image uploaded successfully",
+      "uploadError": "Failed to upload image"
+    },
+    "confirm": {
+      "delete": "Are you sure you want to delete this news item?"
+    },
+    "upload": {
+      "button": "Upload Image"
+    },
+    "detail": {
+      "placeholder": "Enter content (HTML supported)"
     }
   }
 }

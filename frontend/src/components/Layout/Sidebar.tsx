@@ -84,9 +84,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      key: '/content',
+      key: '/news',
       icon: <BookOutlined />,
-      label: t('navigation.content', { defaultValue: '内容管理' }),
+      label: t('navigation.newsManagement'),
     },
     ...(user?.role === 'ADMIN' ? [
       {

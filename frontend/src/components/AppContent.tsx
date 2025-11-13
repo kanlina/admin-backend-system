@@ -17,7 +17,7 @@ import AdjustData from '../pages/AdjustData';
 import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
 import ApiPartners from '../pages/ApiPartners';
-import Content from '../pages/Content';
+import NewsManagement from '../pages/Content';
 
 // 配置 dayjs 多语言
 import dayjs from 'dayjs';
@@ -140,11 +140,11 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             } />
             
-            {/* 内容管理路由 */}
-            <Route path="/content" element={
+            {/* 新闻管理路由 */}
+            <Route path="/news" element={
               <ProtectedRoute>
                 <AppLayout>
-                  <Content />
+                  <NewsManagement />
                 </AppLayout>
               </ProtectedRoute>
             } />

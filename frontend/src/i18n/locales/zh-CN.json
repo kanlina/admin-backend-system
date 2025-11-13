@@ -19,6 +19,7 @@
     "rows": "行",
     "date": "日期",
     "time": "时间",
+    "refresh": "刷新",
     "status": "状态",
     "action": "操作",
     "actions": "操作",
@@ -49,7 +50,8 @@
     "apiPartners": "API合作伙伴配置",
     "cpiPartners": "CPI合作伙伴配置",
     "logout": "退出登录",
-    "adminPanel": "管理后台"
+    "adminPanel": "管理后台",
+    "newsManagement": "新闻管理"
   },
   "internalTransfer": {
     "title": "内转数据监控",
@@ -488,6 +490,81 @@
       "required": "请输入{{field}}",
       "url": "请输入有效的URL",
       "number": "请输入有效的数字"
+    }
+  },
+  "news": {
+    "title": "新闻管理",
+    "filters": {
+      "searchTitlePlaceholder": "搜索新闻标题",
+      "statusPlaceholder": "状态筛选"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "actions": {
+      "add": "新增新闻",
+      "batchDelete": "批量删除",
+      "batchDeleteWithCount": "批量删除 ({{count}})"
+    },
+    "columns": {
+      "id": "ID",
+      "status": "状态",
+      "title": "标题",
+      "thumbnail": "缩略图",
+      "publishedAt": "发布时间",
+      "urlPath": "URL路径",
+      "actions": "操作"
+    },
+    "modals": {
+      "addTitle": "新增新闻",
+      "editTitle": "编辑新闻",
+      "detailTitle": "编辑新闻详情"
+    },
+    "form": {
+      "fields": {
+        "title": "标题",
+        "subtitle": "副标题",
+        "author": "作者",
+        "alias": "别名",
+        "thumbnail": "缩略图",
+        "status": "状态",
+        "content": "内容"
+      },
+      "placeholders": {
+        "title": "请输入标题",
+        "subtitle": "请输入副标题",
+        "author": "请输入作者",
+        "alias": "请输入别名（可选）"
+      }
+    },
+    "messages": {
+      "loadError": "获取新闻列表失败",
+      "deleteSuccess": "删除成功",
+      "deleteError": "删除失败",
+      "selectWarning": "请选择至少一条新闻",
+      "batchDeleteSuccess": "批量删除成功",
+      "batchDeleteError": "批量删除失败",
+      "updateSuccess": "更新成功",
+      "updateError": "更新失败",
+      "createSuccess": "创建成功",
+      "createError": "创建失败",
+      "statusUpdateSuccess": "状态更新成功",
+      "statusUpdateError": "状态更新失败",
+      "detailLoadError": "获取新闻详情失败",
+      "detailSaveSuccess": "保存成功",
+      "detailSaveError": "保存失败",
+      "uploadSuccess": "图片上传成功",
+      "uploadError": "图片上传失败"
+    },
+    "confirm": {
+      "delete": "确定要删除这条新闻吗？"
+    },
+    "upload": {
+      "button": "上传图片"
+    },
+    "detail": {
+      "placeholder": "请输入内容（支持HTML）"
     }
   }
 }

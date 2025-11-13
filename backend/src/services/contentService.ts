@@ -132,43 +132,20 @@ export const contentService = {
         }
       }
 
-      const insertData = {
-        appId: content.appId || 15, // 默认 appId
-        parentId: content.parentId || 10, // 默认 parentId
-        type: content.type || 2, // 默认文章类型
-        title: content.title || '',
-        subtitle: content.subtitle || '',
-        author: content.author || '',
-        content: content.content || '',
-        alias: content.alias || '',
-        titleImg01: content.titleImg01 || '',
-        enabled: content.enabled !== undefined ? content.enabled : 1,
-        publishedAt: now,
-        urlPath: content.urlPath || '',
-        sortNum: 0,
-        createdAt: now,
-        updatedAt: now
-      };
-
       const [result] = await connection.execute(
-        `INSERT INTO content (appId, parentId, type, title, subtitle, author, content, alias, titleImg01, enabled, publishedAt, urlPath, sortNum, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO content (appId, parentId, type, title, subtitle, author, content, alias, titleImg01, enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          insertData.appId,
-          insertData.parentId,
-          insertData.type,
-          insertData.title,
-          insertData.subtitle,
-          insertData.author,
-          insertData.content,
-          insertData.alias,
-          insertData.titleImg01,
-          insertData.enabled,
-          insertData.publishedAt,
-          insertData.urlPath,
-          insertData.sortNum,
-          insertData.createdAt,
-          insertData.updatedAt
+          content.appId || 15, // 默认 appId
+          content.parentId || 10, // 默认 parentId
+          content.type || 2, // 默认文章类型
+          content.title || '',
+          content.subtitle || '',
+          content.author || '',
+          content.content || '',
+          content.alias || '',
+          content.titleImg01 || '',
+          content.enabled !== undefined ? content.enabled : 1
         ]
       );
 
@@ -222,8 +199,6 @@ export const contentService = {
         return await this.getContentById(id);
       }
 
-      updateFields.push('updatedAt = ?');
-      updateValues.push(new Date().toISOString().slice(0, 19).replace('T', ' '));
       updateValues.push(id);
 
       await connection.execute(
@@ -322,8 +297,8 @@ export const contentService = {
       );
 
       await connection.execute(
-        'UPDATE content SET content = ?, updatedAt = ? WHERE id = ?',
-        [finalContent, new Date().toISOString().slice(0, 19).replace('T', ' '), id]
+        'UPDATE content SET content = ? WHERE id = ?',
+        [finalContent, id]
       );
 
       return await this.getContentById(id);
@@ -337,8 +312,8 @@ export const contentService = {
     const connection = await createId998DbConnection();
     try {
       await connection.execute(
-        'UPDATE content SET enabled = ?, updatedAt = ? WHERE id = ?',
-        [enabled, new Date().toISOString().slice(0, 19).replace('T', ' '), id]
+        'UPDATE content SET enabled = ? WHERE id = ?',
+        [enabled, id]
       );
       return await this.getContentById(id);
     } finally {

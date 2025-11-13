@@ -11,8 +11,6 @@ import {
   Form,
   message,
   Popconfirm,
-  Row,
-  Col,
   Switch,
   Image,
   Upload
@@ -25,7 +23,6 @@ import {
   FileTextOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
 import { apiService } from '../services/api';
 import dayjs from 'dayjs';
 
@@ -47,7 +44,6 @@ interface Content {
 }
 
 const Content: React.FC = () => {
-  const { t } = useTranslation();
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -251,8 +247,6 @@ const Content: React.FC = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target?.result as string;
-        const ext = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase();
-        
         // 这里需要调用上传接口，暂时使用 base64
         // 实际应该调用后端的图片上传接口
         const imageUrl = base64;

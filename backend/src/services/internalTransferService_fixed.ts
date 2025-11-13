@@ -91,6 +91,7 @@ export const internalTransferService = {
                 DATE(created_at) AS date_col,
                COUNT(DISTINCT(user_id)) AS info_count
             FROM user_partner_bank_record
+            where status = 1
             GROUP BY DATE(created_at)
         ) info_stats ON info_stats.date_col = date_series.date_col
 

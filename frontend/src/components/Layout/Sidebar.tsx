@@ -11,7 +11,8 @@ import {
   CreditCardOutlined,
   ToolOutlined,
   TeamOutlined,
-  ApiOutlined
+  ApiOutlined,
+  BookOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -81,6 +82,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: t('navigation.apiPartners'),
         },
       ],
+    },
+    {
+      key: '/content',
+      icon: <BookOutlined />,
+      label: t('navigation.content', { defaultValue: '内容管理' }),
     },
     ...(user?.role === 'ADMIN' ? [
       {

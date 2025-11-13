@@ -17,6 +17,7 @@ import AdjustData from '../pages/AdjustData';
 import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
 import ApiPartners from '../pages/ApiPartners';
+import Content from '../pages/Content';
 
 // 配置 dayjs 多语言
 import dayjs from 'dayjs';
@@ -135,6 +136,15 @@ const AppContent: React.FC = () => {
               <ProtectedRoute requireAdmin>
                 <AppLayout>
                   <Users />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* 内容管理路由 */}
+            <Route path="/content" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Content />
                 </AppLayout>
               </ProtectedRoute>
             } />

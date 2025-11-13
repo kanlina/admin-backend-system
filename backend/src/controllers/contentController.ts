@@ -165,15 +165,21 @@ export const getCategories = async (req: Request, res: Response) => {
     const { appId = 15 } = req.query;
     const categories = await contentService.getCategories(parseInt(appId as string));
 
-    // 构建树形结构
-    const buildTree = (items: Array<{ id: number; name: string; parentId: number }>, parentId: number = 0) => {
-      return items
+    type CategoryItem = { id: number; name: string; parentId: number };
+    interface CategoryTreeNode extends CategoryItem {
+      children: CategoryTreeNode[];
+    }
+
+    const buildTree = (
+      items: CategoryItem[],
+      parentId: number = 0,
+    ): CategoryTreeNode[] =>
+      items
         .filter(item => item.parentId === parentId)
         .map(item => ({
           ...item,
-          children: buildTree(items, item.id)
+          children: buildTree(items, item.id),
         }));
-    };
 
     const tree = buildTree(categories);
 

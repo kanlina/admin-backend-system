@@ -46,34 +46,12 @@ export const createCoreDbConnection = () => {
 
 // id-998 项目数据库连接（用于 Content 功能）
 export const createId998DbConnection = () => {
-  const host =
-    process.env.ID998_DB_HOST ||
-    process.env.DB_HOST ||
-    (process.env.NODE_ENV === 'production'
-      ? '127.0.0.1'
-      : '127.0.0.1');
-  const port = parseInt(
-    process.env.ID998_DB_PORT || process.env.DB_PORT || '3306',
-    10,
-  );
-  const user =
-    process.env.ID998_DB_USER ||
-    process.env.DB_USER ||
-    'dbuser';
-  const password =
-    process.env.ID998_DB_PASSWORD ||
-    process.env.DB_PASSWORD ||
-    'wD2:aB1]mJ1%rB0}';
-  const database =
-    process.env.ID998_DB_NAME ||
-    'loan';
-
   return mysql.createConnection({
-    host,
-    port,
-    user,
-    password,
-    database,
-    charset: 'utf8mb4',
+    host: '127.0.0.1',
+    port: 3306,
+    user: 'dbuser',
+    password: 'wD2:aB1]mJ1%rB0}',
+    database: 'loan',
+    charset: 'utf8mb4'
   });
 };

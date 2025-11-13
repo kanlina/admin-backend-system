@@ -12,6 +12,7 @@ import tagRoutes from './routes/tags';
 import internalTransferRoutes from './routes/internalTransfer';
 import attributionDataRoutes from './routes/attributionData';
 import apiPartnerRoutes from './routes/apiPartner';
+import contentRoutes from './routes/content';
 
 // 加载环境变量
 dotenv.config();
@@ -77,6 +78,7 @@ app.use('/api/tags', tagRoutes);
 app.use('/api', internalTransferRoutes);
 app.use('/api', attributionDataRoutes);
 app.use('/api/api-partner-configs', apiPartnerRoutes);
+app.use('/api/content', contentRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {

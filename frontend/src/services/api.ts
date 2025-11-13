@@ -227,6 +227,52 @@ class ApiService {
     const response = await this.api.delete(`/api-partner-configs/${id}`);
     return response.data;
   }
+
+  // Content 内容管理相关
+  async getContents(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/content', { params });
+    return response.data;
+  }
+
+  async getContentById(id: string): Promise<ApiResponse<any>> {
+    const response = await this.api.get(`/content/${id}`);
+    return response.data;
+  }
+
+  async createContent(data: any): Promise<ApiResponse<any>> {
+    const response = await this.api.post('/content', data);
+    return response.data;
+  }
+
+  async updateContent(id: string, data: any): Promise<ApiResponse<any>> {
+    const response = await this.api.put(`/content/${id}`, data);
+    return response.data;
+  }
+
+  async deleteContent(id: string): Promise<ApiResponse<any>> {
+    const response = await this.api.delete(`/content/${id}`);
+    return response.data;
+  }
+
+  async deleteContents(ids: string[]): Promise<ApiResponse<any>> {
+    const response = await this.api.post('/content/batch-delete', { ids });
+    return response.data;
+  }
+
+  async getCategories(appId?: number): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/content/categories', { params: { appId } });
+    return response.data;
+  }
+
+  async updateContentDetail(id: string, content: string): Promise<ApiResponse<any>> {
+    const response = await this.api.post(`/content/${id}/detail`, { content });
+    return response.data;
+  }
+
+  async toggleContentEnabled(id: string, enabled: number): Promise<ApiResponse<any>> {
+    const response = await this.api.post(`/content/${id}/toggle-enabled`, { enabled });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

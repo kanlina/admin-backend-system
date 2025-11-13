@@ -18,9 +18,14 @@ if (!ossConfig.accessKeyId || !ossConfig.accessKeySecret) {
   throw new Error('OSS配置缺失：请设置环境变量 OSS_ACCESS_KEY_ID 和 OSS_ACCESS_KEY_SECRET');
 }
 
+const { accessKeyId, accessKeySecret, endpoint, bucket, bucketDomain } = ossConfig;
+
 // 创建OSS客户端
 export const ossClient = new OSS({
-  ...ossConfig,
+  accessKeyId,
+  accessKeySecret,
+  endpoint,
+  bucket,
   timeout: 120000 // 120秒超时
 });
 
@@ -57,7 +62,7 @@ export const uploadBufferToOSS = async (buffer: Buffer, extension: string, folde
       console.warn('设置OSS文件ACL失败:', aclError);
     }
 
-    return result.url || `${ossConfig.bucketDomain}/${fileName}`;
+    return result.url || `${bucketDomain}/${fileName}`;
   } catch (error: any) {
     console.error('OSS上传失败:', error);
     throw new Error(`文件上传失败: ${error?.message || 'Unknown error'}`);
@@ -67,7 +72,7 @@ export const uploadBufferToOSS = async (buffer: Buffer, extension: string, folde
 // 删除OSS文件
 export const deleteFromOSS = async (url: string): Promise<boolean> => {
   try {
-    const fileName = url.replace(`${ossConfig.bucketDomain}/`, '');
+    const fileName = url.replace(`${bucketDomain}/`, '');
     await ossClient.delete(fileName);
     return true;
   } catch (error) {
@@ -76,4 +81,10 @@ export const deleteFromOSS = async (url: string): Promise<boolean> => {
   }
 };
 
-export default ossConfig;
+export default {
+  accessKeyId,
+  accessKeySecret,
+  endpoint,
+  bucket,
+  bucketDomain
+};

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { contentService } from '../services/contentService';
 import type { AuthenticatedRequest } from '../types';
+import { uploadBufferToOSS } from '../config/oss';
 
 // 获取内容列表
 export const getContents = async (req: Request, res: Response) => {
@@ -253,6 +254,85 @@ export const toggleEnabled = async (req: AuthenticatedRequest, res: Response) =>
     res.status(500).json({
       success: false,
       message: '更新状态失败',
+      error: error instanceof Error ? error.message : '未知错误'
+    });
+  }
+};
+
+// 上传内容图片（缩略图等）
+export const uploadContentImage = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('收到上传请求:', {
+      hasFile: !!req.file,
+      bodyKeys: Object.keys(req.body || {}),
+      contentType: req.headers['content-type'],
+      contentLength: req.headers['content-length'],
+    });
+
+    if (req.file) {
+      const { originalname, buffer, mimetype, size } = req.file;
+      console.log('处理multipart上传:', {
+        originalname,
+        mimetype,
+        size,
+      });
+      const extension = originalname.includes('.') ? originalname.substring(originalname.lastIndexOf('.')) : '.png';
+      const url = await uploadBufferToOSS(buffer, extension, 'content', mimetype);
+
+      console.log('上传成功，返回URL:', url);
+
+      return res.json({
+        success: true,
+        data: { url },
+        message: '上传成功'
+      });
+    }
+
+    const { file, ext } = req.body as { file?: string; ext?: string };
+
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供文件内容'
+      });
+    }
+
+    let mimeType = 'image/png';
+    let base64Data = file;
+
+    const dataUrlMatch = file.match(/^data:(.+);base64,(.*)$/);
+    if (dataUrlMatch) {
+      mimeType = dataUrlMatch[1];
+      base64Data = dataUrlMatch[2];
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const extension = ext
+      ? (ext.startsWith('.') ? ext : `.${ext}`)
+      : mimeType.includes('/')
+        ? `.${mimeType.split('/')[1]}`
+        : '.png';
+
+    console.log('处理base64上传:', {
+      mimeType,
+      extension,
+      bufferLength: buffer.length,
+    });
+
+    const url = await uploadBufferToOSS(buffer, extension, 'content', mimeType);
+
+    console.log('上传成功，返回URL:', url);
+
+    res.json({
+      success: true,
+      data: { url },
+      message: '上传成功'
+    });
+  } catch (error) {
+    console.error('上传内容图片失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '上传失败',
       error: error instanceof Error ? error.message : '未知错误'
     });
   }

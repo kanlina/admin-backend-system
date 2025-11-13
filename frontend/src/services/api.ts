@@ -239,6 +239,24 @@ class ApiService {
     return response.data;
   }
 
+  async uploadContentImage(file: File | string, ext?: string): Promise<ApiResponse<{ url: string }>> {
+    if (file instanceof File) {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (ext) {
+        formData.append('ext', ext);
+      }
+
+      const response = await this.api.post('/content/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    }
+
+    const response = await this.api.post('/content/upload', { file, ext });
+    return response.data;
+  }
+
   async createContent(data: any): Promise<ApiResponse<any>> {
     const response = await this.api.post('/content', data);
     return response.data;

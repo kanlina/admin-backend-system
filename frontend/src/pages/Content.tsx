@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Table,
   Button,
@@ -24,9 +24,10 @@ import {
 } from '@ant-design/icons';
 import { apiService } from '../services/api';
 import dayjs from 'dayjs';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface Content {
   id: number;
@@ -60,6 +61,10 @@ const Content: React.FC = () => {
   const [detailForm] = Form.useForm();
   const [uploading, setUploading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [detailEditorValue, setDetailEditorValue] = useState('');
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
+  const quillInstanceRef = useRef<any>(null);
 
   const appId = 15; // 默认 appId
 
@@ -112,6 +117,7 @@ const Content: React.FC = () => {
     setEditingContent(null);
     form.resetFields();
     form.setFieldsValue({ appId, enabled: 1 });
+    setThumbnailPreview(null);
     setModalVisible(true);
   };
 
@@ -122,6 +128,7 @@ const Content: React.FC = () => {
       if (response.success) {
         setEditingContent(response.data);
         form.setFieldsValue(response.data);
+        setThumbnailPreview(response.data?.titleImg01 || null);
         setModalVisible(true);
       }
     } catch (error) {
@@ -171,6 +178,7 @@ const Content: React.FC = () => {
         if (response.success) {
           message.success('更新成功');
           setModalVisible(false);
+          setThumbnailPreview(null);
           fetchContents();
         }
       } else {
@@ -178,6 +186,7 @@ const Content: React.FC = () => {
         if (response.success) {
           message.success('创建成功');
           setModalVisible(false);
+          setThumbnailPreview(null);
           fetchContents();
         }
       }
@@ -212,6 +221,7 @@ const Content: React.FC = () => {
       if (response.success) {
         setEditingContent(response.data);
         detailForm.setFieldsValue({ content: response.data.content });
+        setDetailEditorValue(response.data.content || '');
         setDetailModalVisible(true);
       }
     } catch (error) {
@@ -231,6 +241,8 @@ const Content: React.FC = () => {
       if (response.success) {
         message.success('保存成功');
         setDetailModalVisible(false);
+        detailForm.resetFields();
+        setDetailEditorValue('');
         fetchContents();
       }
     } catch (error) {
@@ -243,23 +255,104 @@ const Content: React.FC = () => {
   const handleImageUpload = async (file: File) => {
     try {
       setUploading(true);
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = e.target?.result as string;
-        // 这里需要调用上传接口，暂时使用 base64
-        // 实际应该调用后端的图片上传接口
-        const imageUrl = base64;
-        form.setFieldsValue({ titleImg01: imageUrl });
-        setUploading(false);
-        message.success('图片上传成功');
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
+      const extension = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase();
+      const response = await apiService.uploadContentImage(file, extension);
+
+      if (!response.success) {
+        throw new Error(response.message || '上传失败');
+      }
+
+      const imageUrl = response.data?.url;
+      form.setFieldsValue({ titleImg01: imageUrl });
+      setThumbnailPreview(imageUrl || null);
+      message.success('图片上传成功');
+    } catch (error: any) {
+      message.error(error?.message || '图片上传失败');
+    } finally {
       setUploading(false);
-      message.error('图片上传失败');
     }
-    return false; // 阻止默认上传
+
+    return false;
   };
+
+  useEffect(() => {
+    if (detailModalVisible) {
+      if (editorContainerRef.current) {
+        if (!quillInstanceRef.current) {
+          const toolbarContainer = document.createElement('div');
+          toolbarContainer.innerHTML = `
+            <span class="ql-formats">
+              <select class="ql-header">
+                <option selected></option>
+                <option value="1"></option>
+                <option value="2"></option>
+                <option value="3"></option>
+              </select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-bold"></button>
+              <button class="ql-italic"></button>
+              <button class="ql-underline"></button>
+              <button class="ql-strike"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-list" value="ordered"></button>
+              <button class="ql-list" value="bullet"></button>
+            </span>
+            <span class="ql-formats">
+              <select class="ql-align"></select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-link"></button>
+              <button class="ql-image"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-clean"></button>
+            </span>
+          `;
+
+          const wrapper = document.createElement('div');
+          wrapper.className = 'ql-container ql-snow';
+          const editorDiv = document.createElement('div');
+          editorDiv.className = 'ql-editor';
+          wrapper.appendChild(editorDiv);
+
+          editorContainerRef.current.innerHTML = '';
+          editorContainerRef.current.appendChild(toolbarContainer);
+          editorContainerRef.current.appendChild(wrapper);
+
+          quillInstanceRef.current = new Quill(editorDiv, {
+            theme: 'snow',
+            modules: {
+              toolbar: toolbarContainer,
+            },
+          });
+
+          quillInstanceRef.current.on('text-change', () => {
+            const html = editorDiv.innerHTML;
+            setDetailEditorValue(html);
+            detailForm.setFieldsValue({ content: html });
+          });
+        }
+
+        if (quillInstanceRef.current) {
+          const quill = quillInstanceRef.current;
+          const html = detailEditorValue || '';
+          const delta = quill.clipboard.convert(html);
+          quill.setContents(delta);
+          quill.setSelection(quill.getLength(), 0);
+        }
+      }
+    } else {
+      if (quillInstanceRef.current) {
+        quillInstanceRef.current.off('text-change');
+        quillInstanceRef.current = null;
+      }
+      if (editorContainerRef.current) {
+        editorContainerRef.current.innerHTML = '';
+      }
+    }
+  }, [detailModalVisible, detailEditorValue, detailForm]);
 
   const columns = [
     {
@@ -439,6 +532,7 @@ const Content: React.FC = () => {
         onCancel={() => {
           setModalVisible(false);
           form.resetFields();
+          setThumbnailPreview(null);
         }}
         confirmLoading={loading}
         width={600}
@@ -490,13 +584,14 @@ const Content: React.FC = () => {
                   上传图片
                 </Button>
               </Upload>
-              {form.getFieldValue('titleImg01') && (
+              {thumbnailPreview && (
                 <Image
-                  src={form.getFieldValue('titleImg01')}
+                  src={thumbnailPreview}
                   alt="预览"
                   width={100}
                   height={100}
                   style={{ objectFit: 'cover' }}
+                  fallback=""
                 />
               )}
             </Space>
@@ -521,6 +616,7 @@ const Content: React.FC = () => {
         onCancel={() => {
           setDetailModalVisible(false);
           detailForm.resetFields();
+          setDetailEditorValue('');
         }}
         confirmLoading={loading}
         width={800}
@@ -528,13 +624,14 @@ const Content: React.FC = () => {
         <Form form={detailForm} layout="vertical">
           <Form.Item
             label="内容"
-            name="content"
-            rules={[{ required: true, message: '请输入内容' }]}
+            required
+            validateStatus={!detailEditorValue ? 'error' : undefined}
+            help={!detailEditorValue ? '请输入内容' : undefined}
           >
-            <TextArea
-              rows={15}
-              placeholder="请输入内容（支持HTML）"
-            />
+            <div ref={editorContainerRef} style={{ minHeight: 300 }} />
+          </Form.Item>
+          <Form.Item name="content" rules={[{ required: true, message: '请输入内容' }]} style={{ display: 'none' }}>
+            <Input type="hidden" />
           </Form.Item>
         </Form>
       </Modal>

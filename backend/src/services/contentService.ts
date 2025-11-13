@@ -134,7 +134,7 @@ export const contentService = {
 
       const [result] = await connection.execute(
         `INSERT INTO content (appId, parentId, type, title, subtitle, author, content, alias, titleImg01, enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
         [
           content.appId || 15, // 默认 appId
           content.parentId || 10, // 默认 parentId
@@ -151,14 +151,69 @@ export const contentService = {
 
       const insertId = (result as any).insertId;
 
-      // 更新 urlPath 和 sortNum
-      const urlPath = `/article/${insertId}.html`;
-      await connection.execute(
-        'UPDATE content SET urlPath = ?, sortNum = ? WHERE id = ?',
-        [urlPath, insertId, insertId]
-      );
+      let columnSet: Set<string> | null = null;
+      try {
+        const [columnRows] = await connection.execute('SHOW COLUMNS FROM content');
+        columnSet = new Set((columnRows as Array<{ Field: string }>).map(col => col.Field));
+      } catch (err) {
+        // 没有 SHOW 权限时忽略，按最小字段集返回
+        columnSet = null;
+      }
 
-      return await this.getContentById(insertId);
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
+
+      if (columnSet?.has('urlPath')) {
+        updateFields.push('urlPath = ?');
+        updateValues.push(`/article/${insertId}.html`);
+      }
+
+      if (columnSet?.has('sortNum')) {
+        updateFields.push('sortNum = ?');
+        updateValues.push(insertId);
+      }
+
+      if (columnSet?.has('publishedAt')) {
+        updateFields.push('publishedAt = ?');
+        updateValues.push(now);
+      }
+
+      if (columnSet?.has('enabled') && content.enabled === undefined) {
+        // 老系统默认启用值为 2，这里兼容：如果存在该字段且未传值，则更新为 2
+        updateFields.push('enabled = ?');
+        updateValues.push(2);
+      }
+
+      if (updateFields.length > 0) {
+        updateValues.push(insertId);
+        await connection.execute(
+          `UPDATE content SET ${updateFields.join(', ')} WHERE id = ?`,
+          updateValues
+        );
+      }
+
+      const responseData: Content = {
+        id: insertId,
+        appId: content.appId || 15,
+        parentId: content.parentId || 10,
+        type: content.type || 2,
+        title: content.title || '',
+        subtitle: content.subtitle || '',
+        author: content.author || '',
+        content: content.content || '',
+        alias: content.alias || '',
+        urlPath: columnSet?.has('urlPath') ? `/article/${insertId}.html` : content.urlPath,
+        titleImg01: content.titleImg01 || '',
+        enabled: columnSet?.has('enabled')
+          ? (content.enabled !== undefined ? content.enabled : 2)
+          : (content.enabled !== undefined ? content.enabled : 1),
+        publishedAt: columnSet?.has('publishedAt') ? now : content.publishedAt,
+        sortNum: columnSet?.has('sortNum') ? insertId : content.sortNum,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      return responseData;
     } finally {
       await connection.end();
     }

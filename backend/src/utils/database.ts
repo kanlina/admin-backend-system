@@ -46,12 +46,5 @@ export const createCoreDbConnection = () => {
 
 // id-998 项目数据库连接（用于 Content 功能）
 export const createId998DbConnection = () => {
-  return mysql.createConnection({
-    host: '127.0.0.1',
-    port: 3306,
-    user: 'dbuser',
-    password: 'wD2:aB1]mJ1%rB0}',
-    database: 'loan',
-    charset: 'utf8mb4'
-  });
+  return createMainDbConnection();
 };

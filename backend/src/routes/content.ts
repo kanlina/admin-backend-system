@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   getContents,
   getContentById,
@@ -8,17 +9,22 @@ import {
   deleteContents,
   getCategories,
   updateContentDetail,
-  toggleEnabled
+  toggleEnabled,
+  uploadContentImage
 } from '../controllers/contentController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // 获取分类列表（公开接口，用于前端选择）
 router.get('/categories', getCategories);
 
 // 所有其他路由都需要认证
 router.use(authenticateToken);
+
+// 上传内容图片
+router.post('/upload', upload.single('file'), uploadContentImage);
 
 // 获取内容列表
 router.get('/', getContents);

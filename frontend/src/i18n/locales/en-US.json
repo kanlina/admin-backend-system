@@ -851,8 +851,7 @@
       "result": "Result",
       "success": "Success",
       "failure": "Failure",
-      "updatedAt": "Updated At",
-      "createdBy": "Created By"
+      "updatedAt": "Updated At"
     },
     "status": {
       "draft": "Draft",

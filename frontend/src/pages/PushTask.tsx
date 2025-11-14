@@ -274,12 +274,6 @@ const PushTaskPage: React.FC = () => {
       render: (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
-      title: t('pushTask.table.createdBy'),
-      dataIndex: 'createdByName',
-      width: 160,
-      render: (value?: string) => value || '-',
-    },
-    {
       title: t('pushTask.table.status'),
       dataIndex: 'status',
       width: 140,

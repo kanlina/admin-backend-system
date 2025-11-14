@@ -855,8 +855,7 @@
       "result": "推送结果",
       "success": "成功",
       "failure": "失败",
-      "updatedAt": "更新时间",
-      "createdBy": "创建账号"
+      "updatedAt": "更新时间"
     },
     "status": {
       "draft": "草稿",

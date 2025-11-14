@@ -851,8 +851,7 @@
       "result": "Hasil",
       "success": "Berhasil",
       "failure": "Gagal",
-      "updatedAt": "Diperbarui Pada",
-      "createdBy": "Dibuat Oleh"
+      "updatedAt": "Diperbarui Pada"
     },
     "status": {
       "draft": "Draft",

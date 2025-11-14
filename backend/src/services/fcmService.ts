@@ -161,15 +161,16 @@ const sendWithServiceAccount = async ({
   tokens: string[];
   template: PushTemplate;
 }): Promise<FcmSendResult> => {
-  const serviceAccount = pushConfig.serviceAccount ? JSON.parse(pushConfig.serviceAccount) : null;
-  if (!serviceAccount) {
+  const serviceAccountJson = pushConfig.serviceAccount;
+  if (!serviceAccountJson) {
     throw new Error('Service Account JSON 未配置');
   }
+  const serviceAccount = JSON.parse(serviceAccountJson);
   const projectId = pushConfig.projectId || serviceAccount.project_id;
   if (!projectId) {
     throw new Error('Service Account JSON 缺少 projectId');
   }
-  const accessToken = await getAccessToken(pushConfig.id, pushConfig.serviceAccount);
+  const accessToken = await getAccessToken(pushConfig.id, serviceAccountJson);
   const endpoint = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
   const notificationPayload = buildNotificationPayload(template);
   const dataPayload = normalizeDataPayload(template.dataPayload);

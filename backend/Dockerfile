@@ -26,6 +26,10 @@ RUN npm ci
 # 复制源代码
 COPY . .
 
+# 在构建阶段提供默认 DATABASE_URL，供 Prisma generate 使用
+ARG DATABASE_URL="file:./dev.db"
+ENV DATABASE_URL=${DATABASE_URL}
+
 # 生成 Prisma 客户端
 RUN npx prisma generate
 

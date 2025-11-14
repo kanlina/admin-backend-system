@@ -20,11 +20,11 @@ WORKDIR /app
 # 复制 package.json 和 package-lock.json
 COPY package*.json ./
 
+# 复制 Prisma schema 以便提前生成客户端
+COPY prisma ./prisma
+
 # 安装全部依赖（包含 devDependencies，供构建和 Prisma 使用）
 RUN npm ci
-
-# 复制源代码
-COPY . .
 
 # 在构建阶段提供默认 DATABASE_URL，供 Prisma generate 使用
 ARG DATABASE_URL="file:./dev.db"
@@ -32,6 +32,9 @@ ENV DATABASE_URL=${DATABASE_URL}
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
+
+# 复制源代码的剩余部分
+COPY . .
 
 # 构建应用
 RUN npm run build

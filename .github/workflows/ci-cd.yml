@@ -42,7 +42,7 @@ jobs:
       - name: Generate backend environment file
         working-directory: backend
         run: |
-          cat <<'ENV' > .env
+          cat <<ENV > .env
           OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
           OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
           OSS_BUCKET=${OSS_BUCKET}
@@ -164,11 +164,12 @@ jobs:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ env.DEPLOY_USERNAME }}
           password: ${{ env.DEPLOY_PASSWORD }}
+          envs: GHCR_TOKEN,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET,OSS_BUCKET,OSS_BUCKET_DOMAIN,OSS_ENDPOINT
           script: |
             set -e
             cd /www/wwwroot/admin-backend-system
 
-            cat <<'ENV' > .env
+            cat <<ENV > .env
             OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
             OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
             OSS_BUCKET=${OSS_BUCKET}
@@ -176,7 +177,6 @@ jobs:
             OSS_ENDPOINT=${OSS_ENDPOINT}
             ENV
 
-            # rest of deployment script ...
             echo "=== Deploying Admin Backend System to Development ==="
             mkdir -p /var/log/admin-backend-dev /var/uploads/admin-backend-dev /var/app-logs/admin-backend-dev
             chmod 755 /var/log/admin-backend-dev /var/uploads/admin-backend-dev /var/app-logs/admin-backend-dev
@@ -190,7 +190,12 @@ jobs:
               git clean -fd
             fi
 
-            echo "${GHCR_TOKEN}" | docker login ghcr.io -u kanlina --password-stdin
+            if [ -z "$GHCR_TOKEN" ]; then
+              echo "Missing GHCR_TOKEN"
+              exit 1
+            fi
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u kanlina --password-stdin
 
             docker pull ghcr.io/kanlina/admin-backend-system-backend:develop
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:develop
@@ -245,11 +250,12 @@ jobs:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ env.DEPLOY_USERNAME }}
           password: ${{ env.DEPLOY_PASSWORD }}
+          envs: GHCR_TOKEN,OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET,OSS_BUCKET,OSS_BUCKET_DOMAIN,OSS_ENDPOINT
           script: |
             set -e
             cd /www/wwwroot/admin-backend-system
 
-            cat <<'ENV' > .env
+            cat <<ENV > .env
             OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
             OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
             OSS_BUCKET=${OSS_BUCKET}
@@ -270,7 +276,12 @@ jobs:
               git clean -fd
             fi
 
-            echo "${GHCR_TOKEN}" | docker login ghcr.io -u kanlina --password-stdin
+            if [ -z "$GHCR_TOKEN" ]; then
+              echo "Missing GHCR_TOKEN"
+              exit 1
+            fi
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u kanlina --password-stdin
 
             docker pull ghcr.io/kanlina/admin-backend-system-backend:main
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:main

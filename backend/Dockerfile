@@ -20,8 +20,8 @@ WORKDIR /app
 # 复制 package.json 和 package-lock.json
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装全部依赖（包含 devDependencies，供构建和 Prisma 使用）
+RUN npm ci
 
 # 复制源代码
 COPY . .
@@ -31,6 +31,9 @@ RUN npx prisma generate
 
 # 构建应用
 RUN npm run build
+
+# 移除开发依赖，减小镜像体积
+RUN npm prune --production
 
 # 创建非 root 用户
 RUN groupadd -g 1001 nodejs

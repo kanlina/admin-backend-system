@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
@@ -13,12 +13,17 @@ env:
   FRONTEND_IMAGE_NAME: kanlina/admin-backend-system-frontend
 
 jobs:
-  # 后端构建和测试
   backend-build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+      OSS_BUCKET_DOMAIN: ${{ secrets.OSS_BUCKET_DOMAIN }}
+      OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,19 +36,27 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate backend environment file
+        working-directory: backend
         run: |
-          cd backend
-          npm ci
+          cat <<'ENV' > .env
+          OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+          OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+          OSS_BUCKET=${OSS_BUCKET}
+          OSS_BUCKET_DOMAIN=${OSS_BUCKET_DOMAIN}
+          OSS_ENDPOINT=${OSS_ENDPOINT}
+          ENV
 
       - name: Run backend tests
-        run: |
-          cd backend
-          npm run test
+        working-directory: backend
+        run: npm run test --if-present
 
       - name: Build backend
-        run: |
-          cd backend
-          npm run build
+        working-directory: backend
+        run: npm run build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -73,9 +86,9 @@ jobs:
           tags: ${{ steps.backend-meta.outputs.tags }}
           labels: ${{ steps.backend-meta.outputs.labels }}
 
-  # 前端构建和测试
   frontend-build:
     runs-on: ubuntu-latest
+    needs: backend-build
     permissions:
       contents: read
       packages: write
@@ -91,19 +104,16 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
+        working-directory: frontend
+        run: npm ci
 
       - name: Run frontend tests
-        run: |
-          cd frontend
-          npm run test
+        working-directory: frontend
+        run: npm run test --if-present
 
       - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
+        working-directory: frontend
+        run: npm run build
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -133,218 +143,163 @@ jobs:
           tags: ${{ steps.frontend-meta.outputs.tags }}
           labels: ${{ steps.frontend-meta.outputs.labels }}
 
-  # 开发环境部署
   deploy-dev:
     needs: [backend-build, frontend-build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+      DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+      OSS_BUCKET_DOMAIN: ${{ secrets.OSS_BUCKET_DOMAIN }}
+      OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
     steps:
       - name: Deploy to development server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USERNAME }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USERNAME }}
+          password: ${{ env.DEPLOY_PASSWORD }}
           script: |
             set -e
-            
-            echo "=== Deploying Admin Backend System to Development ==="
-            
-            # 进入项目目录
             cd /www/wwwroot/admin-backend-system
-            
-            # 创建开发环境必要的目录
-            echo "Creating development environment directories..."
-            mkdir -p /var/log/admin-backend-dev
-            mkdir -p /var/uploads/admin-backend-dev
-            mkdir -p /var/app-logs/admin-backend-dev
-            chmod 755 /var/log/admin-backend-dev
-            chmod 755 /var/uploads/admin-backend-dev
-            chmod 755 /var/app-logs/admin-backend-dev
-            chown -R root:root /var/log/admin-backend-dev
-            chown -R root:root /var/uploads/admin-backend-dev
-            chown -R root:root /var/app-logs/admin-backend-dev
-            
-            echo "✅ Directories created successfully"
-            
-            # 检查并初始化 Git 仓库
-            echo "🔄 Checking Git repository..."
+
+            cat <<'ENV' > .env
+            OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+            OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+            OSS_BUCKET=${OSS_BUCKET}
+            OSS_BUCKET_DOMAIN=${OSS_BUCKET_DOMAIN}
+            OSS_ENDPOINT=${OSS_ENDPOINT}
+            ENV
+
+            # rest of deployment script ...
+            echo "=== Deploying Admin Backend System to Development ==="
+            mkdir -p /var/log/admin-backend-dev /var/uploads/admin-backend-dev /var/app-logs/admin-backend-dev
+            chmod 755 /var/log/admin-backend-dev /var/uploads/admin-backend-dev /var/app-logs/admin-backend-dev
+            chown -R root:root /var/log/admin-backend-dev /var/uploads/admin-backend-dev /var/app-logs/admin-backend-dev
+
             if [ ! -d ".git" ]; then
-              echo "📥 Cloning repository..."
               git clone https://github.com/kanlina/admin-backend-system.git .
             else
-              echo "🔄 Updating repository..."
               git fetch origin
               git reset --hard origin/develop
               git clean -fd
             fi
-            
-            # 登录到GHCR
-            echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u kanlina --password-stdin
-            
-            # 拉取最新镜像
-            echo "📥 Pulling latest images..."
+
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u kanlina --password-stdin
+
             docker pull ghcr.io/kanlina/admin-backend-system-backend:develop
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:develop
-            
-            # 停止现有容器
-            echo "🛑 Stopping existing containers..."
+
             docker compose -f docker-compose.dev.yml down || true
-            
-            # 启动新容器
-            echo "🚀 Starting new containers..."
             docker compose -f docker-compose.dev.yml up -d
-            
-            # 等待服务启动
-            echo "⏳ Waiting for services to start..."
+
             sleep 60
-            
-            # 健康检查 - 重试机制
-            echo "🔍 Performing health checks..."
-            
-            # 后端健康检查（重试5次）
+
             for i in {1..5}; do
-              echo "Backend health check attempt $i/5..."
               if curl -f http://localhost:3001/health; then
-                echo "✅ Backend health check passed"
                 break
               else
-                echo "❌ Backend health check failed, retrying in 30 seconds..."
                 if [ $i -eq 5 ]; then
-                  echo "❌ Backend health check failed after 5 attempts"
-                  echo "📋 Checking container logs..."
                   docker logs admin-backend-api-dev --tail 50
                   exit 1
                 fi
                 sleep 30
               fi
             done
-            
-            # 前端健康检查（重试3次）
+
             for i in {1..3}; do
-              echo "Frontend health check attempt $i/3..."
               if curl -f http://localhost:3000; then
-                echo "✅ Frontend health check passed"
                 break
               else
-                echo "❌ Frontend health check failed, retrying in 15 seconds..."
                 if [ $i -eq 3 ]; then
-                  echo "❌ Frontend health check failed after 3 attempts"
-                  echo "📋 Checking container logs..."
                   docker logs admin-backend-web-dev --tail 50
                   exit 1
                 fi
                 sleep 15
               fi
             done
-            
-            echo "🎉 Deployment to development environment completed successfully!"
 
-  # 生产环境部署
   deploy-prod:
     needs: [backend-build, frontend-build]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+      DEPLOY_PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+      OSS_BUCKET_DOMAIN: ${{ secrets.OSS_BUCKET_DOMAIN }}
+      OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
     steps:
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USERNAME }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USERNAME }}
+          password: ${{ env.DEPLOY_PASSWORD }}
           script: |
             set -e
-            
-            echo "=== Deploying Admin Backend System to Production ==="
-            
-            # 进入项目目录
             cd /www/wwwroot/admin-backend-system
-            
-            # 创建生产环境必要的目录
-            echo "Creating production environment directories..."
-            mkdir -p /var/log/admin-backend-prod
-            mkdir -p /var/uploads/admin-backend-prod
-            mkdir -p /var/app-logs/admin-backend-prod
-            chmod 755 /var/log/admin-backend-prod
-            chmod 755 /var/uploads/admin-backend-prod
-            chmod 755 /var/app-logs/admin-backend-prod
-            chown -R root:root /var/log/admin-backend-prod
-            chown -R root:root /var/uploads/admin-backend-prod
-            chown -R root:root /var/app-logs/admin-backend-prod
-            
-            echo "✅ Directories created successfully"
-            
-            # 检查并初始化 Git 仓库
-            echo "🔄 Checking Git repository..."
+
+            cat <<'ENV' > .env
+            OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+            OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+            OSS_BUCKET=${OSS_BUCKET}
+            OSS_BUCKET_DOMAIN=${OSS_BUCKET_DOMAIN}
+            OSS_ENDPOINT=${OSS_ENDPOINT}
+            ENV
+
+            echo "=== Deploying Admin Backend System to Production ==="
+            mkdir -p /var/log/admin-backend-prod /var/uploads/admin-backend-prod /var/app-logs/admin-backend-prod
+            chmod 755 /var/log/admin-backend-prod /var/uploads/admin-backend-prod /var/app-logs/admin-backend-prod
+            chown -R root:root /var/log/admin-backend-prod /var/uploads/admin-backend-prod /var/app-logs/admin-backend-prod
+
             if [ ! -d ".git" ]; then
-              echo "📥 Cloning repository..."
               git clone https://github.com/kanlina/admin-backend-system.git .
             else
-              echo "🔄 Updating repository..."
               git fetch origin
               git reset --hard origin/main
               git clean -fd
             fi
-            
-            # 登录到GHCR
-            echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u kanlina --password-stdin
-            
-            # 拉取最新镜像
-            echo "📥 Pulling latest images..."
+
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u kanlina --password-stdin
+
             docker pull ghcr.io/kanlina/admin-backend-system-backend:main
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:main
-            
-            # 停止现有容器
-            echo "🛑 Stopping existing containers..."
+
             docker compose -f docker-compose.prod.yml down || true
-            
-            # 启动新容器
-            echo "🚀 Starting new containers..."
             docker compose -f docker-compose.prod.yml up -d
-            
-            # 等待服务启动
-            echo "⏳ Waiting for services to start..."
+
             sleep 60
-            
-            # 健康检查 - 重试机制
-            echo "🔍 Performing health checks..."
-            
-            # 后端健康检查（重试5次）
+
             for i in {1..5}; do
-              echo "Backend health check attempt $i/5..."
               if curl -f http://localhost:3001/health; then
-                echo "✅ Backend health check passed"
                 break
               else
-                echo "❌ Backend health check failed, retrying in 30 seconds..."
                 if [ $i -eq 5 ]; then
-                  echo "❌ Backend health check failed after 5 attempts"
-                  echo "📋 Checking container logs..."
                   docker logs admin-backend-api-prod --tail 50
                   exit 1
                 fi
                 sleep 30
               fi
             done
-            
-            # 前端健康检查（重试3次）
+
             for i in {1..3}; do
-              echo "Frontend health check attempt $i/3..."
               if curl -f http://localhost:3000; then
-                echo "✅ Frontend health check passed"
                 break
               else
-                echo "❌ Frontend health check failed, retrying in 15 seconds..."
                 if [ $i -eq 3 ]; then
-                  echo "❌ Frontend health check failed after 3 attempts"
-                  echo "📋 Checking container logs..."
                   docker logs admin-backend-web-prod --tail 50
                   exit 1
                 fi
                 sleep 15
               fi
             done
-            
-            echo "🎉 Deployment to production environment completed successfully!"

@@ -18,6 +18,11 @@ services:
       - JWT_EXPIRES_IN=7d
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=10485760
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+      - OSS_BUCKET=${OSS_BUCKET}
+      - OSS_BUCKET_DOMAIN=${OSS_BUCKET_DOMAIN}
+      - OSS_ENDPOINT=${OSS_ENDPOINT}
     ports:
       - "3001:3001"
     volumes:

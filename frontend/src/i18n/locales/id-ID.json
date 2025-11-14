@@ -540,6 +540,7 @@
     },
     "messages": {
       "loadError": "Gagal memuat daftar berita",
+      "loadTimeout": "Permintaan timeout, silakan coba lagi",
       "deleteSuccess": "Berhasil dihapus",
       "deleteError": "Gagal menghapus",
       "selectWarning": "Silakan pilih setidaknya satu berita",
@@ -551,6 +552,7 @@
       "createError": "Gagal membuat",
       "statusUpdateSuccess": "Status berhasil diperbarui",
       "statusUpdateError": "Gagal memperbarui status",
+      "statusUpdateTimeout": "Pemutakhiran status timeout, silakan coba lagi",
       "detailLoadError": "Gagal memuat detail berita",
       "detailSaveSuccess": "Berhasil disimpan",
       "detailSaveError": "Gagal menyimpan",

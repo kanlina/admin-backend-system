@@ -540,6 +540,7 @@
     },
     "messages": {
       "loadError": "Failed to load news list",
+      "loadTimeout": "Request timed out, please try again",
       "deleteSuccess": "Deleted successfully",
       "deleteError": "Failed to delete",
       "selectWarning": "Please select at least one news item",
@@ -551,6 +552,7 @@
       "createError": "Failed to create",
       "statusUpdateSuccess": "Status updated successfully",
       "statusUpdateError": "Failed to update status",
+      "statusUpdateTimeout": "Status update timed out, please try again",
       "detailLoadError": "Failed to load news detail",
       "detailSaveSuccess": "Saved successfully",
       "detailSaveError": "Failed to save",

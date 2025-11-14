@@ -33,6 +33,31 @@ import { useTranslation } from 'react-i18next';
 const { Option } = Select;
 const { Text } = Typography;
 
+const TIMEOUT_MS = 15000;
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number = TIMEOUT_MS): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('timeout')), ms);
+      })
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+};
+
+const isTimeoutError = (error: any) => {
+  if (!error) return false;
+  const message = typeof error === 'string' ? error : error?.message;
+  if (typeof message !== 'string') return false;
+  return message.toLowerCase().includes('timeout');
+};
+
 interface NewsItem {
   id: number;
   title: string;
@@ -70,6 +95,7 @@ const NewsManagement: React.FC = () => {
   const [detailEditorValue, setDetailEditorValue] = useState('');
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const quillInstanceRef = useRef<any>(null);
+  const [statusLoadingIds, setStatusLoadingIds] = useState<Set<number>>(new Set());
 
   const appId = 15; // 默认 appId
 
@@ -93,7 +119,7 @@ const NewsManagement: React.FC = () => {
         params.enabled = enabledFilter;
       }
 
-      const response = await apiService.getContents(params);
+      const response = await withTimeout(apiService.getContents(params));
       if (response.success) {
         setContents(response.data || []);
         setPagination(prev => ({
@@ -101,9 +127,15 @@ const NewsManagement: React.FC = () => {
           total: response.pagination?.total || 0,
           totalPages: response.pagination?.totalPages || 0
         }));
+      } else {
+        message.error(t('news.messages.loadError'));
       }
     } catch (error) {
-      message.error(t('news.messages.loadError'));
+      if (isTimeoutError(error)) {
+        message.error(t('news.messages.loadTimeout'));
+      } else {
+        message.error(t('news.messages.loadError'));
+      }
     } finally {
       setLoading(false);
     }
@@ -121,7 +153,7 @@ const NewsManagement: React.FC = () => {
   const handleAdd = () => {
     setEditingContent(null);
     form.resetFields();
-    form.setFieldsValue({ appId, enabled: 1 });
+    form.setFieldsValue({ appId, enabled: 2 });
     setThumbnailPreview(null);
     setModalVisible(true);
   };
@@ -208,15 +240,28 @@ const NewsManagement: React.FC = () => {
 
   const handleToggleEnabled = async (id: number, enabled: number) => {
     try {
-      const newEnabled = enabled === 1 ? 0 : 1;
-      const response = await apiService.toggleContentEnabled(id.toString(), newEnabled);
+      setStatusLoadingIds(prev => new Set(prev).add(id));
+      const targetEnabled = enabled === 2 ? 1 : 2;
+      const response = await withTimeout(apiService.toggleContentEnabled(id.toString(), targetEnabled));
       if (response.success) {
         message.success(t('news.messages.statusUpdateSuccess'));
         fetchContents();
+      } else {
+        message.error(t('news.messages.statusUpdateError'));
       }
     } catch (error) {
-      message.error(t('news.messages.statusUpdateError'));
-      fetchContents();
+      if (isTimeoutError(error)) {
+        message.error(t('news.messages.statusUpdateTimeout'));
+      } else {
+        message.error(t('news.messages.statusUpdateError'));
+      }
+    } finally {
+      setStatusLoadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setLoading(false);
     }
   };
 
@@ -374,7 +419,9 @@ const NewsManagement: React.FC = () => {
       width: 110,
       render: (enabled: number, record: NewsItem) => (
         <Switch
-          checked={enabled === 1}
+          checked={enabled === 2}
+          loading={statusLoadingIds.has(record.id)}
+          disabled={statusLoadingIds.has(record.id)}
           onChange={() => handleToggleEnabled(record.id, enabled)}
           checkedChildren={t('news.status.enabled')}
           unCheckedChildren={t('news.status.disabled')}
@@ -563,7 +610,7 @@ const NewsManagement: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ appId, enabled: 1, type: 2 }}
+          initialValues={{ appId, enabled: 2, type: 2 }}
         >
           <Form.Item name="appId" hidden>
             <Input />
@@ -622,10 +669,11 @@ const NewsManagement: React.FC = () => {
           <Form.Item
             label={t('news.form.fields.status')}
             name="enabled"
+            getValueFromEvent={(value) => value}
           >
             <Select>
-              <Option value={1}>{t('news.status.enabled')}</Option>
-              <Option value={0}>{t('news.status.disabled')}</Option>
+              <Option value={2}>{t('news.status.enabled')}</Option>
+              <Option value={1}>{t('news.status.disabled')}</Option>
             </Select>
           </Form.Item>
         </Form>

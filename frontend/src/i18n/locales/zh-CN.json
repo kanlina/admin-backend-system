@@ -540,6 +540,7 @@
     },
     "messages": {
       "loadError": "获取新闻列表失败",
+      "loadTimeout": "请求超时，请稍后重试",
       "deleteSuccess": "删除成功",
       "deleteError": "删除失败",
       "selectWarning": "请选择至少一条新闻",
@@ -551,6 +552,7 @@
       "createError": "创建失败",
       "statusUpdateSuccess": "状态更新成功",
       "statusUpdateError": "状态更新失败",
+      "statusUpdateTimeout": "状态更新超时，请稍后重试",
       "detailLoadError": "获取新闻详情失败",
       "detailSaveSuccess": "保存成功",
       "detailSaveError": "保存失败",

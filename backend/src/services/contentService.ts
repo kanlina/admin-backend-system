@@ -145,7 +145,7 @@ export const contentService = {
           content.content || '',
           content.alias || '',
           content.titleImg01 || '',
-          content.enabled !== undefined ? content.enabled : 1
+          content.enabled !== undefined ? content.enabled : 2
         ]
       );
 

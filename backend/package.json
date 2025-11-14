@@ -35,7 +35,9 @@
     "i18next": "^25.5.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "mysql2": "^3.15.0"
+    "mysql2": "^3.15.0",
+    "node-fetch": "^2.7.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.16.11",
@@ -44,6 +46,7 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^1.4.11",
+    "@types/node-fetch": "^2.6.11",
     "@types/node": "^20.10.5",
     "prisma": "^5.7.1",
     "tsx": "^4.6.2",

@@ -13,6 +13,10 @@ import internalTransferRoutes from './routes/internalTransfer';
 import attributionDataRoutes from './routes/attributionData';
 import apiPartnerRoutes from './routes/apiPartner';
 import contentRoutes from './routes/content';
+import pushConfigRoutes from './routes/pushConfig';
+import pushAudienceRoutes from './routes/pushAudience';
+import pushTemplateRoutes from './routes/pushTemplate';
+import pushTaskRoutes from './routes/pushTask';
 
 // 加载环境变量
 dotenv.config();
@@ -79,6 +83,10 @@ app.use('/api', internalTransferRoutes);
 app.use('/api', attributionDataRoutes);
 app.use('/api/api-partner-configs', apiPartnerRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/push-configs', pushConfigRoutes);
+app.use('/api', pushAudienceRoutes);
+app.use('/api/push-templates', pushTemplateRoutes);
+app.use('/api/push-tasks', pushTaskRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {

@@ -56,6 +56,8 @@ const Header: React.FC<HeaderProps> = ({
         return t('navigation.analytics');
       case '/settings':
         return t('navigation.systemSettings');
+      case '/push-center/config':
+        return t('navigation.pushConfig');
       default:
         return t('navigation.adminPanel');
     }

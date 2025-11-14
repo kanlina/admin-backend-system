@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS `push_tasks` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `description` TEXT NULL,
+  `pushConfigId` INT UNSIGNED NOT NULL,
+  `pushTemplateId` INT UNSIGNED NOT NULL,
+  `pushAudienceId` INT UNSIGNED NOT NULL,
+  `createdBy` INT UNSIGNED NOT NULL,
+  `status` ENUM('draft','scheduled','processing','completed','failed') NOT NULL DEFAULT 'draft',
+  `scheduleTime` DATETIME NULL,
+  `totalTokens` INT NULL,
+  `successCount` INT NULL,
+  `failureCount` INT NULL,
+  `lastError` TEXT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_scheduleTime` (`scheduleTime`),
+  KEY `idx_pushConfigId` (`pushConfigId`),
+  KEY `idx_pushTemplateId` (`pushTemplateId`),
+  KEY `idx_pushAudienceId` (`pushAudienceId`),
+  KEY `idx_createdBy` (`createdBy`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

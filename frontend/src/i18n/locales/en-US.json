@@ -34,7 +34,9 @@
     "settings": "Settings",
     "pageRange": "Items {{start}}-{{end}}",
     "totalItems": "Total {{total}} items",
-    "pageRangeWithTotal": "Items {{start}}-{{end}} of {{total}}"
+    "pageRangeWithTotal": "Items {{start}}-{{end}} of {{total}}",
+    "index": "No.",
+    "close": "Close"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -51,7 +53,12 @@
     "cpiPartners": "CPI Partners Configuration",
     "logout": "Logout",
     "adminPanel": "Admin Panel",
-    "newsManagement": "News Management"
+    "newsManagement": "News Management",
+    "pushCenter": "Push Center",
+    "pushConfig": "Push Configuration",
+    "pushAudience": "Audience Hub",
+    "pushTemplate": "Push Templates",
+    "pushTask": "Push Tasks"
   },
   "internalTransfer": {
     "title": "Internal Transfer Data Monitoring",
@@ -567,6 +574,323 @@
     },
     "detail": {
       "placeholder": "Enter content (HTML supported)"
+    }
+  },
+  "pushConfig": {
+    "title": "Push Configuration Management",
+    "actions": {
+      "add": "Add Configuration",
+      "edit": "Edit Configuration"
+    },
+    "table": {
+      "name": "Configuration Name",
+      "appId": "App ID",
+      "platform": "Platform",
+      "projectId": "Project ID",
+      "status": "Status",
+      "description": "Description"
+    },
+    "form": {
+      "name": "Configuration Name",
+      "nameRequired": "Please enter configuration name",
+      "namePlaceholder": "e.g., Production-Android",
+      "appId": "App ID",
+      "appIdRequired": "Please enter App ID",
+      "appIdPlaceholder": "e.g., com.example.app",
+      "platform": "Platform",
+      "platformRequired": "Please select platform",
+      "projectId": "Project ID",
+      "projectIdRequired": "Please enter Project ID",
+      "projectIdPlaceholder": "Firebase Project ID",
+      "credentials": "Credentials",
+      "serverKey": "Server Key",
+      "serverKeyTooltip": "FCM Server Key (Legacy)",
+      "serverKeyPlaceholder": "Please enter FCM Server Key",
+      "serviceAccount": "Service Account JSON",
+      "serviceAccountTooltip": "Firebase Service Account JSON (Recommended)",
+      "serviceAccountPlaceholder": "Please enter complete Service Account JSON",
+      "vapidKey": "VAPID Key",
+      "vapidKeyTooltip": "Web Push VAPID Public Key",
+      "vapidKeyPlaceholder": "Please enter VAPID public key",
+      "description": "Description",
+      "descriptionPlaceholder": "Please enter configuration description",
+      "status": "Enabled Status"
+    },
+    "platform": {
+      "android": "Android",
+      "ios": "iOS",
+      "web": "Web",
+      "all": "All Platforms"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "messages": {
+      "loadError": "Failed to load configuration list",
+      "createSuccess": "Configuration created successfully",
+      "createError": "Failed to create configuration",
+      "updateSuccess": "Configuration updated successfully",
+      "updateError": "Failed to update configuration",
+      "deleteSuccess": "Configuration deleted successfully",
+      "deleteError": "Failed to delete configuration",
+      "deleteConfirm": "Are you sure you want to delete this configuration?"
+    }
+  },
+  "pushAudience": {
+    "title": "Audience Hub",
+    "subtitle": "Manage audience segments and device tokens for precise FCM campaigns",
+    "tabs": {
+      "audiences": "Audience Segments",
+      "tokens": "Device Tokens"
+    },
+    "actions": {
+      "addAudience": "Create Audience",
+      "editAudience": "Edit Audience"
+    },
+    "stats": {
+      "total": "Total Audiences",
+      "active": "Active Audiences",
+      "tokens": "Total Tokens"
+    },
+    "common": {
+      "noData": "No data"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "messages": {
+      "loadAudienceError": "Failed to load audience list",
+      "loadTokenError": "Failed to load token list",
+      "deleteAudienceTitle": "Delete Audience",
+      "deleteAudienceContent": "Are you sure you want to delete audience \"{{name}}\"?",
+      "deleteAudienceSuccess": "Audience deleted successfully",
+      "deleteAudienceError": "Failed to delete audience",
+      "createAudienceSuccess": "Audience created successfully",
+      "createAudienceError": "Failed to create audience",
+      "updateAudienceSuccess": "Audience updated successfully",
+      "updateAudienceError": "Failed to update audience",
+      "deleteTokenTitle": "Delete Push Token",
+      "deleteTokenContent": "The device will stop receiving pushes after deletion. Continue?",
+      "deleteTokenSuccess": "Token deleted successfully",
+      "deleteTokenError": "Failed to delete token"
+    },
+    "audience": {
+      "columns": {
+        "name": "Audience Name",
+        "tags": "Tags",
+        "description": "Description",
+        "createdAt": "Created At",
+        "status": "Status"
+      }
+    },
+    "tokens": {
+      "columns": {
+        "token": "Device Token",
+        "status": "Status",
+        "tags": "Tags",
+        "createdAt": "Created At",
+        "audiences": "Audiences"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by token",
+        "statusPlaceholder": "Select status"
+      },
+      "import": {
+        "title": "Bulk Import Tokens",
+        "tokensLabel": "Device Token List",
+        "tokensRequired": "Please enter at least one token",
+        "tokensPlaceholder": "Paste one token per line or separate with commas",
+        "audience": "Audience Mapping",
+        "audiencePlaceholder": "Optional, auto-link after import",
+        "tags": "Default Tags",
+        "tagsPlaceholder": "Type or select tags",
+        "replace": "Override existing tokens",
+        "noTokenInput": "Please input at least one token",
+        "audienceRequired": "Please select an audience tag before submitting",
+        "success": "{{count}} tokens imported successfully",
+        "error": "Failed to import tokens",
+        "orUpload": "Or use Excel template",
+        "downloadTemplate": "Download template",
+        "uploadExcel": "Upload Excel",
+        "excelHint": "Fill the first column with tokens. Multiple tokens can be separated by commas.",
+        "templateError": "Failed to download template, please retry",
+        "parseSuccess": "{{count}} tokens parsed and filled into the list",
+        "parseError": "Failed to parse Excel file",
+        "parseEmpty": "No tokens were found in the Excel file",
+        "noAudienceTitle": "No audience selected",
+        "noAudienceMessage": "Tokens will be saved without audience mapping. Continue?",
+        "continue": "Continue"
+      },
+      "actions": {
+        "edit": "Edit",
+        "editTitle": "Edit Device Token",
+        "updateSuccess": "Token updated successfully",
+        "updateError": "Failed to update token"
+      }
+    },
+    "form": {
+      "name": "Audience Name",
+      "nameRequired": "Please enter audience name",
+      "namePlaceholder": "e.g., Active users in last 7 days",
+      "tags": "Tags",
+      "tagsPlaceholder": "Type or select tags",
+      "description": "Description",
+      "descriptionPlaceholder": "Add notes about this audience",
+      "status": "Active Status"
+    }
+  },
+  "pushTemplate": {
+    "title": "Push Template Management",
+    "subtitle": "Configure FCM notification titles, bodies, and data payloads",
+    "common": {
+      "noData": "No data"
+    },
+    "actions": {
+      "add": "Create Template",
+      "edit": "Edit Template"
+    },
+    "stats": {
+      "total": "Total Templates",
+      "enabled": "Enabled Templates",
+      "disabled": "Disabled Templates"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name or template key",
+      "pushConfigPlaceholder": "Select push config",
+      "pushAudiencePlaceholder": "Select audience",
+      "statusPlaceholder": "Select status",
+      "apply": "Apply Filters",
+      "reset": "Reset"
+    },
+    "table": {
+      "name": "Template Name / Key",
+      "pushConfig": "Push Config",
+      "pushAudience": "Audience",
+      "title": "Notification Title",
+      "status": "Status",
+      "updatedAt": "Updated At"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "messages": {
+      "loadError": "Failed to load templates",
+      "loadReferenceError": "Failed to load configs or audiences",
+      "createSuccess": "Template created successfully",
+      "createError": "Failed to create template",
+      "updateSuccess": "Template updated successfully",
+      "updateError": "Failed to update template",
+      "deleteTitle": "Delete Template",
+      "deleteConfirm": "Are you sure you want to delete template \"{{name}}\"?",
+      "deleteSuccess": "Template deleted successfully",
+      "deleteError": "Failed to delete template"
+    },
+    "form": {
+      "name": "Template Name",
+      "nameRequired": "Please enter template name",
+      "namePlaceholder": "e.g., Order reminder default",
+      "pushConfig": "Push Configuration",
+      "pushConfigRequired": "Please select a push configuration",
+      "pushConfigPlaceholder": "Used to send this template",
+      "pushAudience": "Push Audience",
+      "pushAudienceRequired": "Please select a push audience",
+      "pushAudiencePlaceholder": "Target audience for this template",
+      "tags": "Tags",
+      "tagsPlaceholder": "Type or select tags",
+      "title": "Notification Title",
+      "titleRequired": "Please enter notification title",
+      "titlePlaceholder": "e.g., You have a new message",
+      "body": "Notification Body",
+      "bodyRequired": "Please enter notification body",
+      "bodyPlaceholder": "Content supports placeholder variables",
+      "clickAction": "Click Action",
+      "clickActionPlaceholder": "Custom schema or external URL",
+      "imageUrl": "Notification Image",
+      "imageUrlPlaceholder": "Optional large image URL",
+      "dataPayload": "Data Payload",
+      "dataPayloadPlaceholder": "{ \"route\": \"detail\", \"id\": 1 }",
+      "dataPayloadTip": "JSON object that will be available under data payload on the client",
+      "dataPayloadInvalid": "Please enter a valid JSON object",
+      "description": "Description",
+      "descriptionPlaceholder": "Usage notes, variables, scenarios",
+      "enabled": "Enabled Status"
+    }
+  },
+  "pushTask": {
+    "title": "Push Tasks",
+    "subtitle": "Orchestrate configs, templates, and audiences for final FCM delivery",
+    "common": {
+      "noDescription": "No description"
+    },
+    "actions": {
+      "add": "Create Task",
+      "edit": "Edit Task",
+      "execute": "Send Now"
+    },
+    "stats": {
+      "total": "Total Tasks",
+      "processing": "Running",
+      "completed": "Completed"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name/config/audience",
+      "statusPlaceholder": "Select status",
+      "apply": "Apply Filters",
+      "reset": "Reset"
+    },
+    "table": {
+      "name": "Task Name / Description",
+      "pushConfig": "Push Config",
+      "pushTemplate": "Push Template",
+      "pushAudience": "Audience",
+      "scheduleTime": "Scheduled Time",
+      "status": "Status",
+      "result": "Result",
+      "success": "Success",
+      "failure": "Failure",
+      "updatedAt": "Updated At",
+      "createdBy": "Created By"
+    },
+    "status": {
+      "draft": "Draft",
+      "scheduled": "Scheduled",
+      "processing": "Processing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "messages": {
+      "loadError": "Failed to load tasks",
+      "loadReferenceError": "Failed to load configs or audiences",
+      "createSuccess": "Task created successfully",
+      "createError": "Failed to create task",
+      "updateSuccess": "Task updated successfully",
+      "updateError": "Failed to update task",
+      "deleteTitle": "Delete Task",
+      "deleteConfirm": "Are you sure you want to delete task \"{{name}}\"?",
+      "deleteSuccess": "Task deleted successfully",
+      "deleteError": "Failed to delete task",
+      "executeSuccess": "Task has been triggered",
+      "executeError": "Failed to execute task"
+    },
+    "form": {
+      "name": "Task Name",
+      "nameRequired": "Please enter task name",
+      "namePlaceholder": "e.g., Double 11 campaign",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe purpose, variables, etc.",
+      "pushTemplate": "Push Template",
+      "pushTemplateRequired": "Please select a push template",
+      "pushTemplatePlaceholder": "Choose template (config & audience auto-linked)",
+      "templateInfoTitle": "Template Associations",
+      "templateInfoConfig": "Push Config: {{name}}",
+      "templateInfoAudience": "Audience: {{name}}",
+      "scheduleTime": "Send Time",
+      "scheduleTimeImmediate": "Send Immediately",
+      "scheduleTimeImmediateDesc": "Task will be marked as immediate and can be executed anytime after creation",
+      "status": "Task Status"
     }
   }
 }

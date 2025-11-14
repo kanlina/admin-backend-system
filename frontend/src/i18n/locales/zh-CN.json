@@ -34,7 +34,9 @@
     "noData": "暂无数据",
     "pageRange": "第 {{start}}-{{end}} 条",
     "totalItems": "共 {{total}} 条",
-    "pageRangeWithTotal": "第 {{start}}-{{end}} 条/共 {{total}} 条"
+    "pageRangeWithTotal": "第 {{start}}-{{end}} 条/共 {{total}} 条",
+    "index": "序号",
+    "close": "关闭"
   },
   "navigation": {
     "dashboard": "仪表盘",
@@ -51,7 +53,12 @@
     "cpiPartners": "CPI合作伙伴配置",
     "logout": "退出登录",
     "adminPanel": "管理后台",
-    "newsManagement": "新闻管理"
+    "newsManagement": "新闻管理",
+    "pushCenter": "推送中心",
+    "pushConfig": "推送配置",
+    "pushAudience": "推送人群",
+    "pushTemplate": "推送模版",
+    "pushTask": "推送任务"
   },
   "internalTransfer": {
     "title": "内转数据监控",
@@ -567,6 +574,327 @@
     },
     "detail": {
       "placeholder": "请输入内容（支持HTML）"
+    }
+  },
+  "pushConfig": {
+    "title": "推送配置管理",
+    "actions": {
+      "add": "新增配置",
+      "edit": "编辑配置"
+    },
+    "common": {
+      "index": "序号",
+      "name": "配置名称"
+    },
+    "table": {
+      "name": "配置名称",
+      "appId": "应用ID",
+      "platform": "平台",
+      "projectId": "项目ID",
+      "status": "状态",
+      "description": "描述"
+    },
+    "form": {
+      "name": "配置名称",
+      "nameRequired": "请输入配置名称",
+      "namePlaceholder": "例如：生产环境-Android",
+      "appId": "应用ID",
+      "appIdRequired": "请输入应用ID",
+      "appIdPlaceholder": "例如：com.example.app",
+      "platform": "平台",
+      "platformRequired": "请选择平台",
+      "projectId": "项目ID",
+      "projectIdRequired": "请输入项目ID",
+      "projectIdPlaceholder": "Firebase 项目ID",
+      "credentials": "凭证信息",
+      "serverKey": "Server Key",
+      "serverKeyTooltip": "FCM Server Key（旧版）",
+      "serverKeyPlaceholder": "请输入 FCM Server Key",
+      "serviceAccount": "Service Account JSON",
+      "serviceAccountTooltip": "Firebase Service Account JSON（推荐使用）",
+      "serviceAccountPlaceholder": "请输入完整的 Service Account JSON",
+      "vapidKey": "VAPID Key",
+      "vapidKeyTooltip": "Web Push VAPID 公钥",
+      "vapidKeyPlaceholder": "请输入 VAPID 公钥",
+      "description": "描述",
+      "descriptionPlaceholder": "请输入配置描述",
+      "status": "启用状态"
+    },
+    "platform": {
+      "android": "Android",
+      "ios": "iOS",
+      "web": "Web",
+      "all": "全部平台"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "禁用"
+    },
+    "messages": {
+      "loadError": "获取配置列表失败",
+      "createSuccess": "创建配置成功",
+      "createError": "创建配置失败",
+      "updateSuccess": "更新配置成功",
+      "updateError": "更新配置失败",
+      "deleteSuccess": "删除配置成功",
+      "deleteError": "删除配置失败",
+      "deleteConfirm": "确定要删除这条配置吗？"
+    }
+  },
+  "pushAudience": {
+    "title": "推送人群",
+    "subtitle": "管理人群与设备Token，实现精准FCM推送",
+    "tabs": {
+      "audiences": "人群分组",
+      "tokens": "设备Token"
+    },
+    "actions": {
+      "addAudience": "新建人群",
+      "editAudience": "编辑人群"
+    },
+    "stats": {
+      "total": "人群总数",
+      "active": "活跃人群",
+      "tokens": "Token 总数"
+    },
+    "common": {
+      "noData": "暂无数据"
+    },
+    "status": {
+      "active": "启用",
+      "inactive": "停用"
+    },
+    "messages": {
+      "loadAudienceError": "加载人群列表失败",
+      "loadTokenError": "加载Token列表失败",
+      "deleteAudienceTitle": "删除人群",
+      "deleteAudienceContent": "确定要删除人群「{{name}}」吗？",
+      "deleteAudienceSuccess": "人群删除成功",
+      "deleteAudienceError": "删除人群失败",
+      "createAudienceSuccess": "人群创建成功",
+      "createAudienceError": "创建人群失败",
+      "updateAudienceSuccess": "人群更新成功",
+      "updateAudienceError": "更新人群失败",
+      "deleteTokenTitle": "删除推送Token",
+      "deleteTokenContent": "删除后该设备将不再接收推送，确认继续？",
+      "deleteTokenSuccess": "Token 删除成功",
+      "deleteTokenError": "删除 Token 失败"
+    },
+    "audience": {
+      "columns": {
+        "name": "人群名称",
+        "tags": "标签",
+        "description": "人群描述",
+        "createdAt": "创建时间",
+        "status": "状态"
+      }
+    },
+    "tokens": {
+      "columns": {
+        "token": "设备Token",
+        "status": "状态",
+        "tags": "标签",
+        "createdAt": "创建时间",
+        "audiences": "关联人群"
+      },
+      "filters": {
+        "searchPlaceholder": "按Token搜索",
+        "statusPlaceholder": "选择状态"
+      },
+      "import": {
+        "title": "批量导入Token",
+        "tokensLabel": "设备Token列表",
+        "tokensRequired": "请输入至少一个Token",
+        "tokensPlaceholder": "可按行粘贴或使用英文逗号 , 分隔多个 Token",
+        "audience": "关联人群",
+        "audiencePlaceholder": "可选，导入后自动关联",
+        "tags": "默认标签",
+        "tagsPlaceholder": "输入或选择标签",
+        "replace": "覆盖已有Token",
+        "noTokenInput": "请至少输入一个Token",
+        "audienceRequired": "请选择人群标签后再提交",
+        "success": "成功导入 {{count}} 个Token",
+        "error": "导入Token失败",
+        "orUpload": "或使用Excel模板导入",
+        "downloadTemplate": "下载模板",
+        "uploadExcel": "上传Excel导入",
+        "excelHint": "模板第一列填写 Token，可用英文逗号分隔多个 Token。",
+        "templateError": "下载模板失败，请稍后重试",
+        "parseSuccess": "成功解析 {{count}} 个 Token，已填入列表",
+        "parseError": "解析Excel失败",
+        "parseEmpty": "Excel 中未解析到任何 Token",
+        "noAudienceTitle": "未选择关联人群",
+        "noAudienceMessage": "未选择人群将写入公共池，确认继续吗？",
+        "continue": "继续导入"
+      },
+      "actions": {
+        "edit": "编辑",
+        "editTitle": "编辑设备 Token",
+        "updateSuccess": "Token 更新成功",
+        "updateError": "更新 Token 失败"
+      }
+    },
+    "form": {
+      "name": "人群名称",
+      "nameRequired": "请输入人群名称",
+      "namePlaceholder": "例如：近7天活跃用户",
+      "tags": "标签",
+      "tagsPlaceholder": "输入或选择标签",
+      "description": "人群描述",
+      "descriptionPlaceholder": "用于说明人群说明与目的",
+      "status": "启用状态"
+    }
+  },
+  "pushTemplate": {
+    "title": "推送模版管理",
+    "subtitle": "配置 FCM 推送标题、正文与数据载荷",
+    "common": {
+      "noData": "暂无数据"
+    },
+    "actions": {
+      "add": "新建模版",
+      "edit": "编辑模版"
+    },
+    "stats": {
+      "total": "模版总数",
+      "enabled": "启用模版",
+      "disabled": "停用模版"
+    },
+    "filters": {
+      "searchPlaceholder": "按名称 / 模版标识搜索",
+      "pushConfigPlaceholder": "选择推送配置",
+      "pushAudiencePlaceholder": "选择推送人群",
+      "statusPlaceholder": "选择状态",
+      "apply": "应用筛选",
+      "reset": "重置筛选"
+    },
+    "table": {
+      "name": "模版名称 / 标识",
+      "pushConfig": "推送配置",
+      "pushAudience": "推送人群",
+      "title": "推送标题",
+      "status": "状态",
+      "updatedAt": "更新时间"
+    },
+    "status": {
+      "enabled": "启用",
+      "disabled": "停用"
+    },
+    "messages": {
+      "loadError": "加载模版失败",
+       "loadReferenceError": "加载配置或人群数据失败",
+      "createSuccess": "模版创建成功",
+      "createError": "创建模版失败",
+      "updateSuccess": "模版更新成功",
+      "updateError": "更新模版失败",
+      "deleteTitle": "删除模版",
+      "deleteConfirm": "确定要删除模版「{{name}}」吗？",
+      "deleteSuccess": "模版删除成功",
+      "deleteError": "删除模版失败"
+    },
+    "form": {
+      "name": "模版名称",
+      "nameRequired": "请输入模版名称",
+      "namePlaceholder": "例如：订单提醒-默认",
+      "pushConfig": "推送配置",
+      "pushConfigRequired": "请选择推送配置",
+      "pushConfigPlaceholder": "用于发送该模版的推送配置",
+      "pushAudience": "推送人群",
+      "pushAudienceRequired": "请选择推送人群",
+      "pushAudiencePlaceholder": "发送目标人群",
+      "tags": "标签",
+      "tagsPlaceholder": "输入或选择标签",
+      "title": "推送标题",
+      "titleRequired": "请输入推送标题",
+      "titlePlaceholder": "例如：您有新的消息",
+      "body": "推送正文",
+      "bodyRequired": "请输入推送正文",
+      "bodyPlaceholder": "填写推送内容，支持使用变量占位",
+      "clickAction": "点击跳转",
+      "clickActionPlaceholder": "如自定义 schema 或网页 URL",
+      "imageUrl": "通知图片",
+      "imageUrlPlaceholder": "可选，展示大图",
+      "dataPayload": "数据载荷",
+      "dataPayloadPlaceholder": "{ \"route\": \"detail\", \"id\": 1 }",
+      "dataPayloadTip": "请输入 JSON 对象，可在客户端读取 data 字段",
+      "dataPayloadInvalid": "请填写合法 JSON 对象",
+      "description": "说明",
+      "descriptionPlaceholder": "记录用途、适用场景或变量说明",
+      "enabled": "启用状态"
+    }
+  },
+  "pushTask": {
+    "title": "推送任务",
+    "subtitle": "编排推送配置、模版与人群，执行最终 FCM 推送",
+    "common": {
+      "noDescription": "暂无描述"
+    },
+    "actions": {
+      "add": "创建任务",
+      "edit": "编辑任务",
+      "execute": "立即推送"
+    },
+    "stats": {
+      "total": "任务总数",
+      "processing": "进行中",
+      "completed": "已完成"
+    },
+    "filters": {
+      "searchPlaceholder": "按名称/配置/人群搜索",
+      "statusPlaceholder": "选择状态",
+      "apply": "应用筛选",
+      "reset": "重置"
+    },
+    "table": {
+      "name": "任务名称 / 描述",
+      "pushConfig": "推送配置",
+      "pushTemplate": "推送模版",
+      "pushAudience": "推送人群",
+      "scheduleTime": "计划时间",
+      "status": "状态",
+      "result": "推送结果",
+      "success": "成功",
+      "failure": "失败",
+      "updatedAt": "更新时间",
+      "createdBy": "创建账号"
+    },
+    "status": {
+      "draft": "草稿",
+      "scheduled": "已排期",
+      "processing": "推送中",
+      "completed": "已完成",
+      "failed": "失败"
+    },
+    "messages": {
+      "loadError": "加载任务列表失败",
+      "loadReferenceError": "加载引用配置失败",
+      "createSuccess": "任务创建成功",
+      "createError": "任务创建失败",
+      "updateSuccess": "任务更新成功",
+      "updateError": "任务更新失败",
+      "deleteTitle": "删除任务",
+      "deleteConfirm": "确定删除任务「{{name}}」吗？",
+      "deleteSuccess": "任务删除成功",
+      "deleteError": "任务删除失败",
+      "executeSuccess": "任务已触发推送",
+      "executeError": "执行推送失败"
+    },
+    "form": {
+      "name": "任务名称",
+      "nameRequired": "请输入任务名称",
+      "namePlaceholder": "例如：双十一活动推送",
+      "description": "任务描述",
+      "descriptionPlaceholder": "记录本次推送目的、变量等",
+      "pushTemplate": "推送模版",
+      "pushTemplateRequired": "请选择推送模版",
+      "pushTemplatePlaceholder": "选择推送内容模版（自动关联配置和人群）",
+      "templateInfoTitle": "模版关联信息",
+      "templateInfoConfig": "推送配置：{{name}}",
+      "templateInfoAudience": "推送人群：{{name}}",
+      "scheduleTime": "推送时间",
+      "scheduleTimeImmediate": "立即推送",
+      "scheduleTimeImmediateDesc": "该任务会设置为立即推送，创建后可随时执行",
+      "status": "任务状态"
     }
   }
 }

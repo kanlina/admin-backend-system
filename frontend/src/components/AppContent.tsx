@@ -18,6 +18,10 @@ import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
 import ApiPartners from '../pages/ApiPartners';
 import NewsManagement from '../pages/Content';
+import PushConfig from '../pages/PushConfig';
+import PushAudiencePage from '../pages/PushAudience';
+import PushTemplatePage from '../pages/PushTemplate';
+import PushTaskPage from '../pages/PushTask';
 
 // 配置 dayjs 多语言
 import dayjs from 'dayjs';
@@ -145,6 +149,36 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <AppLayout>
                   <NewsManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* 推送中心路由 */}
+            <Route path="/push-center/config" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PushConfig />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/push-center/audiences" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PushAudiencePage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/push-center/templates" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PushTemplatePage />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/push-center/tasks" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <PushTaskPage />
                 </AppLayout>
               </ProtectedRoute>
             } />

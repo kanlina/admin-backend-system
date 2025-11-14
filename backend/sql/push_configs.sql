@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `push_configs` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `appId` VARCHAR(255) NOT NULL,
+  `platform` ENUM('android','ios','web','all') NOT NULL DEFAULT 'all',
+  `projectId` VARCHAR(255) NOT NULL,
+  `serverKey` TEXT NULL,
+  `serviceAccount` TEXT NULL,
+  `vapidKey` TEXT NULL,
+  `description` TEXT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_app_platform` (`appId`, `platform`),
+  KEY `idx_appId` (`appId`),
+  KEY `idx_platform` (`platform`),
+  KEY `idx_enabled` (`enabled`),
+  KEY `idx_updatedAt` (`updatedAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

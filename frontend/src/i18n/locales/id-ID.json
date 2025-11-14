@@ -34,7 +34,9 @@
     "settings": "Pengaturan",
     "pageRange": "Item {{start}}-{{end}}",
     "totalItems": "Total {{total}} item",
-    "pageRangeWithTotal": "Item {{start}}-{{end}} dari {{total}}"
+    "pageRangeWithTotal": "Item {{start}}-{{end}} dari {{total}}",
+    "index": "No.",
+    "close": "Tutup"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -51,7 +53,12 @@
     "cpiPartners": "Konfigurasi Mitra CPI",
     "logout": "Keluar",
     "adminPanel": "Panel Admin",
-    "newsManagement": "Manajemen Berita"
+    "newsManagement": "Manajemen Berita",
+    "pushCenter": "Pusat Push",
+    "pushConfig": "Konfigurasi Push",
+    "pushAudience": "Audiens Push",
+    "pushTemplate": "Template Push",
+    "pushTask": "Tugas Push"
   },
   "internalTransfer": {
     "title": "Pemantauan Data Transfer Internal",
@@ -567,6 +574,323 @@
     },
     "detail": {
       "placeholder": "Masukkan konten (mendukung HTML)"
+    }
+  },
+  "pushConfig": {
+    "title": "Manajemen Konfigurasi Push",
+    "actions": {
+      "add": "Tambah Konfigurasi",
+      "edit": "Edit Konfigurasi"
+    },
+    "table": {
+      "name": "Nama Konfigurasi",
+      "appId": "ID Aplikasi",
+      "platform": "Platform",
+      "projectId": "ID Proyek",
+      "status": "Status",
+      "description": "Deskripsi"
+    },
+    "form": {
+      "name": "Nama Konfigurasi",
+      "nameRequired": "Masukkan nama konfigurasi",
+      "namePlaceholder": "misalnya: Produksi-Android",
+      "appId": "ID Aplikasi",
+      "appIdRequired": "Masukkan ID Aplikasi",
+      "appIdPlaceholder": "misalnya: com.example.app",
+      "platform": "Platform",
+      "platformRequired": "Pilih platform",
+      "projectId": "ID Proyek",
+      "projectIdRequired": "Masukkan ID Proyek",
+      "projectIdPlaceholder": "Firebase Project ID",
+      "credentials": "Informasi Kredensial",
+      "serverKey": "Server Key",
+      "serverKeyTooltip": "FCM Server Key (Legacy)",
+      "serverKeyPlaceholder": "Masukkan FCM Server Key",
+      "serviceAccount": "Service Account JSON",
+      "serviceAccountTooltip": "Firebase Service Account JSON (Direkomendasikan)",
+      "serviceAccountPlaceholder": "Masukkan Service Account JSON lengkap",
+      "vapidKey": "VAPID Key",
+      "vapidKeyTooltip": "Web Push VAPID Public Key",
+      "vapidKeyPlaceholder": "Masukkan VAPID public key",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Masukkan deskripsi konfigurasi",
+      "status": "Status Aktif"
+    },
+    "platform": {
+      "android": "Android",
+      "ios": "iOS",
+      "web": "Web",
+      "all": "Semua Platform"
+    },
+    "status": {
+      "enabled": "Diaktifkan",
+      "disabled": "Dinonaktifkan"
+    },
+    "messages": {
+      "loadError": "Gagal memuat daftar konfigurasi",
+      "createSuccess": "Konfigurasi berhasil dibuat",
+      "createError": "Gagal membuat konfigurasi",
+      "updateSuccess": "Konfigurasi berhasil diperbarui",
+      "updateError": "Gagal memperbarui konfigurasi",
+      "deleteSuccess": "Konfigurasi berhasil dihapus",
+      "deleteError": "Gagal menghapus konfigurasi",
+      "deleteConfirm": "Apakah Anda yakin ingin menghapus konfigurasi ini?"
+    }
+  },
+  "pushAudience": {
+    "title": "Audiens Push",
+    "subtitle": "Kelola segmen audiens dan token perangkat untuk kampanye FCM yang presisi",
+    "tabs": {
+      "audiences": "Segmen Audiens",
+      "tokens": "Token Perangkat"
+    },
+    "actions": {
+      "addAudience": "Buat Audiens",
+      "editAudience": "Edit Audiens"
+    },
+    "stats": {
+      "total": "Total Audiens",
+      "active": "Audiens Aktif",
+      "tokens": "Total Token"
+    },
+    "common": {
+      "noData": "Tidak ada data"
+    },
+    "status": {
+      "active": "Aktif",
+      "inactive": "Nonaktif"
+    },
+    "messages": {
+      "loadAudienceError": "Gagal memuat daftar audiens",
+      "loadTokenError": "Gagal memuat daftar token",
+      "deleteAudienceTitle": "Hapus Audiens",
+      "deleteAudienceContent": "Yakin ingin menghapus audiens \"{{name}}\"?",
+      "deleteAudienceSuccess": "Audiens berhasil dihapus",
+      "deleteAudienceError": "Gagal menghapus audiens",
+      "createAudienceSuccess": "Audiens berhasil dibuat",
+      "createAudienceError": "Gagal membuat audiens",
+      "updateAudienceSuccess": "Audiens berhasil diperbarui",
+      "updateAudienceError": "Gagal memperbarui audiens",
+      "deleteTokenTitle": "Hapus Token Push",
+      "deleteTokenContent": "Perangkat ini tidak akan menerima push setelah dihapus. Lanjutkan?",
+      "deleteTokenSuccess": "Token berhasil dihapus",
+      "deleteTokenError": "Gagal menghapus token"
+    },
+    "audience": {
+      "columns": {
+        "name": "Nama Audiens",
+        "tags": "Tag",
+        "description": "Deskripsi",
+        "createdAt": "Dibuat Pada",
+        "status": "Status"
+      }
+    },
+    "tokens": {
+      "columns": {
+        "token": "Token Perangkat",
+        "status": "Status",
+        "tags": "Tag",
+        "createdAt": "Dibuat Pada",
+        "audiences": "Audiens"
+      },
+      "filters": {
+        "searchPlaceholder": "Cari berdasarkan token",
+        "statusPlaceholder": "Pilih status"
+      },
+      "import": {
+        "title": "Impor Token Massal",
+        "tokensLabel": "Daftar Token Perangkat",
+        "tokensRequired": "Masukkan minimal satu token",
+        "tokensPlaceholder": "Tempel satu token per baris atau pisahkan dengan koma",
+        "audience": "Kaitkan Audiens",
+        "audiencePlaceholder": "Opsional, otomatis dikaitkan setelah impor",
+        "tags": "Tag Default",
+        "tagsPlaceholder": "Ketik atau pilih tag",
+        "replace": "Timpa token yang sudah ada",
+        "noTokenInput": "Silakan masukkan minimal satu token",
+        "audienceRequired": "Pilih tag audiens terlebih dahulu sebelum mengirim",
+        "success": "{{count}} token berhasil diimpor",
+        "error": "Gagal mengimpor token",
+        "orUpload": "Atau gunakan template Excel",
+        "downloadTemplate": "Unduh template",
+        "uploadExcel": "Unggah Excel",
+        "excelHint": "Isi kolom pertama dengan token. Token ganda dapat dipisahkan dengan koma.",
+        "templateError": "Gagal mengunduh template, coba lagi",
+        "parseSuccess": "{{count}} token berhasil diuraikan dan diisi ke daftar",
+        "parseError": "Gagal menguraikan berkas Excel",
+        "parseEmpty": "Tidak ada token yang ditemukan di berkas Excel",
+        "noAudienceTitle": "Belum memilih audiens",
+        "noAudienceMessage": "Token akan disimpan tanpa audiens. Lanjutkan?",
+        "continue": "Lanjutkan"
+      },
+      "actions": {
+        "edit": "Edit",
+        "editTitle": "Edit Token Perangkat",
+        "updateSuccess": "Token berhasil diperbarui",
+        "updateError": "Gagal memperbarui token"
+      }
+    },
+    "form": {
+      "name": "Nama Audiens",
+      "nameRequired": "Masukkan nama audiens",
+      "namePlaceholder": "misalnya: Pengguna aktif 7 hari terakhir",
+      "tags": "Tag",
+      "tagsPlaceholder": "Ketik atau pilih tag",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Tambahkan catatan tentang audiens ini",
+      "status": "Status Aktif"
+    }
+  },
+  "pushTemplate": {
+    "title": "Manajemen Template Push",
+    "subtitle": "Atur judul, isi, dan payload data FCM",
+    "common": {
+      "noData": "Tidak ada data"
+    },
+    "actions": {
+      "add": "Buat Template",
+      "edit": "Edit Template"
+    },
+    "stats": {
+      "total": "Total Template",
+      "enabled": "Template Aktif",
+      "disabled": "Template Nonaktif"
+    },
+    "filters": {
+      "searchPlaceholder": "Cari nama atau key template",
+      "pushConfigPlaceholder": "Pilih konfigurasi push",
+      "pushAudiencePlaceholder": "Pilih audiens push",
+      "statusPlaceholder": "Pilih status",
+      "apply": "Terapkan",
+      "reset": "Reset"
+    },
+    "table": {
+      "name": "Nama / Key Template",
+      "pushConfig": "Konfigurasi Push",
+      "pushAudience": "Audiens Push",
+      "title": "Judul Notifikasi",
+      "status": "Status",
+      "updatedAt": "Diperbarui Pada"
+    },
+    "status": {
+      "enabled": "Aktif",
+      "disabled": "Nonaktif"
+    },
+    "messages": {
+      "loadError": "Gagal memuat template",
+      "loadReferenceError": "Gagal memuat konfigurasi atau audiens",
+      "createSuccess": "Template berhasil dibuat",
+      "createError": "Gagal membuat template",
+      "updateSuccess": "Template berhasil diperbarui",
+      "updateError": "Gagal memperbarui template",
+      "deleteTitle": "Hapus Template",
+      "deleteConfirm": "Yakin ingin menghapus template \"{{name}}\"?",
+      "deleteSuccess": "Template berhasil dihapus",
+      "deleteError": "Gagal menghapus template"
+    },
+    "form": {
+      "name": "Nama Template",
+      "nameRequired": "Masukkan nama template",
+      "namePlaceholder": "contoh: Pengingat pesanan standar",
+      "pushConfig": "Konfigurasi Push",
+      "pushConfigRequired": "Pilih konfigurasi push",
+      "pushConfigPlaceholder": "Digunakan saat mengirim template ini",
+      "pushAudience": "Audiens Push",
+      "pushAudienceRequired": "Pilih audiens push",
+      "pushAudiencePlaceholder": "Audiens target untuk template ini",
+      "tags": "Tag",
+      "tagsPlaceholder": "Ketik atau pilih tag",
+      "title": "Judul Notifikasi",
+      "titleRequired": "Masukkan judul notifikasi",
+      "titlePlaceholder": "contoh: Anda punya pesan baru",
+      "body": "Isi Notifikasi",
+      "bodyRequired": "Masukkan isi notifikasi",
+      "bodyPlaceholder": "Konten dapat menggunakan placeholder variabel",
+      "clickAction": "Aksi Saat Klik",
+      "clickActionPlaceholder": "Schema khusus atau URL",
+      "imageUrl": "Gambar Notifikasi",
+      "imageUrlPlaceholder": "Opsional, URL gambar besar",
+      "dataPayload": "Payload Data",
+      "dataPayloadPlaceholder": "{ \"route\": \"detail\", \"id\": 1 }",
+      "dataPayloadTip": "Masukkan objek JSON yang akan dibaca di sisi klien",
+      "dataPayloadInvalid": "Masukkan objek JSON yang valid",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Catat penggunaan, variabel, atau skenario",
+      "enabled": "Status Aktif"
+    }
+  },
+  "pushTask": {
+    "title": "Tugas Push",
+    "subtitle": "Atur konfigurasi, template, dan audiens untuk eksekusi FCM",
+    "common": {
+      "noDescription": "Tidak ada deskripsi"
+    },
+    "actions": {
+      "add": "Buat Tugas",
+      "edit": "Edit Tugas",
+      "execute": "Kirim Sekarang"
+    },
+    "stats": {
+      "total": "Total Tugas",
+      "processing": "Sedang Berjalan",
+      "completed": "Selesai"
+    },
+    "filters": {
+      "searchPlaceholder": "Cari nama/konfigurasi/audiens",
+      "statusPlaceholder": "Pilih status",
+      "apply": "Terapkan",
+      "reset": "Reset"
+    },
+    "table": {
+      "name": "Nama Tugas / Deskripsi",
+      "pushConfig": "Konfigurasi Push",
+      "pushTemplate": "Template Push",
+      "pushAudience": "Audiens",
+      "scheduleTime": "Waktu Terjadwal",
+      "status": "Status",
+      "result": "Hasil",
+      "success": "Berhasil",
+      "failure": "Gagal",
+      "updatedAt": "Diperbarui Pada",
+      "createdBy": "Dibuat Oleh"
+    },
+    "status": {
+      "draft": "Draft",
+      "scheduled": "Terjadwal",
+      "processing": "Berjalan",
+      "completed": "Selesai",
+      "failed": "Gagal"
+    },
+    "messages": {
+      "loadError": "Gagal memuat tugas",
+      "loadReferenceError": "Gagal memuat konfigurasi atau audiens",
+      "createSuccess": "Tugas berhasil dibuat",
+      "createError": "Gagal membuat tugas",
+      "updateSuccess": "Tugas berhasil diperbarui",
+      "updateError": "Gagal memperbarui tugas",
+      "deleteTitle": "Hapus Tugas",
+      "deleteConfirm": "Yakin ingin menghapus tugas \"{{name}}\"?",
+      "deleteSuccess": "Tugas berhasil dihapus",
+      "deleteError": "Gagal menghapus tugas",
+      "executeSuccess": "Tugas telah dijalankan",
+      "executeError": "Gagal menjalankan tugas"
+    },
+    "form": {
+      "name": "Nama Tugas",
+      "nameRequired": "Masukkan nama tugas",
+      "namePlaceholder": "contoh: Kampanye 11.11",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Tuliskan tujuan, variabel, dll.",
+      "pushTemplate": "Template Push",
+      "pushTemplateRequired": "Pilih template push",
+      "pushTemplatePlaceholder": "Pilih template (konfigurasi & audiens otomatis)",
+      "templateInfoTitle": "Informasi Template",
+      "templateInfoConfig": "Konfigurasi: {{name}}",
+      "templateInfoAudience": "Audiens: {{name}}",
+      "scheduleTime": "Waktu Kirim",
+      "scheduleTimeImmediate": "Kirim Sekarang",
+      "scheduleTimeImmediateDesc": "Tugas akan disetel untuk segera dikirim dan bisa dieksekusi kapan saja setelah dibuat",
+      "status": "Status Tugas"
     }
   }
 }

@@ -1,6 +1,23 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import type { ApiResponse, LoginRequest, RegisterRequest, AuthResponse, FavoriteAdSequence } from '../types';
+import type {
+  ApiResponse,
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  FavoriteAdSequence,
+  PushConfig,
+  PushConfigPayload,
+  PushPlatform,
+  PushAudience,
+  PushAudiencePayload,
+  PushToken,
+  PushTokenPayload,
+  PushTemplate,
+  PushTemplatePayload,
+  PushTask,
+  PushTaskPayload,
+} from '../types';
 
 class ApiService {
   private api: AxiosInstance;
@@ -225,6 +242,158 @@ class ApiService {
 
   async deleteApiPartnerConfig(id: string): Promise<ApiResponse<any>> {
     const response = await this.api.delete(`/api-partner-configs/${id}`);
+    return response.data;
+  }
+
+  // 推送配置相关
+  async getPushConfigs(params?: { appId?: string; platform?: PushPlatform; enabled?: boolean }): Promise<ApiResponse<PushConfig[]>> {
+    const response = await this.api.get('/push-configs', { params });
+    return response.data;
+  }
+
+  async getPushConfigById(id: string): Promise<ApiResponse<PushConfig>> {
+    const response = await this.api.get(`/push-configs/${id}`);
+    return response.data;
+  }
+
+  async createPushConfig(data: PushConfigPayload): Promise<ApiResponse<PushConfig>> {
+    const response = await this.api.post('/push-configs', data);
+    return response.data;
+  }
+
+  async updatePushConfig(id: string, data: Partial<PushConfigPayload>): Promise<ApiResponse<PushConfig>> {
+    const response = await this.api.put(`/push-configs/${id}`, data);
+    return response.data;
+  }
+
+  async deletePushConfig(id: string): Promise<ApiResponse<null>> {
+    const response = await this.api.delete(`/push-configs/${id}`);
+    return response.data;
+  }
+
+  async getPushTemplates(params?: {
+    search?: string;
+    pushConfigId?: number;
+    pushAudienceId?: number;
+    enabled?: boolean;
+  }): Promise<ApiResponse<PushTemplate[]>> {
+    const response = await this.api.get('/push-templates', { params });
+    return response.data;
+  }
+
+  async getPushTemplateById(id: string): Promise<ApiResponse<PushTemplate>> {
+    const response = await this.api.get(`/push-templates/${id}`);
+    return response.data;
+  }
+
+  async createPushTemplate(data: PushTemplatePayload): Promise<ApiResponse<PushTemplate>> {
+    const response = await this.api.post('/push-templates', data);
+    return response.data;
+  }
+
+  async updatePushTemplate(id: string, data: Partial<PushTemplatePayload>): Promise<ApiResponse<PushTemplate>> {
+    const response = await this.api.put(`/push-templates/${id}`, data);
+    return response.data;
+  }
+
+  async deletePushTemplate(id: string): Promise<ApiResponse<null>> {
+    const response = await this.api.delete(`/push-templates/${id}`);
+    return response.data;
+  }
+
+  async getPushTasks(params?: { status?: string; search?: string }): Promise<ApiResponse<PushTask[]>> {
+    const response = await this.api.get('/push-tasks', { params });
+    return response.data;
+  }
+
+  async getPushTaskById(id: string): Promise<ApiResponse<PushTask>> {
+    const response = await this.api.get(`/push-tasks/${id}`);
+    return response.data;
+  }
+
+  async createPushTask(data: PushTaskPayload): Promise<ApiResponse<PushTask>> {
+    const response = await this.api.post('/push-tasks', data);
+    return response.data;
+  }
+
+  async updatePushTask(id: string, data: Partial<PushTaskPayload>): Promise<ApiResponse<PushTask>> {
+    const response = await this.api.put(`/push-tasks/${id}`, data);
+    return response.data;
+  }
+
+  async deletePushTask(id: string): Promise<ApiResponse<null>> {
+    const response = await this.api.delete(`/push-tasks/${id}`);
+    return response.data;
+  }
+
+  async executePushTask(id: string): Promise<ApiResponse<PushTask>> {
+    const response = await this.api.post(`/push-tasks/${id}/execute`);
+    return response.data;
+  }
+
+  // 推送人群/Token 管理
+  async getPushAudiences(params?: any): Promise<ApiResponse<PushAudience[]>> {
+    const response = await this.api.get('/push-audiences', { params });
+    return response.data;
+  }
+
+  async createPushAudience(data: PushAudiencePayload): Promise<ApiResponse<PushAudience>> {
+    const response = await this.api.post('/push-audiences', data);
+    return response.data;
+  }
+
+  async updatePushAudience(id: string, data: PushAudiencePayload): Promise<ApiResponse<PushAudience>> {
+    const response = await this.api.put(`/push-audiences/${id}`, data);
+    return response.data;
+  }
+
+  async deletePushAudience(id: string): Promise<ApiResponse<null>> {
+    const response = await this.api.delete(`/push-audiences/${id}`);
+    return response.data;
+  }
+
+  async getPushTokens(params?: any): Promise<ApiResponse<PushToken[]>> {
+    const response = await this.api.get('/push-tokens', { params });
+    return response.data;
+  }
+
+  async updatePushToken(id: string, data: PushTokenPayload): Promise<ApiResponse<PushToken>> {
+    const response = await this.api.put(`/push-tokens/${id}`, data);
+    return response.data;
+  }
+
+  async deletePushToken(id: string): Promise<ApiResponse<null>> {
+    const response = await this.api.delete(`/push-tokens/${id}`);
+    return response.data;
+  }
+
+  async importPushTokens(data: {
+    tokens: PushTokenPayload[];
+    replace?: boolean;
+    audienceId?: number;
+  }): Promise<ApiResponse<{ imported: number }>> {
+    const response = await this.api.post('/push-tokens/import', data);
+    return response.data;
+  }
+
+  async downloadPushTokenTemplate(): Promise<Blob> {
+    const response = await this.api.get('/push-tokens/template', {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async importPushTokensFromFile(data: FormData): Promise<ApiResponse<{ imported: number }>> {
+    const response = await this.api.post('/push-tokens/import-excel', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async parsePushTokensFromFile(data: FormData): Promise<ApiResponse<{ tokens: string[] }>> {
+    const response = await this.api.post('/push-tokens/parse-excel', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   }
 

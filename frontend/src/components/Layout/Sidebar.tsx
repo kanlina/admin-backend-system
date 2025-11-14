@@ -12,7 +12,10 @@ import {
   ToolOutlined,
   TeamOutlined,
   ApiOutlined,
-  BookOutlined
+  BookOutlined,
+  NotificationOutlined,
+  MessageOutlined,
+  UserSwitchOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -68,6 +71,33 @@ const Sidebar: React.FC<SidebarProps> = ({
           key: '/data-monitor/post-loan',
           icon: <CreditCardOutlined />,
           label: t('navigation.postLoanData'),
+        },
+      ],
+    },
+    {
+      key: 'push-center',
+      icon: <NotificationOutlined />,
+      label: t('navigation.pushCenter'),
+      children: [
+        {
+          key: '/push-center/config',
+          icon: <MessageOutlined />,
+          label: t('navigation.pushConfig'),
+        },
+        {
+          key: '/push-center/audiences',
+          icon: <UserSwitchOutlined />,
+          label: t('navigation.pushAudience'),
+        },
+        {
+          key: '/push-center/templates',
+          icon: <FileTextOutlined />,
+          label: t('navigation.pushTemplate'),
+        },
+        {
+          key: '/push-center/tasks',
+          icon: <NotificationOutlined />,
+          label: t('navigation.pushTask'),
         },
       ],
     },

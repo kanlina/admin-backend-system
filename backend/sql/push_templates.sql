@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS `push_templates` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `templateKey` VARCHAR(255) NOT NULL,
+  `pushConfigId` INT UNSIGNED NOT NULL,
+  `pushAudienceId` INT UNSIGNED NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `body` TEXT NOT NULL,
+  `dataPayload` TEXT NULL,
+  `clickAction` VARCHAR(512) NULL,
+  `imageUrl` VARCHAR(512) NULL,
+  `description` TEXT NULL,
+  `tags` TEXT NULL,
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_template` (`templateKey`, `pushConfigId`),
+  KEY `idx_templateKey` (`templateKey`),
+  KEY `idx_pushConfigId` (`pushConfigId`),
+  KEY `idx_pushAudienceId` (`pushAudienceId`),
+  KEY `idx_enabled` (`enabled`),
+  KEY `idx_updatedAt` (`updatedAt`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

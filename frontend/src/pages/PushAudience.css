@@ -1,0 +1,57 @@
+.push-audience-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.push-audience-header {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.push-audience-stat-card {
+  background: #f7f9fc;
+  border-radius: 10px;
+  padding: 16px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.push-audience-stat-card .ant-typography {
+  margin: 0;
+}
+
+.push-audience-empty {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.push-token-filters {
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.push-token-filters .ant-form-item {
+  margin-bottom: 0;
+}
+
+.push-audience-rule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.push-audience-rule-row {
+  margin-bottom: 8px;
+}
+
+.push-audience-table .ant-table-thead > tr > th,
+.push-audience-table .ant-table-tbody > tr > td {
+  text-align: center;
+  vertical-align: middle;
+}
+

@@ -5,7 +5,7 @@ import { RegisterRequest, UpdateUserRequest, PaginationQuery } from '../types';
 const prisma = new PrismaClient();
 
 export class UserService {
-  async createUser(data: RegisterRequest): Promise<User> {
+  async createUser(data: RegisterRequest & { role?: string }): Promise<User> {
     const hashedPassword = await hashPassword(data.password);
     
     return prisma.user.create({
@@ -13,6 +13,7 @@ export class UserService {
         username: data.username,
         email: data.email,
         password: hashedPassword,
+        role: (data.role as any) || 'USER',
       },
     });
   }
@@ -110,5 +111,14 @@ export class UserService {
       adminUsers,
       inactiveUsers: totalUsers - activeUsers,
     };
+  }
+
+  async resetPassword(id: string, newPassword: string): Promise<void> {
+    const hashedPassword = await hashPassword(newPassword);
+    
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+    });
   }
 }

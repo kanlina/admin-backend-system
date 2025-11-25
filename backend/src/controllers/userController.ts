@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/userService';
-import { UpdateUserRequest, PaginationQuery, ApiResponse } from '../types';
+import { UpdateUserRequest, PaginationQuery, ApiResponse, RegisterRequest } from '../types';
 
 const userService = new UserService();
 
@@ -116,6 +116,82 @@ export class UserController {
       });
     } catch (error) {
       console.error('Get user stats error:', error);
+      res.status(500).json({
+        success: false,
+        error: '服务器内部错误',
+      });
+    }
+  }
+
+  async createUser(req: Request<{}, ApiResponse, RegisterRequest>, res: Response<ApiResponse>) {
+    try {
+      const { username, email, password, role } = req.body;
+
+      // 检查用户名是否已存在
+      const existingUser = await userService.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          error: '用户名已存在',
+        });
+      }
+
+      // 检查邮箱是否已存在
+      const existingEmail = await userService.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({
+          success: false,
+          error: '邮箱已被使用',
+        });
+      }
+
+      // 如果没有提供密码，使用默认密码123456
+      const userPassword = password || '123456';
+
+      const user = await userService.createUser({
+        username,
+        email,
+        password: userPassword,
+        role: role || 'USER',
+      });
+
+      // 不返回密码
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.status(201).json({
+        success: true,
+        data: userWithoutPassword,
+        message: '用户创建成功',
+      });
+    } catch (error) {
+      console.error('Create user error:', error);
+      res.status(500).json({
+        success: false,
+        error: '服务器内部错误',
+      });
+    }
+  }
+
+  async resetPassword(req: Request<{ id: string }, ApiResponse, { password: string }>, res: Response<ApiResponse>) {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+
+      if (!password || password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          error: '密码长度至少为6个字符',
+        });
+      }
+
+      await userService.resetPassword(id, password);
+
+      res.json({
+        success: true,
+        message: '密码重置成功',
+      });
+    } catch (error) {
+      console.error('Reset password error:', error);
       res.status(500).json({
         success: false,
         error: '服务器内部错误',

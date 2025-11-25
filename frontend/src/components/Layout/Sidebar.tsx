@@ -16,6 +16,7 @@ import {
   NotificationOutlined,
   MessageOutlined,
   UserSwitchOutlined,
+  SafetyOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -120,9 +121,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
     ...(user?.role === 'ADMIN' ? [
       {
-        key: '/users',
+        key: 'user-center',
         icon: <UserOutlined />,
-        label: t('navigation.userManagement'),
+        label: t('navigation.userCenter'),
+        children: [
+          {
+            key: '/user-center/users',
+            icon: <UserOutlined />,
+            label: t('navigation.userManagement'),
+          },
+          {
+            key: '/user-center/permissions',
+            icon: <SafetyOutlined />,
+            label: t('navigation.permissionManagement'),
+          },
+        ],
       },
       {
         key: '/analytics',

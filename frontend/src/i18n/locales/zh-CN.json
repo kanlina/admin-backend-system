@@ -36,7 +36,8 @@
     "totalItems": "共 {{total}} 条",
     "pageRangeWithTotal": "第 {{start}}-{{end}} 条/共 {{total}} 条",
     "index": "序号",
-    "close": "关闭"
+    "close": "关闭",
+    "preview": "预览"
   },
   "navigation": {
     "dashboard": "仪表盘",
@@ -58,7 +59,9 @@
     "pushConfig": "推送配置",
     "pushAudience": "推送人群",
     "pushTemplate": "推送模版",
-    "pushTask": "推送任务"
+    "pushTask": "推送任务",
+    "userCenter": "用户中心",
+    "permissionManagement": "权限管理"
   },
   "internalTransfer": {
     "title": "内转数据监控",
@@ -526,7 +529,8 @@
     "modals": {
       "addTitle": "新增新闻",
       "editTitle": "编辑新闻",
-      "detailTitle": "编辑新闻详情"
+      "detailTitle": "编辑新闻详情",
+      "previewTitle": "预览：{{title}}"
     },
     "form": {
       "fields": {
@@ -563,6 +567,7 @@
       "detailLoadError": "获取新闻详情失败",
       "detailSaveSuccess": "保存成功",
       "detailSaveError": "保存失败",
+      "previewLoadError": "加载预览内容失败",
       "uploadSuccess": "图片上传成功",
       "uploadError": "图片上传失败"
     },
@@ -592,7 +597,8 @@
       "platform": "平台",
       "projectId": "项目ID",
       "status": "状态",
-      "description": "描述"
+      "description": "描述",
+      "createdAt": "创建时间"
     },
     "form": {
       "name": "配置名称",
@@ -629,6 +635,14 @@
     "status": {
       "enabled": "启用",
       "disabled": "禁用"
+    },
+    "filters": {
+      "platform": "平台",
+      "platformPlaceholder": "选择平台",
+      "status": "状态",
+      "statusPlaceholder": "选择状态",
+      "projectId": "项目ID",
+      "projectIdPlaceholder": "输入项目ID"
     },
     "messages": {
       "loadError": "获取配置列表失败",
@@ -684,9 +698,18 @@
       "columns": {
         "name": "人群名称",
         "tags": "标签",
+        "tokenCount": "关联Token数",
         "description": "人群描述",
         "createdAt": "创建时间",
         "status": "状态"
+      },
+      "filters": {
+        "name": "人群名称",
+        "namePlaceholder": "输入人群名称",
+        "tag": "标签",
+        "tagPlaceholder": "输入标签",
+        "status": "状态",
+        "statusPlaceholder": "选择状态"
       }
     },
     "tokens": {
@@ -698,7 +721,9 @@
         "audiences": "关联人群"
       },
       "filters": {
+        "search": "搜索",
         "searchPlaceholder": "按Token搜索",
+        "status": "状态",
         "statusPlaceholder": "选择状态"
       },
       "import": {
@@ -773,7 +798,9 @@
       "pushConfig": "推送配置",
       "pushAudience": "推送人群",
       "title": "推送标题",
+      "tags": "标签",
       "status": "状态",
+      "createdAt": "创建时间",
       "updatedAt": "更新时间"
     },
     "status": {
@@ -855,6 +882,7 @@
       "result": "推送结果",
       "success": "成功",
       "failure": "失败",
+      "createdAt": "创建时间",
       "updatedAt": "更新时间"
     },
     "status": {
@@ -876,7 +904,9 @@
       "deleteSuccess": "任务删除成功",
       "deleteError": "任务删除失败",
       "executeSuccess": "任务已触发推送",
-      "executeError": "执行推送失败"
+      "executeError": "执行推送失败",
+      "cannotExecuteCompleted": "已完成的任务不能再次执行推送",
+      "cannotExecuteFailed": "已失败的任务不能再次执行推送"
     },
     "form": {
       "name": "任务名称",
@@ -893,7 +923,20 @@
       "scheduleTime": "推送时间",
       "scheduleTimeImmediate": "立即推送",
       "scheduleTimeImmediateDesc": "该任务会设置为立即推送，创建后可随时执行",
-      "status": "任务状态"
+      "status": "任务状态",
+      "statusHintCreate": "新创建的任务默认为草稿状态，点击\"立即推送\"后才会执行推送",
+      "statusHintEdit": "当前状态：{{status}}，状态只能通过执行推送任务来改变"
+    }
+  },
+  "userManagement": {
+    "role": {
+      "admin": "管理员",
+      "user": "用户",
+      "adminDescription": "系统管理员，拥有所有权限",
+      "userDescription": "普通用户，仅查看权限"
+    },
+    "table": {
+      "role": "角色"
     }
   }
 }

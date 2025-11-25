@@ -1,14 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import {
   Button,
   Card,
-  Col,
   Form,
   Input,
   Modal,
   Popconfirm,
-  Row,
   Select,
   Space,
   Table,
@@ -39,6 +37,7 @@ const PushTaskPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<PushTask | null>(null);
   const [filters, setFilters] = useState<{ status?: string; search?: string }>({});
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [form] = Form.useForm();
   const [filterForm] = Form.useForm();
 
@@ -62,7 +61,29 @@ const PushTaskPage: React.FC = () => {
     try {
       const response = await apiService.getPushTasks(params);
       if (response.success) {
-        setTasks(response.data || []);
+        const tasksData = response.data || [];
+        // 使用Map去重：根据id去重，保留最新的（按updatedAt）
+        const taskMap = new Map<number, PushTask>();
+        tasksData.forEach((task: PushTask) => {
+          const existing = taskMap.get(task.id);
+          if (!existing) {
+            taskMap.set(task.id, task);
+          } else {
+            // 如果已存在，比较更新时间，保留最新的
+            const existingTime = new Date(existing.updatedAt || '').getTime();
+            const currentTime = new Date(task.updatedAt || '').getTime();
+            if (currentTime > existingTime) {
+              taskMap.set(task.id, task);
+            }
+          }
+        });
+        // 转换为数组并按更新时间倒序排序
+        const uniqueTasks = Array.from(taskMap.values()).sort((a, b) => {
+          const timeA = new Date(a.updatedAt || '').getTime();
+          const timeB = new Date(b.updatedAt || '').getTime();
+          return timeB - timeA;
+        });
+        setTasks(uniqueTasks);
       } else {
         message.error(response.message || t('pushTask.messages.loadError'));
       }
@@ -146,7 +167,30 @@ const PushTaskPage: React.FC = () => {
       const response = await apiService.executePushTask(String(task.id));
       if (response.success) {
         message.success(t('pushTask.messages.executeSuccess'));
-        fetchTasks(filters);
+        // 如果返回了更新后的任务数据，直接更新列表
+        if (response.data) {
+          const updatedTask = response.data;
+          setTasks((prevTasks) => {
+            const taskMap = new Map<number, PushTask>();
+            // 先添加更新后的任务
+            taskMap.set(updatedTask.id, updatedTask);
+            // 然后添加其他任务
+            prevTasks.forEach((t) => {
+              if (!taskMap.has(t.id)) {
+                taskMap.set(t.id, t);
+              }
+            });
+            // 转换为数组并按更新时间倒序排序
+            return Array.from(taskMap.values()).sort((a, b) => {
+              const timeA = new Date(a.updatedAt || '').getTime();
+              const timeB = new Date(b.updatedAt || '').getTime();
+              return timeB - timeA;
+            });
+          });
+        } else {
+          // 如果没有返回数据，刷新列表
+          fetchTasks(filters);
+        }
       } else {
         message.error(response.message || t('pushTask.messages.executeError'));
       }
@@ -165,20 +209,37 @@ const PushTaskPage: React.FC = () => {
   };
 
   const handleModalCancel = () => {
+    // 如果正在提交，禁止关闭
+    if (submitLoading) {
+      return;
+    }
     setModalVisible(false);
     form.resetFields();
     setEditingTask(null);
     setSelectedTemplate(null);
+    setSubmitLoading(false);
   };
 
   const handleSubmit = async () => {
+    if (submitLoading) {
+      return;
+    }
     try {
       const values = await form.validateFields();
+      
+      // 确保 pushTemplateId 是数字类型
+      const pushTemplateId = Number(values.pushTemplateId);
+      if (!pushTemplateId || isNaN(pushTemplateId)) {
+        message.error(t('pushTask.form.pushTemplateRequired'));
+        return;
+      }
+
       const payload: PushTaskPayload = {
-        name: values.name,
-        description: values.description,
-        pushTemplateId: values.pushTemplateId,
-        status: values.status,
+        name: values.name?.trim() || '',
+        description: values.description?.trim(),
+        pushTemplateId: pushTemplateId,
+        // 创建任务时固定为草稿状态，不传status字段
+        // 编辑任务时也不传status，保持原有状态
       };
 
       setSubmitLoading(true);
@@ -190,16 +251,52 @@ const PushTaskPage: React.FC = () => {
         message.success(
           editingTask ? t('pushTask.messages.updateSuccess') : t('pushTask.messages.createSuccess')
         );
-        handleModalCancel();
-        fetchTasks(filters);
+        setModalVisible(false);
+        form.resetFields();
+        setEditingTask(null);
+        setSelectedTemplate(null);
+        setSubmitLoading(false);
+        
+        // 如果是创建，使用返回的数据更新列表，避免重复查询
+        if (!editingTask && response.data) {
+          const newTask = response.data;
+          setTasks((prevTasks) => {
+            // 使用Map去重，确保不会有重复的ID
+            const taskMap = new Map<number, PushTask>();
+            
+            // 先添加新任务
+            taskMap.set(newTask.id, newTask);
+            
+            // 然后添加旧任务（如果ID不同）
+            prevTasks.forEach((task) => {
+              if (!taskMap.has(task.id)) {
+                taskMap.set(task.id, task);
+              }
+            });
+            
+            // 转换为数组并按更新时间倒序排序
+            const uniqueTasks = Array.from(taskMap.values()).sort((a, b) => {
+              const timeA = new Date(a.updatedAt || '').getTime();
+              const timeB = new Date(b.updatedAt || '').getTime();
+              return timeB - timeA;
+            });
+            
+            return uniqueTasks;
+          });
+        } else {
+          // 如果是更新，刷新列表
+          fetchTasks(filters);
+        }
       } else {
         message.error(
           response.message ||
             (editingTask ? t('pushTask.messages.updateError') : t('pushTask.messages.createError'))
         );
+        setSubmitLoading(false);
       }
     } catch (error: any) {
       if (error?.errorFields) {
+        setSubmitLoading(false);
         return;
       }
       message.error(
@@ -208,17 +305,10 @@ const PushTaskPage: React.FC = () => {
           error
         )
       );
-    } finally {
       setSubmitLoading(false);
     }
   };
 
-  const taskStats = useMemo(() => {
-    const total = tasks.length;
-    const processing = tasks.filter((task) => task.status === 'processing').length;
-    const completed = tasks.filter((task) => task.status === 'completed').length;
-    return { total, processing, completed };
-  }, [tasks]);
 
   const renderStatusTag = (status: PushTask['status']) => {
     const map: Record<PushTask['status'], { color: string; text: string }> = {
@@ -237,7 +327,12 @@ const PushTaskPage: React.FC = () => {
       title: t('common.index'),
       width: 70,
       align: 'center',
-      render: (_value, _record, index) => index + 1,
+      render: (_value, _record, index) => {
+        // 考虑分页计算序号
+        const current = pagination.current || 1;
+        const pageSize = pagination.pageSize || 10;
+        return (current - 1) * pageSize + index + 1;
+      },
     },
     {
       title: t('pushTask.table.name'),
@@ -271,6 +366,7 @@ const PushTaskPage: React.FC = () => {
       title: t('pushTask.table.scheduleTime'),
       dataIndex: 'scheduleTime',
       width: 200,
+      align: 'center',
       render: (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
@@ -284,6 +380,7 @@ const PushTaskPage: React.FC = () => {
       title: t('pushTask.table.result'),
       dataIndex: 'successCount',
       width: 200,
+      align: 'center',
       render: (_value, record) => (
         <div>
           <Typography.Text>
@@ -297,9 +394,17 @@ const PushTaskPage: React.FC = () => {
       ),
     },
     {
+      title: t('pushTask.table.createdAt'),
+      dataIndex: 'createdAt',
+      width: 200,
+      align: 'center',
+      render: (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
+    },
+    {
       title: t('pushTask.table.updatedAt'),
       dataIndex: 'updatedAt',
       width: 200,
+      align: 'center',
       render: (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'),
     },
     {
@@ -317,7 +422,8 @@ const PushTaskPage: React.FC = () => {
             type="link"
             icon={<PlayCircleOutlined />}
             onClick={() => handleExecute(record)}
-            disabled={record.status === 'processing'}
+            disabled={record.status === 'processing' || record.status === 'completed' || record.status === 'failed'}
+            title={record.status === 'completed' ? t('pushTask.messages.cannotExecuteCompleted') : record.status === 'failed' ? t('pushTask.messages.cannotExecuteFailed') : ''}
           >
             {t('pushTask.actions.execute')}
           </Button>
@@ -340,49 +446,18 @@ const PushTaskPage: React.FC = () => {
 
   return (
     <div className="push-task-page">
-      <Card className="push-task-header">
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Typography.Title level={4} style={{ marginBottom: 0 }}>
-              {t('pushTask.title')}
-            </Typography.Title>
-            <Typography.Text type="secondary">{t('pushTask.subtitle')}</Typography.Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchTasks(filters)}>
-                {t('common.refresh')}
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                {t('pushTask.actions.add')}
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        <Row gutter={16} style={{ marginTop: 24 }}>
-          <Col span={8}>
-            <div className="push-task-stat-card">
-              <Typography.Text>{t('pushTask.stats.total')}</Typography.Text>
-              <Typography.Title level={3}>{taskStats.total}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-task-stat-card">
-              <Typography.Text>{t('pushTask.stats.processing')}</Typography.Text>
-              <Typography.Title level={3}>{taskStats.processing}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-task-stat-card">
-              <Typography.Text>{t('pushTask.stats.completed')}</Typography.Text>
-              <Typography.Title level={3}>{taskStats.completed}</Typography.Title>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card>
+      <Card
+        extra={
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchTasks(filters)}>
+              {t('common.refresh')}
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              {t('pushTask.actions.add')}
+            </Button>
+          </Space>
+        }
+      >
         <Form
           form={filterForm}
           layout="inline"
@@ -421,14 +496,22 @@ const PushTaskPage: React.FC = () => {
         </Form>
 
         <Table
-          rowKey="id"
+          rowKey={(record) => `task-${record.id}`}
           loading={loading}
           className="push-task-table"
           columns={columns}
           dataSource={tasks}
           pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
             showSizeChanger: true,
             showTotal: (total) => t('common.totalItems', { total }),
+            onChange: (page, pageSize) => {
+              setPagination({ current: page, pageSize });
+            },
+            onShowSizeChange: (_current, size) => {
+              setPagination({ current: 1, pageSize: size });
+            },
           }}
           scroll={{ x: 1300 }}
         />
@@ -444,9 +527,12 @@ const PushTaskPage: React.FC = () => {
         okText={t('common.save')}
         cancelText={t('common.cancel')}
         destroyOnClose
-        maskClosable={false}
+        maskClosable={!submitLoading}
+        closable={!submitLoading}
+        okButtonProps={{ loading: submitLoading, disabled: submitLoading }}
+        cancelButtonProps={{ disabled: submitLoading }}
       >
-        <Form form={form} layout="vertical" initialValues={{ status: 'draft' }}>
+        <Form form={form} layout="vertical" disabled={submitLoading}>
           <Form.Item
             label={t('pushTask.form.name')}
             name="name"
@@ -494,15 +580,15 @@ const PushTaskPage: React.FC = () => {
             </Typography.Paragraph>
           </div>
 
-          <Form.Item label={t('pushTask.form.status')} name="status">
-            <Select>
-              <Select.Option value="draft">{t('pushTask.status.draft')}</Select.Option>
-              <Select.Option value="scheduled">{t('pushTask.status.scheduled')}</Select.Option>
-              <Select.Option value="processing">{t('pushTask.status.processing')}</Select.Option>
-              <Select.Option value="completed">{t('pushTask.status.completed')}</Select.Option>
-              <Select.Option value="failed">{t('pushTask.status.failed')}</Select.Option>
-            </Select>
-          </Form.Item>
+          <div className="push-task-status-hint">
+            <Typography.Text strong>{t('pushTask.form.status')}</Typography.Text>
+            <Typography.Paragraph style={{ marginBottom: 0, color: '#666' }}>
+              {editingTask 
+                ? t('pushTask.form.statusHintEdit', { status: t(`pushTask.status.${editingTask.status}`) })
+                : t('pushTask.form.statusHintCreate')
+              }
+            </Typography.Paragraph>
+          </div>
         </Form>
       </Modal>
     </div>

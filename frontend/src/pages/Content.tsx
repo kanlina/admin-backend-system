@@ -22,10 +22,13 @@ import {
   SearchOutlined,
   PlusOutlined,
   FileTextOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { apiService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import 'dayjs/locale/id';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import { useTranslation } from 'react-i18next';
@@ -74,6 +77,7 @@ interface NewsItem {
 
 const NewsManagement: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [contents, setContents] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -271,8 +275,9 @@ const NewsManagement: React.FC = () => {
       const response = await apiService.getContentById(record.id.toString());
       if (response.success) {
         setEditingContent(response.data);
-        detailForm.setFieldsValue({ content: response.data.content });
-        setDetailEditorValue(response.data.content || '');
+        const originalHtml = response.data.content || '';
+        detailForm.setFieldsValue({ content: originalHtml });
+        setDetailEditorValue(originalHtml);
         setDetailModalVisible(true);
       }
     } catch (error) {
@@ -282,13 +287,82 @@ const NewsManagement: React.FC = () => {
     }
   };
 
+  const handlePreview = (record: NewsItem) => {
+    navigate(`/news/preview/${record.id}`);
+  };
+
+
+  // 清理HTML中的表单元素，将表单元素转换为文本内容
+  const cleanHtmlFromFormElements = (html: string): string => {
+    if (!html) return '';
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // 如果内容在ql-editor中，先提取其内容
+    const qlEditor = tempDiv.querySelector('.ql-editor');
+    if (qlEditor) {
+      tempDiv.innerHTML = qlEditor.innerHTML;
+    }
+    
+    // 处理input元素：替换为文本节点，显示其value
+    tempDiv.querySelectorAll('input[type="text"], input[type="password"], input[type="email"], input[type="number"], input:not([type])').forEach(input => {
+      const value = (input as HTMLInputElement).value || '';
+      if (value) {
+        const textNode = document.createTextNode(value);
+        input.parentNode?.replaceChild(textNode, input);
+      } else {
+        input.remove();
+      }
+    });
+    
+    // 处理textarea元素：替换为文本节点，显示其内容
+    tempDiv.querySelectorAll('textarea').forEach(textarea => {
+      const content = textarea.textContent || '';
+      if (content) {
+        const textNode = document.createTextNode(content);
+        textarea.parentNode?.replaceChild(textNode, textarea);
+      } else {
+        textarea.remove();
+      }
+    });
+    
+    // 处理select元素：替换为文本节点，显示选中的option文本
+    tempDiv.querySelectorAll('select').forEach(select => {
+      const selectedOption = (select as HTMLSelectElement).options[(select as HTMLSelectElement).selectedIndex];
+      const text = selectedOption?.textContent || '';
+      if (text) {
+        const textNode = document.createTextNode(text);
+        select.parentNode?.replaceChild(textNode, select);
+      } else {
+        select.remove();
+      }
+    });
+    
+    // 移除button和form元素
+    tempDiv.querySelectorAll('button, form').forEach(el => el.remove());
+    
+    // 移除其他类型的input（checkbox、radio等）
+    tempDiv.querySelectorAll('input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="hidden"]').forEach(input => {
+      input.remove();
+    });
+    
+    return tempDiv.innerHTML;
+  };
+
   const handleSaveDetail = async () => {
     try {
       const values = await detailForm.validateFields();
       if (!editingContent) return;
 
       setLoading(true);
-      const response = await apiService.updateContentDetail(editingContent.id.toString(), values.content);
+      // 获取Quill编辑器当前的内容
+      let contentToSave = values.content || '';
+      
+      // 保存前再次清理HTML，确保不包含任何表单元素，只保存纯文本内容
+      contentToSave = cleanHtmlFromFormElements(contentToSave);
+      
+      const response = await apiService.updateContentDetail(editingContent.id.toString(), contentToSave);
       if (response.success) {
         message.success(t('news.messages.detailSaveSuccess'));
         setDetailModalVisible(false);
@@ -388,7 +462,12 @@ const NewsManagement: React.FC = () => {
 
         if (quillInstanceRef.current) {
           const quill = quillInstanceRef.current;
-          const html = detailEditorValue || '';
+          let html = detailEditorValue || '';
+          
+          // 清理HTML中的表单元素（input、textarea、button、select等），避免显示为输入框
+          // 将表单元素替换为其文本内容或值
+          html = cleanHtmlFromFormElements(html);
+          
           const delta = quill.clipboard.convert(html);
           quill.setContents(delta);
           quill.setSelection(quill.getLength(), 0);
@@ -489,20 +568,33 @@ const NewsManagement: React.FC = () => {
       key: 'action',
       width: 220,
       render: (_: any, record: NewsItem) => (
-        <Space size={8} style={{ whiteSpace: 'nowrap' }}>
+        <Space size={4} style={{ whiteSpace: 'nowrap' }}>
           <Button
             type="link"
+            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
+            style={{ padding: '0 4px' }}
           >
             {t('common.edit')}
           </Button>
           <Button
             type="link"
+            size="small"
             icon={<FileTextOutlined />}
             onClick={() => handleViewDetail(record)}
+            style={{ padding: '0 4px' }}
           >
             {t('common.details')}
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handlePreview(record)}
+            style={{ padding: '0 4px' }}
+          >
+            {t('common.preview')}
           </Button>
           <Popconfirm
             title={t('news.confirm.delete')}
@@ -510,7 +602,7 @@ const NewsManagement: React.FC = () => {
             okText={t('common.confirm')}
             cancelText={t('common.cancel')}
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} style={{ padding: '0 4px' }}>
               {t('common.delete')}
             </Button>
           </Popconfirm>
@@ -521,31 +613,33 @@ const NewsManagement: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card title={t('news.title')}>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-          >
-            {t('news.actions.add')}
-          </Button>
-          <Button
-            danger
-            disabled={selectedRowKeys.length === 0}
-            onClick={handleBatchDelete}
-          >
-            {t('news.actions.batchDeleteWithCount', { count: selectedRowKeys.length })}
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchContents}
-            loading={loading}
-          >
-            {t('common.refresh')}
-          </Button>
-        </Space>
-
+      <Card
+        extra={
+          <Space wrap>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+            >
+              {t('news.actions.add')}
+            </Button>
+            <Button
+              danger
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+            >
+              {t('news.actions.batchDeleteWithCount', { count: selectedRowKeys.length })}
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchContents}
+              loading={loading}
+            >
+              {t('common.refresh')}
+            </Button>
+          </Space>
+        }
+      >
         <Space style={{ marginBottom: 16 }} wrap>
           <Input
             placeholder={t('news.filters.searchTitlePlaceholder')}
@@ -701,11 +795,12 @@ const NewsManagement: React.FC = () => {
           >
             <div ref={editorContainerRef} style={{ minHeight: 300 }} />
           </Form.Item>
-          <Form.Item name="content" rules={[{ required: true, message: t('news.detail.placeholder') }]} style={{ display: 'none' }}>
-            <Input type="hidden" />
+          <Form.Item name="content" rules={[{ required: true, message: t('news.detail.placeholder') }]} hidden>
+            <Input />
           </Form.Item>
         </Form>
       </Modal>
+
     </div>
   );
 };

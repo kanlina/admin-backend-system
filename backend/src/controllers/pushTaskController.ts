@@ -40,33 +40,64 @@ export const getPushTask = async (req: AuthenticatedRequest, res: Response) => {
 
 export const createPushTask = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const pushTemplateId = parseId(req.body.pushTemplateId);
-    if (!req.body.name || !pushTemplateId) {
-      return res.status(400).json({ success: false, message: '名称与推送模版为必填项' });
+    console.log('[pushTaskController] 开始创建推送任务', {
+      name: req.body.name,
+      pushTemplateId: req.body.pushTemplateId,
+      userId: req.user?.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 验证必填字段
+    if (!req.body.name || !req.body.name.trim()) {
+      return res.status(400).json({ success: false, message: '任务名称为必填项' });
     }
+
+    const pushTemplateId = parseId(req.body.pushTemplateId);
+    if (!pushTemplateId) {
+      return res.status(400).json({ success: false, message: '推送模版为必填项' });
+    }
+
     if (!req.user) {
       return res.status(401).json({ success: false, message: '未认证用户无法创建任务' });
     }
 
+    // 获取推送模版
     const template = await pushTemplateService.getTemplateById(pushTemplateId);
     if (!template) {
       return res.status(400).json({ success: false, message: '推送模版不存在或已被删除' });
     }
 
+    // 创建任务时固定为草稿状态
+    const status = 'draft';
+
+    // 创建任务
     const task = await pushTaskService.createTask({
-      name: req.body.name,
-      description: req.body.description,
+      name: req.body.name.trim(),
+      description: req.body.description?.trim() || undefined,
       pushTemplateId,
       pushConfigId: template.pushConfigId,
       pushAudienceId: template.pushAudienceId,
       scheduleTime: new Date().toISOString(),
-      status: req.body.status,
+      status: status as any,
       createdBy: Number(req.user.id),
     });
+
+    if (task) {
+      console.log('[pushTaskController] 推送任务创建成功', {
+        taskId: task.id,
+        name: task.name,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.status(201).json({ success: true, data: task, message: '创建推送任务成功' });
   } catch (error) {
     console.error('[pushTaskController] 创建任务失败', error);
-    res.status(500).json({ success: false, message: '创建推送任务失败', error: error instanceof Error ? error.message : '未知错误' });
+    res.status(500).json({ 
+      success: false, 
+      message: '创建推送任务失败', 
+      error: error instanceof Error ? error.message : '未知错误' 
+    });
   }
 };
 
@@ -76,7 +107,7 @@ export const updatePushTask = async (req: AuthenticatedRequest, res: Response) =
     const nextPayload: any = {
       name: req.body.name,
       description: req.body.description,
-      status: req.body.status,
+      // 编辑时不更新状态，状态只能通过执行推送任务来改变
     };
 
     const pushTemplateId = parseId(req.body.pushTemplateId);
@@ -125,6 +156,17 @@ export const executePushTask = async (req: AuthenticatedRequest, res: Response) 
     if (!task) {
       console.warn('[pushTaskController] 推送任务不存在，无法执行', { taskId: id });
       return res.status(404).json({ success: false, message: '推送任务不存在' });
+    }
+
+    // 检查任务状态，已完成或失败的任务不能再次执行
+    if (task.status === 'completed') {
+      console.warn('[pushTaskController] 推送任务已完成，不能再次执行', { taskId: id, status: task.status });
+      return res.status(400).json({ success: false, message: '推送任务已完成，不能再次执行' });
+    }
+
+    if (task.status === 'failed') {
+      console.warn('[pushTaskController] 推送任务已失败，不能再次执行', { taskId: id, status: task.status });
+      return res.status(400).json({ success: false, message: '推送任务已失败，不能再次执行' });
     }
 
     await pushTaskService.updateTaskStats(id, { status: 'processing', lastError: null });

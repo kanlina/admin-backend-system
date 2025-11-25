@@ -8,18 +8,19 @@ const userService = new UserService();
 export class AuthController {
   async login(req: Request<{}, ApiResponse, LoginRequest>, res: Response<ApiResponse>) {
     try {
-      const { username, password } = req.body;
+      const { login, password } = req.body;
 
-      // 查找用户（支持用户名或邮箱登录）
-      let user = await userService.getUserByUsername(username);
+      // 支持邮箱或用户名登录
+      // 先尝试按邮箱查找，如果找不到再按用户名查找
+      let user = await userService.getUserByEmail(login);
       if (!user) {
-        user = await userService.getUserByEmail(username);
+        user = await userService.getUserByUsername(login);
       }
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          error: '用户名或密码错误',
+          error: '邮箱/用户名或密码错误',
         });
       }
 
@@ -34,7 +35,7 @@ export class AuthController {
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
-          error: '用户名或密码错误',
+          error: '邮箱/用户名或密码错误',
         });
       }
 

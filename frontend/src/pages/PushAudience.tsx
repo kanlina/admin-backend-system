@@ -48,6 +48,7 @@ const PushAudiencePage: React.FC = () => {
   const { t } = useTranslation();
   const [audienceForm] = Form.useForm();
   const [tokenFilterForm] = Form.useForm();
+  const [audienceFilterForm] = Form.useForm();
   const [tokenImportForm] = Form.useForm();
   const [tokenEditForm] = Form.useForm();
   const [audiences, setAudiences] = useState<PushAudience[]>([]);
@@ -62,6 +63,11 @@ const PushAudiencePage: React.FC = () => {
   const [tokenFilters, setTokenFilters] = useState<{
     status?: string;
     search?: string;
+  }>({});
+  const [audienceFilters, setAudienceFilters] = useState<{
+    name?: string;
+    tag?: string;
+    status?: string;
   }>({});
   const [tokenImportLoading, setTokenImportLoading] = useState(false);
   const [excelUploading, setExcelUploading] = useState(false);
@@ -79,12 +85,31 @@ const PushAudiencePage: React.FC = () => {
     return apiMessage || defaultMessage;
   };
 
-  const fetchAudiences = async () => {
+  const fetchAudiences = async (params = audienceFilters) => {
     setAudienceLoading(true);
     try {
       const response = await apiService.getPushAudiences();
       if (response.success) {
-        setAudiences(response.data || []);
+        let filteredAudiences = response.data || [];
+        
+        // 前端筛选
+        if (params.name) {
+          filteredAudiences = filteredAudiences.filter((audience: PushAudience) =>
+            audience.name?.toLowerCase().includes(params.name!.toLowerCase())
+          );
+        }
+        if (params.tag) {
+          filteredAudiences = filteredAudiences.filter((audience: PushAudience) =>
+            audience.tags?.some(tag => tag.toLowerCase().includes(params.tag!.toLowerCase()))
+          );
+        }
+        if (params.status) {
+          filteredAudiences = filteredAudiences.filter((audience: PushAudience) =>
+            audience.status === params.status
+          );
+        }
+        
+        setAudiences(filteredAudiences);
       } else {
         message.error(response.message || t('pushAudience.messages.loadAudienceError'));
       }
@@ -203,6 +228,24 @@ const PushAudiencePage: React.FC = () => {
       ...allValues,
     };
     setTokenFilters(nextFilters);
+  };
+
+  const handleFilterAudiences = (_changedValues: any, allValues: any) => {
+    const nextFilters = {
+      ...audienceFilters,
+      ...allValues,
+    };
+    setAudienceFilters(nextFilters);
+  };
+
+  const applyAudienceFilters = () => {
+    fetchAudiences(audienceFilters);
+  };
+
+  const resetAudienceFilters = () => {
+    setAudienceFilters({});
+    audienceFilterForm.resetFields();
+    fetchAudiences({});
   };
 
   const applyTokenFilters = () => {
@@ -346,12 +389,26 @@ const PushAudiencePage: React.FC = () => {
     return map;
   }, [audiences]);
 
-  const audienceStats = useMemo(() => {
-    const total = audiences.length;
-    const active = audiences.filter((item) => item.status === 'active').length;
-    const tokensCount = tokens.length;
-    return { total, active, tokensCount };
-  }, [audiences, tokens]);
+  // 计算每个audience关联的token数量
+  const getTokenCountForAudience = (audienceId: number): number => {
+    return tokens.filter((token) => token.audienceIds?.includes(audienceId)).length;
+  };
+
+  // 为标签生成颜色
+  const getTagColor = (tag: string): string => {
+    const colors = [
+      'magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan',
+      'blue', 'geekblue', 'purple', 'pink', 'default', 'processing', 'success',
+      'error', 'warning'
+    ];
+    // 根据标签字符串的hash值选择颜色
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   const isImportProcessing = tokenImportLoading || excelUploading;
 
@@ -412,7 +469,7 @@ const PushAudiencePage: React.FC = () => {
     return (
       <Space size={[4, 4]} wrap>
         {tags.map((tag) => (
-          <Tag key={tag}>{tag}</Tag>
+          <Tag key={tag} color={getTagColor(tag)}>{tag}</Tag>
         ))}
       </Space>
     );
@@ -452,11 +509,14 @@ const PushAudiencePage: React.FC = () => {
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>,
     },
     {
-      title: t('pushAudience.audience.columns.tags'),
-      dataIndex: 'tags',
-      width: 220,
+      title: t('pushAudience.audience.columns.tokenCount'),
+      dataIndex: 'id',
+      width: 120,
       align: 'center',
-      render: (tags?: string[]) => renderTags(tags),
+      render: (id: number) => {
+        const count = getTokenCountForAudience(id);
+        return <Typography.Text>{count}</Typography.Text>;
+      },
     },
     {
       title: t('pushAudience.audience.columns.description'),
@@ -471,11 +531,11 @@ const PushAudiencePage: React.FC = () => {
         ),
     },
     {
-      title: t('pushAudience.audience.columns.createdAt'),
-      dataIndex: 'createdAt',
-      width: 200,
+      title: t('pushAudience.audience.columns.tags'),
+      dataIndex: 'tags',
+      width: 220,
       align: 'center',
-      render: (value?: string) => formatDateTime(value),
+      render: (tags?: string[]) => renderTags(tags),
     },
     {
       title: t('pushAudience.audience.columns.status'),
@@ -489,6 +549,13 @@ const PushAudiencePage: React.FC = () => {
             : t('pushAudience.status.inactive')}
         </Tag>
       ),
+    },
+    {
+      title: t('pushAudience.audience.columns.createdAt'),
+      dataIndex: 'createdAt',
+      width: 200,
+      align: 'center',
+      render: (value?: string) => formatDateTime(value),
     },
     {
       title: t('common.action'),
@@ -606,8 +673,9 @@ const PushAudiencePage: React.FC = () => {
       className="push-token-filters"
       onValuesChange={handleFilterTokens}
       initialValues={tokenFilters}
+      style={{ marginBottom: 16 }}
     >
-      <Form.Item name="search">
+      <Form.Item name="search" label={t('pushAudience.tokens.filters.search')}>
         <Input.Search
           allowClear
           placeholder={t('pushAudience.tokens.filters.searchPlaceholder')}
@@ -615,11 +683,12 @@ const PushAudiencePage: React.FC = () => {
           style={{ width: 240 }}
         />
       </Form.Item>
-      <Form.Item name="status">
+      <Form.Item name="status" label={t('pushAudience.tokens.filters.status')}>
         <Select
           allowClear
           placeholder={t('pushAudience.tokens.filters.statusPlaceholder')}
           style={{ width: 180 }}
+          onChange={applyTokenFilters}
         >
           <Select.Option value="active">{t('pushAudience.status.active')}</Select.Option>
           <Select.Option value="inactive">{t('pushAudience.status.inactive')}</Select.Option>
@@ -630,7 +699,60 @@ const PushAudiencePage: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={applyTokenFilters}>
             {t('common.refresh')}
           </Button>
+          <Button type="primary" icon={<ImportOutlined />} onClick={handleOpenTokenImport}>
+            {t('pushAudience.tokens.import.title')}
+          </Button>
           <Button onClick={resetTokenFilters}>{t('common.reset')}</Button>
+        </Space>
+      </Form.Item>
+    </Form>
+  );
+
+  const audienceFilterFormElement = (
+    <Form
+      form={audienceFilterForm}
+      layout="inline"
+      className="push-audience-filters"
+      onValuesChange={handleFilterAudiences}
+      initialValues={audienceFilters}
+      style={{ marginBottom: 16 }}
+    >
+      <Form.Item name="name" label={t('pushAudience.audience.filters.name')}>
+        <Input.Search
+          allowClear
+          placeholder={t('pushAudience.audience.filters.namePlaceholder')}
+          onSearch={applyAudienceFilters}
+          style={{ width: 200 }}
+        />
+      </Form.Item>
+      <Form.Item name="tag" label={t('pushAudience.audience.filters.tag')}>
+        <Input.Search
+          allowClear
+          placeholder={t('pushAudience.audience.filters.tagPlaceholder')}
+          onSearch={applyAudienceFilters}
+          style={{ width: 200 }}
+        />
+      </Form.Item>
+      <Form.Item name="status" label={t('pushAudience.audience.filters.status')}>
+        <Select
+          allowClear
+          placeholder={t('pushAudience.audience.filters.statusPlaceholder')}
+          style={{ width: 150 }}
+          onChange={applyAudienceFilters}
+        >
+          <Select.Option value="active">{t('pushAudience.status.active')}</Select.Option>
+          <Select.Option value="inactive">{t('pushAudience.status.inactive')}</Select.Option>
+        </Select>
+      </Form.Item>
+      <Form.Item>
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={applyAudienceFilters}>
+            {t('common.refresh')}
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAddAudience}>
+            {t('pushAudience.actions.addAudience')}
+          </Button>
+          <Button onClick={resetAudienceFilters}>{t('common.reset')}</Button>
         </Space>
       </Form.Item>
     </Form>
@@ -638,61 +760,6 @@ const PushAudiencePage: React.FC = () => {
 
   return (
     <div className="push-audience-page">
-      <Card className="push-audience-header">
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Typography.Title level={4} style={{ marginBottom: 0 }}>
-              {t('pushAudience.title')}
-            </Typography.Title>
-            <Typography.Text type="secondary">
-              {t('pushAudience.subtitle')}
-            </Typography.Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button icon={<ReloadOutlined />} onClick={() => {
-                fetchAudiences();
-                fetchTokens(tokenFilters);
-              }}>
-                {t('common.refresh')}
-              </Button>
-              {activeTab === 'audiences' ? (
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleAddAudience}>
-                  {t('pushAudience.actions.addAudience')}
-                </Button>
-              ) : (
-                <Button type="primary" icon={<ImportOutlined />} onClick={handleOpenTokenImport}>
-                  {t('pushAudience.tokens.import.title')}
-                </Button>
-              )}
-            </Space>
-          </Col>
-        </Row>
-
-        <Divider />
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <div className="push-audience-stat-card">
-              <Typography.Text>{t('pushAudience.stats.total')}</Typography.Text>
-              <Typography.Title level={3}>{audienceStats.total}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-audience-stat-card">
-              <Typography.Text>{t('pushAudience.stats.active')}</Typography.Text>
-              <Typography.Title level={3}>{audienceStats.active}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-audience-stat-card">
-              <Typography.Text>{t('pushAudience.stats.tokens')}</Typography.Text>
-              <Typography.Title level={3}>{audienceStats.tokensCount}</Typography.Title>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-
       <Card>
         <Tabs
           activeKey={activeTab}
@@ -702,19 +769,22 @@ const PushAudiencePage: React.FC = () => {
               key: 'audiences',
               label: t('pushAudience.tabs.audiences'),
               children: (
-                <Table
-                  rowKey="id"
-                  loading={audienceLoading}
-                  className="push-audience-table"
-                  columns={audienceColumns}
-                  dataSource={audiences}
-                  pagination={{
-                    showSizeChanger: true,
-                    showTotal: (total) => t('common.totalItems', { total }),
-                    pageSize: 10,
-                  }}
-                  scroll={{ x: 1100 }}
-                />
+                <>
+                  {audienceFilterFormElement}
+                  <Table
+                    rowKey="id"
+                    loading={audienceLoading}
+                    className="push-audience-table"
+                    columns={audienceColumns}
+                    dataSource={audiences}
+                    pagination={{
+                      showSizeChanger: true,
+                      showTotal: (total) => t('common.totalItems', { total }),
+                      pageSize: 10,
+                    }}
+                    scroll={{ x: 1100 }}
+                  />
+                </>
               ),
             },
             {

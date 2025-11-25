@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export interface LoginRequest {
-  username: string;
+  login: string; // 可以是邮箱或用户名
   password: string;
 }
 
@@ -14,6 +14,7 @@ export interface RegisterRequest {
   username: string;
   email: string;
   password: string;
+  role?: string;
 }
 
 

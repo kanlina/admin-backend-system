@@ -2,6 +2,7 @@
   "common": {
     "actions": "Aksi",
     "details": "Detail",
+    "preview": "Pratinjau",
     "noData": "Tidak Ada Data",
     "loading": "Memuat...",
     "search": "Cari",
@@ -58,7 +59,9 @@
     "pushConfig": "Konfigurasi Push",
     "pushAudience": "Audiens Push",
     "pushTemplate": "Template Push",
-    "pushTask": "Tugas Push"
+    "pushTask": "Tugas Push",
+    "userCenter": "Pusat Pengguna",
+    "permissionManagement": "Manajemen Izin"
   },
   "internalTransfer": {
     "title": "Pemantauan Data Transfer Internal",
@@ -526,7 +529,8 @@
     "modals": {
       "addTitle": "Tambah Berita",
       "editTitle": "Edit Berita",
-      "detailTitle": "Edit Konten Berita"
+      "detailTitle": "Edit Konten Berita",
+      "previewTitle": "Pratinjau: {{title}}"
     },
     "form": {
       "fields": {
@@ -563,6 +567,7 @@
       "detailLoadError": "Gagal memuat detail berita",
       "detailSaveSuccess": "Berhasil disimpan",
       "detailSaveError": "Gagal menyimpan",
+      "previewLoadError": "Gagal memuat konten pratinjau",
       "uploadSuccess": "Gambar berhasil diunggah",
       "uploadError": "Gagal mengunggah gambar"
     },
@@ -588,7 +593,8 @@
       "platform": "Platform",
       "projectId": "ID Proyek",
       "status": "Status",
-      "description": "Deskripsi"
+      "description": "Deskripsi",
+      "createdAt": "Dibuat Pada"
     },
     "form": {
       "name": "Nama Konfigurasi",
@@ -625,6 +631,14 @@
     "status": {
       "enabled": "Diaktifkan",
       "disabled": "Dinonaktifkan"
+    },
+    "filters": {
+      "platform": "Platform",
+      "platformPlaceholder": "Pilih platform",
+      "status": "Status",
+      "statusPlaceholder": "Pilih status",
+      "projectId": "ID Proyek",
+      "projectIdPlaceholder": "Masukkan ID proyek"
     },
     "messages": {
       "loadError": "Gagal memuat daftar konfigurasi",
@@ -680,9 +694,18 @@
       "columns": {
         "name": "Nama Audiens",
         "tags": "Tag",
+        "tokenCount": "Jumlah Token",
         "description": "Deskripsi",
         "createdAt": "Dibuat Pada",
         "status": "Status"
+      },
+      "filters": {
+        "name": "Nama Audiens",
+        "namePlaceholder": "Masukkan nama audiens",
+        "tag": "Tag",
+        "tagPlaceholder": "Masukkan tag",
+        "status": "Status",
+        "statusPlaceholder": "Pilih status"
       }
     },
     "tokens": {
@@ -694,7 +717,9 @@
         "audiences": "Audiens"
       },
       "filters": {
+        "search": "Cari",
         "searchPlaceholder": "Cari berdasarkan token",
+        "status": "Status",
         "statusPlaceholder": "Pilih status"
       },
       "import": {
@@ -769,7 +794,9 @@
       "pushConfig": "Konfigurasi Push",
       "pushAudience": "Audiens Push",
       "title": "Judul Notifikasi",
+      "tags": "Tag",
       "status": "Status",
+      "createdAt": "Dibuat Pada",
       "updatedAt": "Diperbarui Pada"
     },
     "status": {
@@ -851,6 +878,7 @@
       "result": "Hasil",
       "success": "Berhasil",
       "failure": "Gagal",
+      "createdAt": "Dibuat Pada",
       "updatedAt": "Diperbarui Pada"
     },
     "status": {
@@ -872,7 +900,9 @@
       "deleteSuccess": "Tugas berhasil dihapus",
       "deleteError": "Gagal menghapus tugas",
       "executeSuccess": "Tugas telah dijalankan",
-      "executeError": "Gagal menjalankan tugas"
+      "executeError": "Gagal menjalankan tugas",
+      "cannotExecuteCompleted": "Tugas yang sudah selesai tidak dapat dieksekusi lagi",
+      "cannotExecuteFailed": "Tugas yang gagal tidak dapat dieksekusi lagi"
     },
     "form": {
       "name": "Nama Tugas",
@@ -889,7 +919,20 @@
       "scheduleTime": "Waktu Kirim",
       "scheduleTimeImmediate": "Kirim Sekarang",
       "scheduleTimeImmediateDesc": "Tugas akan disetel untuk segera dikirim dan bisa dieksekusi kapan saja setelah dibuat",
-      "status": "Status Tugas"
+      "status": "Status Tugas",
+      "statusHintCreate": "Tugas yang baru dibuat default ke status draft. Klik 'Eksekusi Sekarang' untuk mengirim push notification",
+      "statusHintEdit": "Status saat ini: {{status}}. Status hanya dapat diubah dengan mengeksekusi tugas push"
+    }
+  },
+  "userManagement": {
+    "role": {
+      "admin": "Admin",
+      "user": "Pengguna",
+      "adminDescription": "Administrator sistem dengan semua izin",
+      "userDescription": "Pengguna biasa dengan izin hanya melihat"
+    },
+    "table": {
+      "role": "Peran"
     }
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import {
   Card,
   Form,
@@ -17,7 +18,7 @@ import {
   Row,
   Col,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { ColumnsType } from 'antd/es/table';
 import { apiService } from '../services/api';
@@ -33,11 +34,18 @@ type PushConfigItem = PushConfigType;
 const PushConfig: React.FC = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  const [filterForm] = Form.useForm();
   const [tableLoading, setTableLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [configs, setConfigs] = useState<PushConfigItem[]>([]);
+  const [allConfigs, setAllConfigs] = useState<PushConfigItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<PushConfigItem | null>(null);
+  const [filters, setFilters] = useState<{
+    platform?: string;
+    enabled?: boolean;
+    projectId?: string;
+  }>({});
 
   // 模拟数据，后续替换为真实 API
   useEffect(() => {
@@ -49,12 +57,32 @@ const PushConfig: React.FC = () => {
     return apiMessage || defaultMessage;
   };
 
-  const fetchConfigs = async () => {
+  const fetchConfigs = async (params = filters) => {
     setTableLoading(true);
     try {
       const response = await apiService.getPushConfigs();
       if (response.success) {
-        setConfigs(response.data || []);
+        let filteredConfigs = response.data || [];
+        setAllConfigs(filteredConfigs);
+        
+        // 前端筛选
+        if (params.platform) {
+          filteredConfigs = filteredConfigs.filter((config: PushConfigItem) =>
+            config.platform === params.platform
+          );
+        }
+        if (params.enabled !== undefined) {
+          filteredConfigs = filteredConfigs.filter((config: PushConfigItem) =>
+            config.enabled === params.enabled
+          );
+        }
+        if (params.projectId) {
+          filteredConfigs = filteredConfigs.filter((config: PushConfigItem) =>
+            config.projectId?.toLowerCase().includes(params.projectId!.toLowerCase())
+          );
+        }
+        
+        setConfigs(filteredConfigs);
       } else {
         message.error(response.message || t('pushConfig.messages.loadError'));
       }
@@ -83,13 +111,31 @@ const PushConfig: React.FC = () => {
       const response = await apiService.deletePushConfig(id.toString());
       if (response.success) {
         message.success(t('pushConfig.messages.deleteSuccess'));
-        fetchConfigs();
+        fetchConfigs(filters);
       } else {
         message.error(response.message || t('pushConfig.messages.deleteError'));
       }
     } catch (error) {
       message.error(buildErrorMessage(t('pushConfig.messages.deleteError'), error));
     }
+  };
+
+  const handleFilterChange = (_changedValues: any, allValues: any) => {
+    const nextFilters = {
+      ...filters,
+      ...allValues,
+    };
+    setFilters(nextFilters);
+  };
+
+  const applyFilters = () => {
+    fetchConfigs(filters);
+  };
+
+  const resetFilters = () => {
+    setFilters({});
+    filterForm.resetFields();
+    fetchConfigs({});
   };
 
   const handleSubmit = async () => {
@@ -115,7 +161,7 @@ const PushConfig: React.FC = () => {
         setModalVisible(false);
         form.resetFields();
         setEditingConfig(null);
-        fetchConfigs();
+        fetchConfigs(filters);
       } else {
         message.error(
           response.message ||
@@ -147,6 +193,24 @@ const PushConfig: React.FC = () => {
     setEditingConfig(null);
   };
 
+  // 为标签生成颜色（统一使用）
+  const getTagColor = (tag: string): string => {
+    const colors = [
+      'magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan',
+      'blue', 'geekblue', 'purple', 'pink', 'default', 'processing', 'success',
+      'error', 'warning'
+    ];
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const formatDateTime = (value?: string) =>
+    value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
+
   const columns: ColumnsType<PushConfigItem> = [
     {
       title: t('common.index'),
@@ -168,10 +232,17 @@ const PushConfig: React.FC = () => {
       width: 200,
     },
     {
+      title: t('pushConfig.table.projectId'),
+      dataIndex: 'projectId',
+      key: 'projectId',
+      width: 200,
+    },
+    {
       title: t('pushConfig.table.platform'),
       dataIndex: 'platform',
       key: 'platform',
       width: 120,
+      align: 'center',
       render: (platform: string) => {
         const colors: Record<string, string> = {
           android: 'green',
@@ -189,16 +260,11 @@ const PushConfig: React.FC = () => {
       },
     },
     {
-      title: t('pushConfig.table.projectId'),
-      dataIndex: 'projectId',
-      key: 'projectId',
-      width: 200,
-    },
-    {
       title: t('pushConfig.table.status'),
       dataIndex: 'enabled',
       key: 'enabled',
       width: 100,
+      align: 'center',
       render: (enabled: boolean) => (
         <Tag color={enabled ? 'success' : 'default'}>
           {enabled ? t('pushConfig.status.enabled') : t('pushConfig.status.disabled')}
@@ -218,10 +284,19 @@ const PushConfig: React.FC = () => {
       ),
     },
     {
+      title: t('pushConfig.table.createdAt'),
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 200,
+      align: 'center',
+      render: (value?: string) => formatDateTime(value),
+    },
+    {
       title: t('common.action'),
       key: 'action',
       width: 200,
       fixed: 'right',
+      align: 'center',
       render: (_, record) => (
         <Space size="small" wrap>
           <Button
@@ -246,18 +321,65 @@ const PushConfig: React.FC = () => {
     },
   ];
 
-  return (
-    <div>
-      <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={4} style={{ margin: 0 }}>
-            {t('pushConfig.title')}
-          </Title>
+  const filterFormElement = (
+    <Form
+      form={filterForm}
+      layout="inline"
+      className="push-config-filters"
+      onValuesChange={handleFilterChange}
+      initialValues={filters}
+      style={{ marginBottom: 16 }}
+    >
+      <Form.Item name="platform" label={t('pushConfig.filters.platform')}>
+        <Select
+          allowClear
+          placeholder={t('pushConfig.filters.platformPlaceholder')}
+          style={{ width: 150 }}
+          onChange={applyFilters}
+        >
+          <Option value="all">{t('pushConfig.platform.all')}</Option>
+          <Option value="android">{t('pushConfig.platform.android')}</Option>
+          <Option value="ios">{t('pushConfig.platform.ios')}</Option>
+          <Option value="web">{t('pushConfig.platform.web')}</Option>
+        </Select>
+      </Form.Item>
+      <Form.Item name="enabled" label={t('pushConfig.filters.status')}>
+        <Select
+          allowClear
+          placeholder={t('pushConfig.filters.statusPlaceholder')}
+          style={{ width: 150 }}
+          onChange={applyFilters}
+        >
+          <Option value={true}>{t('pushConfig.status.enabled')}</Option>
+          <Option value={false}>{t('pushConfig.status.disabled')}</Option>
+        </Select>
+      </Form.Item>
+      <Form.Item name="projectId" label={t('pushConfig.filters.projectId')}>
+        <Input.Search
+          allowClear
+          placeholder={t('pushConfig.filters.projectIdPlaceholder')}
+          onSearch={applyFilters}
+          style={{ width: 200 }}
+        />
+      </Form.Item>
+      <Form.Item>
+        <Space>
+          <Button icon={<ReloadOutlined />} onClick={applyFilters}>
+            {t('common.refresh')}
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             {t('pushConfig.actions.add')}
           </Button>
-        </div>
+          <Button onClick={resetFilters}>{t('common.reset')}</Button>
+        </Space>
+      </Form.Item>
+    </Form>
+  );
 
+  return (
+    <div>
+      <Card>
+        {filterFormElement}
         <Table
           columns={columns}
           dataSource={configs}

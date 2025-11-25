@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import {
   Button,
   Card,
   Col,
-  Divider,
   Form,
   Input,
   Modal,
@@ -236,15 +235,37 @@ const PushTemplatePage: React.FC = () => {
     }
   };
 
-  const templateStats = useMemo(() => {
-    const total = templates.length;
-    const enabled = templates.filter((item) => item.enabled).length;
-    const disabled = total - enabled;
-    return { total, enabled, disabled };
-  }, [templates]);
 
   const formatDateTime = (value?: string) =>
     value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
+
+  // 为标签生成颜色（统一使用）
+  const getTagColor = (tag: string): string => {
+    const colors = [
+      'magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan',
+      'blue', 'geekblue', 'purple', 'pink', 'default', 'processing', 'success',
+      'error', 'warning'
+    ];
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = ((hash << 5) - hash) + tag.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const renderTags = (tags?: string[]) => {
+    if (!tags?.length) {
+      return <span className="push-template-empty">{t('pushTemplate.common.noData')}</span>;
+    }
+    return (
+      <Space size={[4, 4]} wrap>
+        {tags.map((tag) => (
+          <Tag key={tag} color={getTagColor(tag)}>{tag}</Tag>
+        ))}
+      </Space>
+    );
+  };
 
   const columns: ColumnsType<PushTemplate> = [
     {
@@ -299,6 +320,13 @@ const PushTemplatePage: React.FC = () => {
       ),
     },
     {
+      title: t('pushTemplate.table.tags'),
+      dataIndex: 'tags',
+      width: 220,
+      align: 'center',
+      render: (tags?: string[]) => renderTags(tags),
+    },
+    {
       title: t('pushTemplate.table.status'),
       dataIndex: 'enabled',
       width: 120,
@@ -308,6 +336,13 @@ const PushTemplatePage: React.FC = () => {
           {enabled ? t('pushTemplate.status.enabled') : t('pushTemplate.status.disabled')}
         </Tag>
       ),
+    },
+    {
+      title: t('pushTemplate.table.createdAt'),
+      dataIndex: 'createdAt',
+      width: 200,
+      align: 'center',
+      render: (value?: string) => formatDateTime(value),
     },
     {
       title: t('pushTemplate.table.updatedAt'),
@@ -352,51 +387,18 @@ const PushTemplatePage: React.FC = () => {
         </div>
       )}
       <div className={`push-template-page${pageLocked ? ' locked' : ''}`}>
-      <Card className="push-template-header">
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Typography.Title level={4} style={{ marginBottom: 0 }}>
-              {t('pushTemplate.title')}
-            </Typography.Title>
-            <Typography.Text type="secondary">{t('pushTemplate.subtitle')}</Typography.Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button icon={<ReloadOutlined />} onClick={() => fetchTemplates(filters)}>
-                {t('common.refresh')}
-              </Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-                {t('pushTemplate.actions.add')}
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-
-        <Divider />
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <div className="push-template-stat-card">
-              <Typography.Text>{t('pushTemplate.stats.total')}</Typography.Text>
-              <Typography.Title level={3}>{templateStats.total}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-template-stat-card">
-              <Typography.Text>{t('pushTemplate.stats.enabled')}</Typography.Text>
-              <Typography.Title level={3}>{templateStats.enabled}</Typography.Title>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="push-template-stat-card">
-              <Typography.Text>{t('pushTemplate.stats.disabled')}</Typography.Text>
-              <Typography.Title level={3}>{templateStats.disabled}</Typography.Title>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-
-      <Card>
+      <Card
+        extra={
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchTemplates(filters)}>
+              {t('common.refresh')}
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              {t('pushTemplate.actions.add')}
+            </Button>
+          </Space>
+        }
+      >
         <Form
           form={filterForm}
           layout="inline"

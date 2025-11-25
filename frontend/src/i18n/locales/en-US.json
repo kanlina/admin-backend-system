@@ -2,6 +2,7 @@
   "common": {
     "actions": "Actions",
     "details": "Details",
+    "preview": "Preview",
     "noData": "No Data",
     "loading": "Loading...",
     "search": "Search",
@@ -58,7 +59,9 @@
     "pushConfig": "Push Configuration",
     "pushAudience": "Audience Hub",
     "pushTemplate": "Push Templates",
-    "pushTask": "Push Tasks"
+    "pushTask": "Push Tasks",
+    "userCenter": "User Center",
+    "permissionManagement": "Permission Management"
   },
   "internalTransfer": {
     "title": "Internal Transfer Data Monitoring",
@@ -526,7 +529,8 @@
     "modals": {
       "addTitle": "Add News",
       "editTitle": "Edit News",
-      "detailTitle": "Edit News Content"
+      "detailTitle": "Edit News Content",
+      "previewTitle": "Preview: {{title}}"
     },
     "form": {
       "fields": {
@@ -563,6 +567,7 @@
       "detailLoadError": "Failed to load news detail",
       "detailSaveSuccess": "Saved successfully",
       "detailSaveError": "Failed to save",
+      "previewLoadError": "Failed to load preview content",
       "uploadSuccess": "Image uploaded successfully",
       "uploadError": "Failed to upload image"
     },
@@ -588,7 +593,8 @@
       "platform": "Platform",
       "projectId": "Project ID",
       "status": "Status",
-      "description": "Description"
+      "description": "Description",
+      "createdAt": "Created At"
     },
     "form": {
       "name": "Configuration Name",
@@ -625,6 +631,14 @@
     "status": {
       "enabled": "Enabled",
       "disabled": "Disabled"
+    },
+    "filters": {
+      "platform": "Platform",
+      "platformPlaceholder": "Select platform",
+      "status": "Status",
+      "statusPlaceholder": "Select status",
+      "projectId": "Project ID",
+      "projectIdPlaceholder": "Enter project ID"
     },
     "messages": {
       "loadError": "Failed to load configuration list",
@@ -680,9 +694,18 @@
       "columns": {
         "name": "Audience Name",
         "tags": "Tags",
+        "tokenCount": "Token Count",
         "description": "Description",
         "createdAt": "Created At",
         "status": "Status"
+      },
+      "filters": {
+        "name": "Audience Name",
+        "namePlaceholder": "Enter audience name",
+        "tag": "Tag",
+        "tagPlaceholder": "Enter tag",
+        "status": "Status",
+        "statusPlaceholder": "Select status"
       }
     },
     "tokens": {
@@ -694,7 +717,9 @@
         "audiences": "Audiences"
       },
       "filters": {
+        "search": "Search",
         "searchPlaceholder": "Search by token",
+        "status": "Status",
         "statusPlaceholder": "Select status"
       },
       "import": {
@@ -769,7 +794,9 @@
       "pushConfig": "Push Config",
       "pushAudience": "Audience",
       "title": "Notification Title",
+      "tags": "Tags",
       "status": "Status",
+      "createdAt": "Created At",
       "updatedAt": "Updated At"
     },
     "status": {
@@ -851,6 +878,7 @@
       "result": "Result",
       "success": "Success",
       "failure": "Failure",
+      "createdAt": "Created At",
       "updatedAt": "Updated At"
     },
     "status": {
@@ -872,7 +900,9 @@
       "deleteSuccess": "Task deleted successfully",
       "deleteError": "Failed to delete task",
       "executeSuccess": "Task has been triggered",
-      "executeError": "Failed to execute task"
+      "executeError": "Failed to execute task",
+      "cannotExecuteCompleted": "Completed tasks cannot be executed again",
+      "cannotExecuteFailed": "Failed tasks cannot be executed again"
     },
     "form": {
       "name": "Task Name",
@@ -889,7 +919,20 @@
       "scheduleTime": "Send Time",
       "scheduleTimeImmediate": "Send Immediately",
       "scheduleTimeImmediateDesc": "Task will be marked as immediate and can be executed anytime after creation",
-      "status": "Task Status"
+      "status": "Task Status",
+      "statusHintCreate": "Newly created tasks default to draft status. Click 'Execute Now' to send push notifications",
+      "statusHintEdit": "Current status: {{status}}. Status can only be changed by executing the push task"
+    }
+  },
+  "userManagement": {
+    "role": {
+      "admin": "Admin",
+      "user": "User",
+      "adminDescription": "System administrator with all permissions",
+      "userDescription": "Regular user with view-only permissions"
+    },
+    "table": {
+      "role": "Role"
     }
   }
 }

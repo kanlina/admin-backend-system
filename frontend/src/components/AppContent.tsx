@@ -18,10 +18,12 @@ import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
 import ApiPartners from '../pages/ApiPartners';
 import NewsManagement from '../pages/Content';
+import NewsPreview from '../pages/NewsPreview';
 import PushConfig from '../pages/PushConfig';
 import PushAudiencePage from '../pages/PushAudience';
 import PushTemplatePage from '../pages/PushTemplate';
 import PushTaskPage from '../pages/PushTask';
+import PermissionManagement from '../pages/PermissionManagement';
 
 // 配置 dayjs 多语言
 import dayjs from 'dayjs';
@@ -135,11 +137,27 @@ const AppContent: React.FC = () => {
               </ProtectedRoute>
             } />
             
-            {/* 管理员路由 */}
-            <Route path="/users" element={
+            {/* 用户中心路由 */}
+            <Route path="/user-center/users" element={
               <ProtectedRoute requireAdmin>
                 <AppLayout>
                   <Users />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/user-center/permissions" element={
+              <ProtectedRoute requireAdmin>
+                <AppLayout>
+                  <PermissionManagement />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* 兼容旧路由 */}
+            <Route path="/users" element={
+              <ProtectedRoute requireAdmin>
+                <AppLayout>
+                  <Navigate to="/user-center/users" replace />
                 </AppLayout>
               </ProtectedRoute>
             } />
@@ -150,6 +168,11 @@ const AppContent: React.FC = () => {
                 <AppLayout>
                   <NewsManagement />
                 </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/news/preview/:id" element={
+              <ProtectedRoute>
+                <NewsPreview />
               </ProtectedRoute>
             } />
             

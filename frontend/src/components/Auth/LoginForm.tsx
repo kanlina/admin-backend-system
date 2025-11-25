@@ -48,15 +48,14 @@ const LoginForm: React.FC = () => {
           size="large"
         >
           <Form.Item
-            name="username"
+            name="login"
             rules={[
-              { required: true, message: '请输入用户名或邮箱' },
-              { min: 3, message: '用户名至少3个字符' }
+              { required: true, message: '请输入邮箱或用户名' }
             ]}
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="用户名或邮箱"
+              placeholder="邮箱或用户名"
             />
           </Form.Item>
 

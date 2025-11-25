@@ -35,32 +35,29 @@ const Header: React.FC<HeaderProps> = ({
 
   // 根据当前路径获取页面标题
   const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/dashboard':
-        return t('navigation.dashboard');
-      case '/data-monitor/internal-transfer':
-        return '内转数据';
-      case '/data-monitor/adjust-data':
-        return t('navigation.adjustData');
-      case '/data-monitor/page-data':
-        return t('navigation.pageData');
-      case '/data-monitor/post-loan':
-        return t('navigation.postLoanData');
-      case '/data-monitor/partner-center':
-        return t('navigation.partnerCenter');
-      case '/data-monitor/partner-center/api-partners':
-        return t('navigation.apiPartners');
-      case '/users':
-        return t('navigation.userManagement');
-      case '/analytics':
-        return t('navigation.analytics');
-      case '/settings':
-        return t('navigation.systemSettings');
-      case '/push-center/config':
-        return t('navigation.pushConfig');
-      default:
-        return t('navigation.adminPanel');
-    }
+    const path = location.pathname;
+    
+    // 精确匹配
+    if (path === '/dashboard') return t('navigation.dashboard');
+    if (path === '/data-monitor/internal-transfer') return t('navigation.internalTransfer');
+    if (path === '/data-monitor/adjust-data') return t('navigation.adjustData');
+    if (path === '/data-monitor/page-data') return t('navigation.pageData');
+    if (path === '/data-monitor/post-loan') return t('navigation.postLoanData');
+    if (path === '/partner-center/api-partners') return t('navigation.apiPartners');
+    if (path === '/news') return t('navigation.newsManagement');
+    if (path === '/push-center/config') return t('navigation.pushConfig');
+    if (path === '/push-center/audiences') return t('navigation.pushAudience');
+    if (path === '/push-center/templates') return t('navigation.pushTemplate');
+    if (path === '/push-center/tasks') return t('navigation.pushTask');
+    if (path === '/user-center/users') return t('navigation.userManagement');
+    if (path === '/user-center/permissions') return t('navigation.permissionManagement');
+    if (path === '/analytics') return t('navigation.analytics');
+    if (path === '/settings') return t('navigation.systemSettings');
+    
+    // 路径前缀匹配
+    if (path.startsWith('/news/preview/')) return t('navigation.newsManagement');
+    
+    return t('navigation.adminPanel');
   };
 
   const handleLogout = () => {

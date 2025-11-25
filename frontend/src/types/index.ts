@@ -2,7 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  role: 'ADMIN' | 'USER' | 'MODERATOR';
+  role: 'ADMIN' | 'USER';
   avatar?: string;
   isActive: boolean;
   createdAt: string;
@@ -25,7 +25,7 @@ export interface FavoriteAdSequence {
 
 
 export interface LoginRequest {
-  username: string;
+  login: string; // 可以是邮箱或用户名
   password: string;
 }
 
@@ -70,7 +70,7 @@ export interface CreateTagRequest {
 export interface UpdateUserRequest {
   username?: string;
   email?: string;
-  role?: 'ADMIN' | 'USER' | 'MODERATOR';
+  role?: 'ADMIN' | 'USER';
   isActive?: boolean;
 }
 

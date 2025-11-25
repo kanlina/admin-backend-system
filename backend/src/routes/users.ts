@@ -14,6 +14,12 @@ router.get('/', requireRole(['ADMIN']), userController.getUsers);
 // 获取用户统计信息（管理员）
 router.get('/stats', requireRole(['ADMIN']), userController.getUserStats);
 
+// 创建用户（仅管理员）
+router.post('/', requireRole(['ADMIN']), userController.createUser);
+
+// 重置密码（仅管理员）
+router.post('/:id/reset-password', requireRole(['ADMIN']), userController.resetPassword);
+
 // 获取单个用户信息
 router.get('/:id', userController.getUserById);
 

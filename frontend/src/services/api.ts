@@ -105,6 +105,16 @@ class ApiService {
     return response.data;
   }
 
+  async createUser(data: { username: string; email: string; password: string; role?: string }): Promise<ApiResponse<any>> {
+    const response = await this.api.post('/users', data);
+    return response.data;
+  }
+
+  async resetPassword(id: string, password: string): Promise<ApiResponse<any>> {
+    const response = await this.api.post(`/users/${id}/reset-password`, { password });
+    return response.data;
+  }
+
 
   // 标签相关
   async getTags(params?: any): Promise<ApiResponse<any[]>> {

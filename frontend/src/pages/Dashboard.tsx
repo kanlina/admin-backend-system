@@ -4,10 +4,12 @@ import {
   UserOutlined, 
   TagsOutlined
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { apiService } from '../services/api';
 import type { User } from '../types';
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     users: { totalUsers: 0, activeUsers: 0, adminUsers: 0 }
@@ -55,8 +57,8 @@ const Dashboard: React.FC = () => {
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => {
-        const color = role === 'ADMIN' ? 'red' : role === 'MODERATOR' ? 'blue' : 'green';
-        const text = role === 'ADMIN' ? '管理员' : role === 'MODERATOR' ? '版主' : '用户';
+        const color = role === 'ADMIN' ? 'red' : 'green';
+        const text = role === 'ADMIN' ? t('userManagement.role.admin') : t('userManagement.role.user');
         return <Tag color={color}>{text}</Tag>;
       },
     },
@@ -74,11 +76,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1>仪表盘</h1>
-        <p style={{ color: '#666', margin: 0 }}>欢迎使用管理后台，这里是系统概览</p>
-      </div>
-
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>

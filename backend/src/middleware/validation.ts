@@ -18,11 +18,11 @@ export const handleValidationErrors = (
 };
 
 export const validateLogin = [
-  body('username')
+  body('login')
     .notEmpty()
-    .withMessage('用户名不能为空')
-    .isLength({ min: 3, max: 20 })
-    .withMessage('用户名长度必须在3-20个字符之间'),
+    .withMessage('邮箱或用户名不能为空')
+    .isLength({ min: 1 })
+    .withMessage('请输入邮箱或用户名'),
   body('password')
     .notEmpty()
     .withMessage('密码不能为空')

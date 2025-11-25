@@ -27,7 +27,6 @@ import './PushConfig.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { Title } = Typography;
 
 type PushConfigItem = PushConfigType;
 
@@ -38,7 +37,6 @@ const PushConfig: React.FC = () => {
   const [tableLoading, setTableLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [configs, setConfigs] = useState<PushConfigItem[]>([]);
-  const [allConfigs, setAllConfigs] = useState<PushConfigItem[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<PushConfigItem | null>(null);
   const [filters, setFilters] = useState<{
@@ -63,7 +61,6 @@ const PushConfig: React.FC = () => {
       const response = await apiService.getPushConfigs();
       if (response.success) {
         let filteredConfigs = response.data || [];
-        setAllConfigs(filteredConfigs);
         
         // 前端筛选
         if (params.platform) {
@@ -191,21 +188,6 @@ const PushConfig: React.FC = () => {
     setModalVisible(false);
     form.resetFields();
     setEditingConfig(null);
-  };
-
-  // 为标签生成颜色（统一使用）
-  const getTagColor = (tag: string): string => {
-    const colors = [
-      'magenta', 'red', 'volcano', 'orange', 'gold', 'lime', 'green', 'cyan',
-      'blue', 'geekblue', 'purple', 'pink', 'default', 'processing', 'success',
-      'error', 'warning'
-    ];
-    let hash = 0;
-    for (let i = 0; i < tag.length; i++) {
-      hash = ((hash << 5) - hash) + tag.charCodeAt(i);
-      hash = hash & hash;
-    }
-    return colors[Math.abs(hash) % colors.length];
   };
 
   const formatDateTime = (value?: string) =>

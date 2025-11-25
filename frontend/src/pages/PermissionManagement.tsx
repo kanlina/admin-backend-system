@@ -9,13 +9,11 @@ import {
   Form,
   Input,
   Select,
-  Switch,
   message,
   Popconfirm,
   Typography,
   Row,
   Col,
-  Divider,
   Checkbox,
 } from 'antd';
 import {
@@ -30,7 +28,6 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 // 权限定义
 const PERMISSIONS = {
@@ -183,7 +180,7 @@ const PermissionManagement: React.FC = () => {
         <Space size="small">
           <SafetyOutlined />
           <Text strong={record.isSystem}>{name}</Text>
-          {record.isSystem && <Tag color="blue" size="small">系统角色</Tag>}
+          {record.isSystem && <Tag color="blue">系统角色</Tag>}
         </Space>
       ),
     },
@@ -210,12 +207,12 @@ const PermissionManagement: React.FC = () => {
       render: (_: any, record) => (
         <Space wrap size="small">
           {record.permissions.slice(0, 3).map((perm) => (
-            <Tag key={perm} size="small">
+            <Tag key={perm}>
               {PERMISSION_LABELS[perm] || perm}
             </Tag>
           ))}
           {record.permissions.length > 3 && (
-            <Tag size="small" color="default">+{record.permissions.length - 3}</Tag>
+            <Tag color="default">+{record.permissions.length - 3}</Tag>
           )}
         </Space>
       ),

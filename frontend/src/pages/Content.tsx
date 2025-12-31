@@ -99,6 +99,8 @@ const NewsManagement: React.FC = () => {
   const [detailEditorValue, setDetailEditorValue] = useState('');
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const quillInstanceRef = useRef<any>(null);
+  const isEditorInitializedRef = useRef(false);
+  const initialContentRef = useRef<string>('');
   const [statusLoadingIds, setStatusLoadingIds] = useState<Set<number>>(new Set());
 
   const appId = 15; // 默认 appId
@@ -278,6 +280,9 @@ const NewsManagement: React.FC = () => {
         const originalHtml = response.data.content || '';
         detailForm.setFieldsValue({ content: originalHtml });
         setDetailEditorValue(originalHtml);
+        // 设置初始内容到 ref，用于编辑器初始化
+        initialContentRef.current = originalHtml;
+        isEditorInitializedRef.current = false;
         setDetailModalVisible(true);
       }
     } catch (error) {
@@ -453,36 +458,46 @@ const NewsManagement: React.FC = () => {
             },
           });
 
+          // 保存光标位置
+          let savedSelection: any = null;
+          quillInstanceRef.current.on('selection-change', (range: any) => {
+            if (range) {
+              savedSelection = range;
+            }
+          });
+
           quillInstanceRef.current.on('text-change', () => {
             const html = editorDiv.innerHTML;
             setDetailEditorValue(html);
             detailForm.setFieldsValue({ content: html });
           });
-        }
 
-        if (quillInstanceRef.current) {
-          const quill = quillInstanceRef.current;
-          let html = detailEditorValue || '';
-          
-          // 清理HTML中的表单元素（input、textarea、button、select等），避免显示为输入框
-          // 将表单元素替换为其文本内容或值
-          html = cleanHtmlFromFormElements(html);
-          
-          const delta = quill.clipboard.convert(html);
-          quill.setContents(delta);
-          quill.setSelection(quill.getLength(), 0);
+          // 只在初始化时设置内容
+          if (!isEditorInitializedRef.current && initialContentRef.current) {
+            let html = initialContentRef.current || '';
+            html = cleanHtmlFromFormElements(html);
+            const delta = quillInstanceRef.current.clipboard.convert(html);
+            quillInstanceRef.current.setContents(delta);
+            // 设置光标到末尾
+            quillInstanceRef.current.setSelection(quillInstanceRef.current.getLength(), 0);
+            isEditorInitializedRef.current = true;
+          }
         }
       }
     } else {
+      // 模态框关闭时重置
       if (quillInstanceRef.current) {
         quillInstanceRef.current.off('text-change');
+        quillInstanceRef.current.off('selection-change');
         quillInstanceRef.current = null;
       }
       if (editorContainerRef.current) {
         editorContainerRef.current.innerHTML = '';
       }
+      isEditorInitializedRef.current = false;
+      initialContentRef.current = '';
     }
-  }, [detailModalVisible, detailEditorValue, detailForm, t]);
+  }, [detailModalVisible, detailForm]);
 
   const columns = [
     {

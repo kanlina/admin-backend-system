@@ -46,6 +46,8 @@
     "adjustData": "归因数据",
     "pageData": "页面数据",
     "postLoanData": "贷后数据",
+    "ratingData": "评分数据",
+    "ratingLevel":"评分等级",
     "partnerCenter": "合作伙伴中心",
     "userManagement": "用户管理",
     "analytics": "数据分析",

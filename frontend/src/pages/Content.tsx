@@ -458,14 +458,6 @@ const NewsManagement: React.FC = () => {
             },
           });
 
-          // 保存光标位置
-          let savedSelection: any = null;
-          quillInstanceRef.current.on('selection-change', (range: any) => {
-            if (range) {
-              savedSelection = range;
-            }
-          });
-
           quillInstanceRef.current.on('text-change', () => {
             const html = editorDiv.innerHTML;
             setDetailEditorValue(html);
@@ -488,7 +480,6 @@ const NewsManagement: React.FC = () => {
       // 模态框关闭时重置
       if (quillInstanceRef.current) {
         quillInstanceRef.current.off('text-change');
-        quillInstanceRef.current.off('selection-change');
         quillInstanceRef.current = null;
       }
       if (editorContainerRef.current) {

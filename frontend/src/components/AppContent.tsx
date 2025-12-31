@@ -225,7 +225,7 @@ const AppContent: React.FC = () => {
                 flexDirection: 'column'
               }}>
                 <h1>404</h1>
-                <p>页面不存在404-</p>
+                <p>页面不存在</p>
               </div>
             } />
           </Routes>

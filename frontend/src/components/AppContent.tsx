@@ -16,6 +16,7 @@ import InternalTransferData from '../pages/InternalTransferData';
 import AdjustData from '../pages/AdjustData';
 import PageData from '../pages/PageData';
 import PostLoanData from '../pages/PostLoanData';
+import RatingData from '../pages/RatingData';
 import ApiPartners from '../pages/ApiPartners';
 import NewsManagement from '../pages/Content';
 import NewsPreview from '../pages/NewsPreview';
@@ -124,6 +125,14 @@ const AppContent: React.FC = () => {
               <ProtectedRoute>
                 <AppLayout>
                   <PostLoanData />
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/data-monitor/rating-data" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <RatingData />
                 </AppLayout>
               </ProtectedRoute>
             } />

@@ -43,6 +43,7 @@ const Header: React.FC<HeaderProps> = ({
     if (path === '/data-monitor/adjust-data') return t('navigation.adjustData');
     if (path === '/data-monitor/page-data') return t('navigation.pageData');
     if (path === '/data-monitor/post-loan') return t('navigation.postLoanData');
+    if (path === '/data-monitor/rating-data') return t('navigation.ratingData');
     if (path === '/partner-center/api-partners') return t('navigation.apiPartners');
     if (path === '/news') return t('navigation.newsManagement');
     if (path === '/push-center/config') return t('navigation.pushConfig');

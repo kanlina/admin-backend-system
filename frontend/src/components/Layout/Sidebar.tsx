@@ -73,6 +73,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           icon: <CreditCardOutlined />,
           label: t('navigation.postLoanData'),
         },
+        {
+          key: '/data-monitor/rating-data',
+          icon: <BarChartOutlined />,
+          label: t('navigation.ratingData'),
+        },
       ],
     },
     {

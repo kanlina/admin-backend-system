@@ -154,6 +154,12 @@ class ApiService {
     return response.data;
   }
 
+  // 评分数据相关
+  async getRatingData(params?: any): Promise<ApiResponse<any[]>> {
+    const response = await this.api.get('/rating-data', { params });
+    return response.data;
+  }
+
   // 内转数据相关
   async getInternalTransferData(params?: any): Promise<ApiResponse<any[]>> {
     const response = await this.api.get('/internal-transfer-data', { params });

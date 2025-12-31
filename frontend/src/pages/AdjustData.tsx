@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Resizable } from 'react-resizable';
 import 'react-resizable/css/styles.css';
-import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag, Segmented, Spin } from 'antd';
-import { EyeOutlined, DownloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined, MenuOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
+import { Card, Table, Button, DatePicker, Space, message, Modal, Checkbox, Select, Tag, Segmented, Spin, Input } from 'antd';
+import { EyeOutlined, DownloadOutlined, SettingOutlined, ArrowUpOutlined, ArrowDownOutlined, CloseOutlined, PlusOutlined, FunnelPlotOutlined, MenuOutlined, StarFilled, StarOutlined, CheckOutlined, EditOutlined } from '@ant-design/icons';
 import { Line } from '@ant-design/plots';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +49,7 @@ interface AdjustDataPageSnapshot {
   favoriteAdSequences: Record<string, FavoriteAdSequence[]>;
   favoritesBaseline: Record<string, FavoriteAdSequence[]>;
   favoritesDirty: boolean;
+  adSequenceAliases: Record<string, Record<string, string>>;
 }
 
 let adjustDataPageSnapshot: AdjustDataPageSnapshot | null = null;
@@ -56,6 +57,7 @@ let adjustDataPageSnapshot: AdjustDataPageSnapshot | null = null;
 const SELECTED_EVENTS_STORAGE_KEY = 'attribution_selected_items_v4';
 const QUERY_STATE_STORAGE_KEY = 'attribution_query_state_v1';
 const DATA_CACHE_STORAGE_KEY = 'attribution_data_cache_v1';
+const AD_SEQUENCE_ALIAS_STORAGE_KEY = 'attribution_adseq_aliases_v1';
 
 const ResizableHeaderCell: React.FC<any> = ({ onResize, width, children, ...restProps }) => {
   if (!width) {
@@ -119,34 +121,6 @@ const AdjustData: React.FC = () => {
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const favoritesSyncPromiseRef = useRef<Promise<boolean> | null>(null);
   const hasRestoredSnapshotRef = useRef(false);
-
-  const restoreSnapshot = useCallback((snapshot: AdjustDataPageSnapshot) => {
-    setDataSource(snapshot.dataSource);
-    setDateRange(snapshot.dateRange ? [dayjs(snapshot.dateRange.start), dayjs(snapshot.dateRange.end)] : null);
-    setPagination({ ...snapshot.pagination });
-    setData(snapshot.data);
-    setAllData(snapshot.allData);
-    setSelectedAppId(snapshot.selectedAppId);
-    setSelectedMediaSources([...(snapshot.selectedMediaSources || [])]);
-    setSelectedAdSequences([...(snapshot.selectedAdSequences || [])]);
-    setSelectedUserType(snapshot.selectedUserType);
-    setMediaAdPairs((snapshot.mediaAdPairs || []).map(pair => ({ ...pair, ad: pair.ad ? [...pair.ad] : undefined })));
-    setTableLayout(snapshot.tableLayout);
-    setShowChart(snapshot.showChart);
-    const adjustEvents = snapshot.allEventNames?.adjust || [];
-    const appsflyerEvents = snapshot.allEventNames?.appsflyer || [];
-    setAllEventNames({ adjust: [...adjustEvents], appsflyer: [...appsflyerEvents] });
-    setSelectedItems({
-      adjust: (snapshot.selectedItems.adjust || []).map(item => ({ ...item })),
-      appsflyer: (snapshot.selectedItems.appsflyer || []).map(item => ({ ...item })),
-    });
-    setMediaToAdSeqs({ ...(snapshot.mediaToAdSeqs || {}) });
-    setFavoriteAdSequences(JSON.parse(JSON.stringify(snapshot.favoriteAdSequences || {})));
-    favoritesBaselineRef.current = JSON.parse(JSON.stringify(snapshot.favoritesBaseline || {}));
-    favoritesDirtyRef.current = snapshot.favoritesDirty;
-    setIsRestoringFromCache(false);
-    setLoading(false);
-  }, []);
 
   const handleColumnResize = useCallback(
     (columnKey: string) =>
@@ -212,6 +186,10 @@ const AdjustData: React.FC = () => {
   const [favoriteAdSequences, setFavoriteAdSequences] = useState<Record<string, FavoriteAdSequence[]>>({});
   const favoritesBaselineRef = useRef<Record<string, FavoriteAdSequence[]>>({});
   const favoritesDirtyRef = useRef(false);
+  const [adSequenceAliases, setAdSequenceAliases] = useState<Record<string, Record<string, string>>>({});
+  const aliasLoadedRef = useRef(false);
+  const [adAliasEditing, setAdAliasEditing] = useState<Record<string, Record<string, boolean>>>({});
+  const [selectedUserType, setSelectedUserType] = useState<string | undefined>(undefined);
 
   const normalizeFavoriteMap = useCallback((raw?: Record<string, FavoriteAdSequence[]>) => {
     if (!raw || typeof raw !== 'object') return {};
@@ -235,7 +213,136 @@ const AdjustData: React.FC = () => {
     });
     return normalized;
   }, []);
-  const [selectedUserType, setSelectedUserType] = useState<string | undefined>(undefined);
+  const normalizeAliasMap = useCallback((raw?: Record<string, any>) => {
+    if (!raw || typeof raw !== 'object') return {};
+    const normalized: Record<string, Record<string, string>> = {};
+    Object.entries(raw).forEach(([media, aliasMap]) => {
+      if (!aliasMap || typeof aliasMap !== 'object') return;
+      const cleaned: Record<string, string> = {};
+      Object.entries(aliasMap as Record<string, any>).forEach(([seq, alias]) => {
+        const seqKey = typeof seq === 'string' ? seq.trim() : String(seq);
+        const aliasValue = typeof alias === 'string' ? alias.trim() : '';
+        if (seqKey && aliasValue) {
+          cleaned[seqKey] = aliasValue;
+        }
+      });
+      if (Object.keys(cleaned).length > 0) {
+        normalized[media] = cleaned;
+      }
+    });
+    return normalized;
+  }, []);
+  const restoreAdSequenceAliases = useCallback(() => {
+    if (aliasLoadedRef.current) return;
+    aliasLoadedRef.current = true;
+    try {
+      const saved = localStorage.getItem(AD_SEQUENCE_ALIAS_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      setAdSequenceAliases(normalizeAliasMap(parsed));
+    } catch (error) {
+      console.error('恢复广告序列别名失败:', error);
+    }
+  }, [normalizeAliasMap]);
+  const upsertAdSequenceAlias = useCallback(
+    (media: string, seq: string, alias: string) => {
+      if (!media || !seq) return;
+      const trimmedAlias = alias.trim();
+      setAdSequenceAliases(prev => {
+        const next = JSON.parse(JSON.stringify(prev || {})) as Record<string, Record<string, string>>;
+        if (trimmedAlias) {
+          next[media] = { ...(next[media] || {}) };
+          next[media][seq] = trimmedAlias;
+        } else if (next[media]) {
+          delete next[media][seq];
+          if (Object.keys(next[media]).length === 0) {
+            delete next[media];
+          }
+        }
+        return normalizeAliasMap(next);
+      });
+    },
+    [normalizeAliasMap],
+  );
+  const getAdSequenceAlias = useCallback(
+    (media?: string, seq?: string) => {
+      if (!seq) return '';
+      const trimmedSeq = seq.trim();
+      if (media) {
+        return adSequenceAliases?.[media]?.[trimmedSeq] || '';
+      }
+      // 未指定媒体时，从所有媒体中找到第一个有别名的
+      for (const mediaKey of Object.keys(adSequenceAliases || {})) {
+        const alias = adSequenceAliases[mediaKey]?.[trimmedSeq];
+        if (alias) return alias;
+      }
+      return '';
+    },
+    [adSequenceAliases],
+  );
+  const getAdSequenceLabel = useCallback(
+    (media?: string, seq?: string) => {
+      if (!seq) return '';
+      const alias = getAdSequenceAlias(media, seq);
+      return alias ? `${alias} (${seq})` : seq;
+    },
+    [getAdSequenceAlias],
+  );
+  const isAliasEditing = useCallback(
+    (media?: string, seq?: string) => {
+      if (!media || !seq) return false;
+      return !!adAliasEditing?.[media]?.[seq];
+    },
+    [adAliasEditing],
+  );
+  const setAliasEditingState = useCallback((media: string, seq: string, editing: boolean) => {
+    setAdAliasEditing(prev => {
+      const next = JSON.parse(JSON.stringify(prev || {})) as Record<string, Record<string, boolean>>;
+      next[media] = { ...(next[media] || {}) };
+      if (editing) {
+        next[media][seq] = true;
+      } else {
+        delete next[media][seq];
+        if (Object.keys(next[media]).length === 0) {
+          delete next[media];
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const restoreSnapshot = useCallback(
+    (snapshot: AdjustDataPageSnapshot) => {
+      setDataSource(snapshot.dataSource);
+      setDateRange(snapshot.dateRange ? [dayjs(snapshot.dateRange.start), dayjs(snapshot.dateRange.end)] : null);
+      setPagination({ ...snapshot.pagination });
+      setData(snapshot.data);
+      setAllData(snapshot.allData);
+      setSelectedAppId(snapshot.selectedAppId);
+      setSelectedMediaSources([...(snapshot.selectedMediaSources || [])]);
+      setSelectedAdSequences([...(snapshot.selectedAdSequences || [])]);
+      setSelectedUserType(snapshot.selectedUserType);
+      setMediaAdPairs((snapshot.mediaAdPairs || []).map(pair => ({ ...pair, ad: pair.ad ? [...pair.ad] : undefined })));
+      setTableLayout(snapshot.tableLayout);
+      setShowChart(snapshot.showChart);
+      const adjustEvents = snapshot.allEventNames?.adjust || [];
+      const appsflyerEvents = snapshot.allEventNames?.appsflyer || [];
+      setAllEventNames({ adjust: [...adjustEvents], appsflyer: [...appsflyerEvents] });
+      setSelectedItems({
+        adjust: (snapshot.selectedItems.adjust || []).map(item => ({ ...item })),
+        appsflyer: (snapshot.selectedItems.appsflyer || []).map(item => ({ ...item })),
+      });
+      setMediaToAdSeqs({ ...(snapshot.mediaToAdSeqs || {}) });
+      setFavoriteAdSequences(JSON.parse(JSON.stringify(snapshot.favoriteAdSequences || {})));
+      favoritesBaselineRef.current = JSON.parse(JSON.stringify(snapshot.favoritesBaseline || {}));
+      favoritesDirtyRef.current = snapshot.favoritesDirty;
+      aliasLoadedRef.current = true;
+      setAdSequenceAliases(normalizeAliasMap(snapshot.adSequenceAliases || {}));
+      setIsRestoringFromCache(false);
+      setLoading(false);
+    },
+    [normalizeAliasMap],
+  );
   
   // 检测是否为移动端
   const [isMobile, setIsMobile] = useState(false);
@@ -252,6 +359,17 @@ const AdjustData: React.FC = () => {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+  useEffect(() => {
+    restoreAdSequenceAliases();
+  }, [restoreAdSequenceAliases]);
+  useEffect(() => {
+    if (!aliasLoadedRef.current) return;
+    try {
+      localStorage.setItem(AD_SEQUENCE_ALIAS_STORAGE_KEY, JSON.stringify(adSequenceAliases || {}));
+    } catch (error) {
+      console.error('保存广告序列别名失败:', error);
+    }
+  }, [adSequenceAliases]);
   
   const currentItems = selectedItems[dataSource];
   const currentAllEvents = allEventNames[dataSource];
@@ -698,6 +816,7 @@ const AdjustData: React.FC = () => {
       favoriteAdSequences: JSON.parse(JSON.stringify(favoriteAdSequences || {})),
       favoritesBaseline: JSON.parse(JSON.stringify(favoritesBaselineRef.current || {})),
       favoritesDirty: favoritesDirtyRef.current,
+      adSequenceAliases: JSON.parse(JSON.stringify(adSequenceAliases || {})),
     };
   }, [
     allData,
@@ -710,6 +829,7 @@ const AdjustData: React.FC = () => {
     mediaAdPairs,
     mediaToAdSeqs,
     pagination,
+    adSequenceAliases,
     selectedAdSequences,
     selectedAppId,
     selectedItems,
@@ -1452,12 +1572,29 @@ const AdjustData: React.FC = () => {
         key: 'ad_sequence',
         width: 200,
         fixed: 'left' as const,
-        render: (seq: string) => {
+        render: (seq: string, record: any) => {
           const rawSeq = String(seq ?? '').trim();
-          const displaySeq =
-            rawSeq && rawSeq !== 'ALL'
-              ? rawSeq
-              : t('attributionData.allAdSequences') ?? 'ALL';
+          if (!rawSeq || rawSeq === 'ALL') {
+            const allLabel = t('attributionData.allAdSequences') ?? 'ALL';
+            return (
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#262626',
+                }}
+              >
+                {allLabel}
+              </span>
+            );
+          }
+          const mediaForRow = String(
+            record?.media_source ??
+              record?.media_source_name ??
+              record?.media_name ??
+              '',
+          ).trim();
+          const displaySeq = getAdSequenceLabel(mediaForRow || undefined, rawSeq);
           return (
             <span
               style={{
@@ -2000,35 +2137,39 @@ const AdjustData: React.FC = () => {
                           >
                             媒体: {pair.media}
                           </Tag>
-                          {hasAds && (pair.ad as string[]).map(seq => (
-                            <Tag 
-                              key={`${pair.id}_${seq}`}
-                              color="geekblue"
-                              closable
-                              onClose={() => {
-                                const newPairs = [...mediaAdPairs];
-                                const pairIdx = newPairs.findIndex(p => p.id === pair.id);
-                                if (pairIdx >= 0) {
-                                  const newAds = (newPairs[pairIdx].ad as string[]).filter(a => a !== seq);
-                                  newPairs[pairIdx] = { ...newPairs[pairIdx], ad: newAds };
-                                  setMediaAdPairs(newPairs);
-                                  message.success(`已移除广告序列: ${seq}`);
-                                }
-                              }}
-                              style={{ 
-                                margin: 0,
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 500,
-                                background: '#f0f5ff',
-                                borderColor: '#2f54eb',
-                                color: '#1d39c4'
-                              }}
-                            >
-                              广告序列: {seq}
-                            </Tag>
-                          ))}
+                          {hasAds &&
+                            (pair.ad as string[]).map(seq => {
+                              const label = getAdSequenceLabel(pair.media!, seq);
+                              return (
+                                <Tag
+                                  key={`${pair.id}_${seq}`}
+                                  color="geekblue"
+                                  closable
+                                  onClose={() => {
+                                    const newPairs = [...mediaAdPairs];
+                                    const pairIdx = newPairs.findIndex(p => p.id === pair.id);
+                                    if (pairIdx >= 0) {
+                                      const newAds = (newPairs[pairIdx].ad as string[]).filter(a => a !== seq);
+                                      newPairs[pairIdx] = { ...newPairs[pairIdx], ad: newAds };
+                                      setMediaAdPairs(newPairs);
+                                      message.success(`已移除广告序列: ${seq}`);
+                                    }
+                                  }}
+                                  style={{
+                                    margin: 0,
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    background: '#f0f5ff',
+                                    borderColor: '#2f54eb',
+                                    color: '#1d39c4',
+                                  }}
+                                >
+                                  广告序列: {label}
+                                </Tag>
+                              );
+                            })}
                         </React.Fragment>
                       );
                     })}
@@ -2602,6 +2743,7 @@ const AdjustData: React.FC = () => {
                       placeholder={t('attributionData.allAdSequences')}
                       value={pair.ad}
                       style={{ width: 260 }}
+                      optionLabelProp="label"
                       disabled={filtersLocked || !pair.media || (pair.media ? adSequenceLoading[pair.media] : false)}
                       loading={pair.media ? adSequenceLoading[pair.media] : false}
                       showSearch
@@ -2611,7 +2753,10 @@ const AdjustData: React.FC = () => {
                         setMediaAdPairs(newPairs);
                         setTimeout(() => saveQueryState(), 100);
                       }}
-                      filterOption={(input, option) => String(option?.children || '').toLowerCase().includes(input.toLowerCase())}
+                      filterOption={(input, option) => {
+                        const optionLabel = (option as any)?.label ?? (option as any)?.children;
+                        return String(optionLabel || '').toLowerCase().includes(input.toLowerCase());
+                      }}
                     >
                       {(pair.media ? (mediaToAdSeqs[pair.media] || []) : []).length > 0 && pair.media
                         ? (() => {
@@ -2626,16 +2771,72 @@ const AdjustData: React.FC = () => {
                             const displaySeqs = [...favoriteValues, ...remaining];
                             return displaySeqs.map(seq => {
                               const isFavorited = favoriteValues.includes(seq);
+                              const alias = getAdSequenceAlias(pair.media!, seq);
+                              const editing = isAliasEditing(pair.media!, seq);
                               return (
-                                <Select.Option key={seq} value={seq}>
+                                <Select.Option key={seq} value={seq} label={getAdSequenceLabel(pair.media!, seq)}>
                                   <div
                                     style={{
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'space-between',
+                                      gap: 8,
                                     }}
                                   >
-                                    <span>{seq}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, gap: 4 }}>
+                                      <span style={{ fontWeight: alias ? 600 : 400, whiteSpace: 'normal' }}>
+                                        {alias || seq}
+                                      </span>
+                                      <span style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.2 }}>ID: {seq}</span>
+                                      {editing && (
+                                        <Space size={6} align="center">
+                                          <Input
+                                            size="small"
+                                            allowClear
+                                            placeholder="编辑别名"
+                                            value={alias}
+                                            style={{ width: 160 }}
+                                            onChange={(e) => upsertAdSequenceAlias(pair.media!, seq, e.target.value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onKeyDown={(e) => e.stopPropagation()}
+                                          />
+                                          <Button
+                                            size="small"
+                                            type="link"
+                                            icon={<CheckOutlined />}
+                                            style={{ padding: '0 4px' }}
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                            }}
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              setAliasEditingState(pair.media!, seq, false);
+                                              message.success('别名已保存到本地缓存');
+                                            }}
+                                          />
+                                        </Space>
+                                      )}
+                                    </div>
+                                    {!editing && (
+                                      <Button
+                                        size="small"
+                                        type="link"
+                                        icon={<EditOutlined />}
+                                        style={{ padding: '0 4px' }}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setAliasEditingState(pair.media!, seq, true);
+                                        }}
+                                      />
+                                    )}
                                     <span
                                       onMouseDown={handleFavoriteIconClick(pair.media!, seq)}
                                       style={{
@@ -2698,7 +2899,12 @@ const AdjustData: React.FC = () => {
                   )}
                   {selectedAdSequences.length > 0 && (
                     <span style={{ fontSize: '13px', color: '#1890ff' }}>
-                      广告序列: <strong>{selectedAdSequences.join(', ')}</strong>
+                      广告序列:{' '}
+                      <strong>
+                        {selectedAdSequences
+                          .map(seq => getAdSequenceLabel(undefined, seq))
+                          .join(', ')}
+                      </strong>
                     </span>
                   )}
                 </Space>

@@ -601,16 +601,16 @@ export const internalTransferService = {
             SELECT ul.*, ulr.os_name
             FROM user_loans ul
             LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
+              SELECT ulr1.user_id, ulr1.os_name,ulr1.mobile
               FROM user_login_record ulr1
               INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
+                SELECT user_id,mobile MIN(request_time) AS first_login_time
                 FROM user_login_record
                 WHERE user_id IS NOT NULL
                 GROUP BY user_id
               ) AS first_login ON first_login.user_id = ulr1.user_id 
                 AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = ul.user_id
+            ) AS ulr ON ulr.mobile = ul.phone
             WHERE DATE(ul.created_at) = '${date}'
             ORDER BY ul.created_at DESC
             LIMIT 1000

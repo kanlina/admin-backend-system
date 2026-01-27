@@ -620,33 +620,36 @@ export const internalTransferService = {
         case 'loan_approved':
           // 借款成功明细（完全参考汇总逻辑的子查询，关联用户登录表获取os_name）
           sql = `
-            SELECT srp.*, ulr.os_name
-            FROM (
-              SELECT
-                order_no,
-                MIN(created_at) AS created_at
-              FROM scheduled_repay_plan
-              WHERE partner_order_status = 2
-              GROUP BY order_no
-            ) AS plan
-            INNER JOIN scheduled_repay_plan srp 
-              ON srp.order_no = plan.order_no 
-              AND srp.created_at = plan.created_at
-            LEFT JOIN user_loans ul ON ul.order_no = srp.order_no
-            LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
-              FROM user_login_record ulr1
-              INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
-                FROM user_login_record
-                WHERE user_id IS NOT NULL
-                GROUP BY user_id
-              ) AS first_login ON first_login.user_id = ulr1.user_id 
-                AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = ul.user_id
-            WHERE DATE(plan.created_at) = '${date}'
-            ORDER BY plan.created_at DESC
-            LIMIT 1000
+              SELECT srp.*, ulr.os_name
+              FROM (
+                       SELECT
+                           order_no,
+                           MIN(created_at) AS created_at
+                       FROM scheduled_repay_plan
+                       WHERE partner_order_status = 2
+                       GROUP BY order_no
+                   ) AS plan
+                       INNER JOIN scheduled_repay_plan srp
+                                  ON srp.order_no COLLATE utf8mb4_unicode_ci = plan.order_no COLLATE utf8mb4_unicode_ci
+                                      AND srp.created_at = plan.created_at
+                       LEFT JOIN user_loans ul
+                                 ON ul.order_no COLLATE utf8mb4_unicode_ci = srp.order_no COLLATE utf8mb4_unicode_ci
+                       LEFT JOIN (
+                  SELECT ulr1.mobile, ulr1.os_name
+                  FROM user_login_record ulr1
+                           INNER JOIN (
+                      SELECT mobile, MIN(request_time) AS first_login_time
+                      FROM user_login_record
+                      WHERE mobile IS NOT NULL
+                      GROUP BY mobile
+                  ) AS first_login
+                                      ON first_login.mobile COLLATE utf8mb4_unicode_ci = ulr1.mobile COLLATE utf8mb4_unicode_ci
+                                          AND first_login.first_login_time = ulr1.request_time
+              ) AS ulr
+                                 ON ulr.mobile COLLATE utf8mb4_unicode_ci = ul.phone COLLATE utf8mb4_unicode_ci
+              WHERE DATE(plan.created_at) = '${date}'
+              ORDER BY plan.created_at DESC
+                  LIMIT 1000
           `;
           break;
 

@@ -604,7 +604,7 @@ export const internalTransferService = {
               SELECT ulr1.user_id, ulr1.os_name,ulr1.mobile
               FROM user_login_record ulr1
               INNER JOIN (
-                SELECT user_id,mobile MIN(request_time) AS first_login_time
+                SELECT user_id,mobile,MIN(request_time) AS first_login_time
                 FROM user_login_record
                 WHERE user_id IS NOT NULL
                 GROUP BY user_id

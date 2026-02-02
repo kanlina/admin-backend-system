@@ -445,120 +445,255 @@ export const internalTransferService = {
           break;
 
         case 'real_name_auth':
-          // OCR全部识别完成人数明细（完全参考汇总逻辑的子查询，关联用户登录表获取os_name）
+          // OCR全部识别完成人数明细：当日首次完成 face-recognition 且 recognition_status=1 的用户 + 关联登录表取 os_name
           sql = `
-            SELECT ocr.*, ulr.os_name
+            SELECT ocr.*, fl.os_name
             FROM (
-              SELECT 
-                user_id,
-                MIN(created_at) AS created_at
-              FROM user_ocr_record
-              WHERE event_name = 'face-recognition' 
-                AND recognition_status = 1
-              GROUP BY user_id
-            ) AS first_completion
-            INNER JOIN user_ocr_record ocr 
-              ON ocr.user_id = first_completion.user_id 
-              AND ocr.created_at = first_completion.created_at
+              SELECT ocr_c.user_id
+              FROM user_ocr_record ocr_c
+              WHERE ocr_c.created_at >= '${date} 00:00:00'
+                AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                AND ocr_c.event_name = 'face-recognition'
+                AND ocr_c.recognition_status = 1
+              GROUP BY ocr_c.user_id
+              HAVING NOT EXISTS (
+                SELECT 1
+                FROM user_ocr_record ocr2
+                WHERE ocr2.user_id = ocr_c.user_id
+                  AND ocr2.created_at < '${date} 00:00:00'
+                  AND ocr2.event_name = 'face-recognition'
+                  AND ocr2.recognition_status = 1
+              )
+            ) c
+            INNER JOIN user_ocr_record ocr
+              ON ocr.user_id = c.user_id
+              AND ocr.event_name = 'face-recognition'
+              AND ocr.recognition_status = 1
+              AND ocr.created_at = (
+                SELECT MIN(ocr3.created_at)
+                FROM user_ocr_record ocr3
+                WHERE ocr3.user_id = c.user_id
+                  AND ocr3.event_name = 'face-recognition'
+                  AND ocr3.recognition_status = 1
+              )
             LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
-              FROM user_login_record ulr1
+              SELECT ulr.user_id, ulr.os_name
+              FROM user_login_record ulr
               INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
-                FROM user_login_record
-                WHERE user_id IS NOT NULL
-                GROUP BY user_id
-              ) AS first_login ON first_login.user_id = ulr1.user_id 
-                AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = ocr.user_id
-            WHERE DATE(first_completion.created_at) = '${date}'
-            ORDER BY first_completion.created_at DESC
+                SELECT ocr_c.user_id
+                FROM user_ocr_record ocr_c
+                WHERE ocr_c.created_at >= '${date} 00:00:00'
+                  AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                  AND ocr_c.event_name = 'face-recognition'
+                  AND ocr_c.recognition_status = 1
+                GROUP BY ocr_c.user_id
+                HAVING NOT EXISTS (
+                  SELECT 1
+                  FROM user_ocr_record ocr2
+                  WHERE ocr2.user_id = ocr_c.user_id
+                    AND ocr2.created_at < '${date} 00:00:00'
+                    AND ocr2.event_name = 'face-recognition'
+                    AND ocr2.recognition_status = 1
+                )
+              ) c2 ON c2.user_id = ulr.user_id
+              INNER JOIN (
+                SELECT ulr2.user_id, MIN(ulr2.request_time) AS first_time
+                FROM user_login_record ulr2
+                INNER JOIN (
+                  SELECT ocr_c.user_id
+                  FROM user_ocr_record ocr_c
+                  WHERE ocr_c.created_at >= '${date} 00:00:00'
+                    AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                    AND ocr_c.event_name = 'face-recognition'
+                    AND ocr_c.recognition_status = 1
+                  GROUP BY ocr_c.user_id
+                  HAVING NOT EXISTS (
+                    SELECT 1
+                    FROM user_ocr_record ocr2
+                    WHERE ocr2.user_id = ocr_c.user_id
+                      AND ocr2.created_at < '${date} 00:00:00'
+                      AND ocr2.event_name = 'face-recognition'
+                      AND ocr2.recognition_status = 1
+                  )
+                ) c3 ON c3.user_id = ulr2.user_id
+                WHERE ulr2.user_id IS NOT NULL
+                GROUP BY ulr2.user_id
+              ) fl_inner ON fl_inner.user_id = ulr.user_id AND fl_inner.first_time = ulr.request_time
+            ) fl ON fl.user_id = ocr.user_id
+            ORDER BY ocr.created_at DESC
             LIMIT 1000
           `;
           break;
 
         case 'credit_info':
-          // 个人信息提交人数明细（完全参考汇总逻辑，返回所有字段，关联用户登录表获取os_name）
+          // 个人信息提交人数明细：当日 verification_success_at 在日期范围内的用户 + 关联登录表取该批用户首次登录 os_name
           sql = `
             SELECT ui.*, ulr.os_name
             FROM user_info ui
             LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
-              FROM user_login_record ulr1
+              SELECT ulr.user_id, ulr.os_name
+              FROM user_login_record ulr
               INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
-                FROM user_login_record
-                WHERE user_id IS NOT NULL
-                GROUP BY user_id
-              ) AS first_login ON first_login.user_id = ulr1.user_id 
-                AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = ui.user_id
+                SELECT user_id
+                FROM user_info
+                WHERE verification_success_at >= '${date} 00:00:00'
+                  AND verification_success_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+              ) target_users ON target_users.user_id = ulr.user_id
+              INNER JOIN (
+                SELECT ulr2.user_id, MIN(ulr2.request_time) AS first_time
+                FROM user_login_record ulr2
+                INNER JOIN (
+                  SELECT user_id
+                  FROM user_info
+                  WHERE verification_success_at >= '${date} 00:00:00'
+                    AND verification_success_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                ) target_users2 ON target_users2.user_id = ulr2.user_id
+                WHERE ulr2.user_id IS NOT NULL
+                GROUP BY ulr2.user_id
+              ) fl ON fl.user_id = ulr.user_id AND fl.first_time = ulr.request_time
+            ) ulr ON ulr.user_id = ui.user_id
             WHERE ui.verification_success_at IS NOT NULL
-              AND DATE(ui.verification_success_at) = '${date}'
+              AND ui.verification_success_at >= '${date} 00:00:00'
+              AND ui.verification_success_at < DATE_ADD('${date}', INTERVAL 1 DAY)
             ORDER BY ui.verification_success_at DESC
             LIMIT 1000
           `;
           break;
 
         case 'push_total':
-          // 推送总人数明细（完全参考汇总逻辑的子查询，关联用户登录表获取os_name）
+          // 推送总人数明细：当日首次上传用户 + 关联用户登录表取首次登录 os_name
           sql = `
-            SELECT upr.*, ulr.os_name
+            SELECT upr.*, fl.os_name
             FROM (
-              SELECT 
-                user_id,
-                MIN(created_at) AS created_at
-              FROM user_upload_records
-              GROUP BY user_id
-            ) AS first_push
-            INNER JOIN user_upload_records upr 
-              ON upr.user_id = first_push.user_id 
-              AND upr.created_at = first_push.created_at
+              SELECT upr_c.user_id
+              FROM user_upload_records upr_c
+              WHERE upr_c.created_at >= '${date} 00:00:00'
+                AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+              GROUP BY upr_c.user_id
+              HAVING NOT EXISTS (
+                SELECT 1
+                FROM user_upload_records upr2
+                WHERE upr2.user_id = upr_c.user_id
+                  AND upr2.created_at < '${date} 00:00:00'
+              )
+            ) c
+            INNER JOIN user_upload_records upr
+              ON upr.user_id = c.user_id
+              AND upr.created_at = (
+                SELECT MIN(upr3.created_at)
+                FROM user_upload_records upr3
+                WHERE upr3.user_id = c.user_id
+              )
             LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
-              FROM user_login_record ulr1
+              SELECT ulr.user_id, ulr.os_name
+              FROM user_login_record ulr
               INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
-                FROM user_login_record
-                WHERE user_id IS NOT NULL
-                GROUP BY user_id
-              ) AS first_login ON first_login.user_id = ulr1.user_id 
-                AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = upr.user_id
-            WHERE DATE(first_push.created_at) = '${date}'
-            ORDER BY first_push.created_at DESC
+                SELECT upr_c.user_id
+                FROM user_upload_records upr_c
+                WHERE upr_c.created_at >= '${date} 00:00:00'
+                  AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                GROUP BY upr_c.user_id
+                HAVING NOT EXISTS (
+                  SELECT 1
+                  FROM user_upload_records upr2
+                  WHERE upr2.user_id = upr_c.user_id
+                    AND upr2.created_at < '${date} 00:00:00'
+                )
+              ) c2 ON c2.user_id = ulr.user_id
+              INNER JOIN (
+                SELECT ulr2.user_id, MIN(ulr2.request_time) AS first_time
+                FROM user_login_record ulr2
+                INNER JOIN (
+                  SELECT upr_c.user_id
+                  FROM user_upload_records upr_c
+                  WHERE upr_c.created_at >= '${date} 00:00:00'
+                    AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                  GROUP BY upr_c.user_id
+                  HAVING NOT EXISTS (
+                    SELECT 1
+                    FROM user_upload_records upr2
+                    WHERE upr2.user_id = upr_c.user_id
+                      AND upr2.created_at < '${date} 00:00:00'
+                  )
+                ) c3 ON c3.user_id = ulr2.user_id
+                WHERE ulr2.user_id IS NOT NULL
+                GROUP BY ulr2.user_id
+              ) fl_inner ON fl_inner.user_id = ulr.user_id AND fl_inner.first_time = ulr.request_time
+            ) fl ON fl.user_id = upr.user_id
+            ORDER BY upr.created_at DESC
             LIMIT 1000
           `;
           break;
 
         case 'info_push':
-          // 个人信息推送成功人数明细（完全参考汇总逻辑的子查询，关联用户登录表获取os_name）
+          // 个人信息推送成功人数明细：当日首次推送成功用户 + 关联用户登录表取首次登录 os_name
           sql = `
-            SELECT upr.*, ulr.os_name
+            SELECT upr.*, fl.os_name
             FROM (
-              SELECT 
-                user_id,
-                MIN(created_at) AS created_at
-              FROM user_upload_records
-              WHERE status = 'success'
-              GROUP BY user_id
-            ) AS first_success
-            INNER JOIN user_upload_records upr 
-              ON upr.user_id = first_success.user_id 
-              AND upr.created_at = first_success.created_at
+              SELECT upr_c.user_id
+              FROM user_upload_records upr_c
+              WHERE upr_c.created_at >= '${date} 00:00:00'
+                AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                AND upr_c.status = 'success'
+              GROUP BY upr_c.user_id
+              HAVING NOT EXISTS (
+                SELECT 1
+                FROM user_upload_records upr2
+                WHERE upr2.user_id = upr_c.user_id
+                  AND upr2.created_at < '${date} 00:00:00'
+                  AND upr2.status = 'success'
+              )
+            ) c
+            INNER JOIN user_upload_records upr
+              ON upr.user_id = c.user_id
+              AND upr.status = 'success'
+              AND upr.created_at = (
+                SELECT MIN(upr3.created_at)
+                FROM user_upload_records upr3
+                WHERE upr3.user_id = c.user_id
+                  AND upr3.status = 'success'
+              )
             LEFT JOIN (
-              SELECT ulr1.user_id, ulr1.os_name
-              FROM user_login_record ulr1
+              SELECT ulr.user_id, ulr.os_name
+              FROM user_login_record ulr
               INNER JOIN (
-                SELECT user_id, MIN(request_time) AS first_login_time
-                FROM user_login_record
-                WHERE user_id IS NOT NULL
-                GROUP BY user_id
-              ) AS first_login ON first_login.user_id = ulr1.user_id 
-                AND first_login.first_login_time = ulr1.request_time
-            ) AS ulr ON ulr.user_id = upr.user_id
-            WHERE DATE(first_success.created_at) = '${date}'
-            ORDER BY first_success.created_at DESC
+                SELECT upr_c.user_id
+                FROM user_upload_records upr_c
+                WHERE upr_c.created_at >= '${date} 00:00:00'
+                  AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                  AND upr_c.status = 'success'
+                GROUP BY upr_c.user_id
+                HAVING NOT EXISTS (
+                  SELECT 1
+                  FROM user_upload_records upr2
+                  WHERE upr2.user_id = upr_c.user_id
+                    AND upr2.created_at < '${date} 00:00:00'
+                    AND upr2.status = 'success'
+                )
+              ) c2 ON c2.user_id = ulr.user_id
+              INNER JOIN (
+                SELECT ulr2.user_id, MIN(ulr2.request_time) AS first_time
+                FROM user_login_record ulr2
+                INNER JOIN (
+                  SELECT upr_c.user_id
+                  FROM user_upload_records upr_c
+                  WHERE upr_c.created_at >= '${date} 00:00:00'
+                    AND upr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
+                    AND upr_c.status = 'success'
+                  GROUP BY upr_c.user_id
+                  HAVING NOT EXISTS (
+                    SELECT 1
+                    FROM user_upload_records upr2
+                    WHERE upr2.user_id = upr_c.user_id
+                      AND upr2.created_at < '${date} 00:00:00'
+                      AND upr2.status = 'success'
+                  )
+                ) c3 ON c3.user_id = ulr2.user_id
+                WHERE ulr2.user_id IS NOT NULL
+                GROUP BY ulr2.user_id
+              ) fl_inner ON fl_inner.user_id = ulr.user_id AND fl_inner.first_time = ulr.request_time
+            ) fl ON fl.user_id = upr.user_id
+            ORDER BY upr.created_at DESC
             LIMIT 1000
           `;
           break;

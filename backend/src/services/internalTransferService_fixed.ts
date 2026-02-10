@@ -316,7 +316,7 @@ export const internalTransferService = {
                 SELECT 
                     user_id,
                     MIN(created_at) AS created_at
-                FROM user_ocr_record
+                FROM user_bk
                 WHERE event_name = 'face-recognition' 
                     AND recognition_status = 1
                 GROUP BY user_id
@@ -450,7 +450,7 @@ export const internalTransferService = {
             SELECT ocr.*, fl.os_name
             FROM (
               SELECT ocr_c.user_id
-              FROM user_ocr_record ocr_c
+              FROM user_bk ocr_c
               WHERE ocr_c.created_at >= '${date} 00:00:00'
                 AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
                 AND ocr_c.event_name = 'face-recognition'
@@ -458,20 +458,20 @@ export const internalTransferService = {
               GROUP BY ocr_c.user_id
               HAVING NOT EXISTS (
                 SELECT 1
-                FROM user_ocr_record ocr2
+                FROM user_bk ocr2
                 WHERE ocr2.user_id = ocr_c.user_id
                   AND ocr2.created_at < '${date} 00:00:00'
                   AND ocr2.event_name = 'face-recognition'
                   AND ocr2.recognition_status = 1
               )
             ) c
-            INNER JOIN user_ocr_record ocr
+            INNER JOIN user_bk ocr
               ON ocr.user_id = c.user_id
               AND ocr.event_name = 'face-recognition'
               AND ocr.recognition_status = 1
               AND ocr.created_at = (
                 SELECT MIN(ocr3.created_at)
-                FROM user_ocr_record ocr3
+                FROM user_bk ocr3
                 WHERE ocr3.user_id = c.user_id
                   AND ocr3.event_name = 'face-recognition'
                   AND ocr3.recognition_status = 1
@@ -481,7 +481,7 @@ export const internalTransferService = {
               FROM user_login_record ulr
               INNER JOIN (
                 SELECT ocr_c.user_id
-                FROM user_ocr_record ocr_c
+                FROM user_bk ocr_c
                 WHERE ocr_c.created_at >= '${date} 00:00:00'
                   AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
                   AND ocr_c.event_name = 'face-recognition'
@@ -489,7 +489,7 @@ export const internalTransferService = {
                 GROUP BY ocr_c.user_id
                 HAVING NOT EXISTS (
                   SELECT 1
-                  FROM user_ocr_record ocr2
+                  FROM user_bk ocr2
                   WHERE ocr2.user_id = ocr_c.user_id
                     AND ocr2.created_at < '${date} 00:00:00'
                     AND ocr2.event_name = 'face-recognition'
@@ -501,7 +501,7 @@ export const internalTransferService = {
                 FROM user_login_record ulr2
                 INNER JOIN (
                   SELECT ocr_c.user_id
-                  FROM user_ocr_record ocr_c
+                  FROM user_bk ocr_c
                   WHERE ocr_c.created_at >= '${date} 00:00:00'
                     AND ocr_c.created_at < DATE_ADD('${date}', INTERVAL 1 DAY)
                     AND ocr_c.event_name = 'face-recognition'
@@ -509,7 +509,7 @@ export const internalTransferService = {
                   GROUP BY ocr_c.user_id
                   HAVING NOT EXISTS (
                     SELECT 1
-                    FROM user_ocr_record ocr2
+                    FROM user_bk ocr2
                     WHERE ocr2.user_id = ocr_c.user_id
                       AND ocr2.created_at < '${date} 00:00:00'
                       AND ocr2.event_name = 'face-recognition'

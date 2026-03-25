@@ -143,6 +143,9 @@ export const appsflyerDataService = {
       // 构建app_id筛选条件
       const sanitizedAppId = appId ? appId.replace(/'/g, "''") : undefined;
       const appIdWhere = sanitizedAppId ? `AND (app_id = '${sanitizedAppId}' OR event_value_app_id = '${sanitizedAppId}')` : '';
+      const appIdWhereAcInner = sanitizedAppId
+        ? `AND (ac_inner.app_id = '${sanitizedAppId}' OR ac_inner.event_value_app_id = '${sanitizedAppId}')`
+        : '';
 
       // 解析配对（媒体+广告序列）
       const pairs: Array<{ media: string; ad: string } > = (adPairs || '')
@@ -162,8 +165,8 @@ export const appsflyerDataService = {
         .filter(Boolean);
 
       const sanitizedReloan = typeof reloanStatus === 'string' && reloanStatus.trim() !== '' ? reloanStatus.trim() : undefined;
-      const reloanJoin = sanitizedReloan !== undefined
-        ? `INNER JOIN user_collision_record ucr ON ucr.user_id = ac.customer_user_id AND ucr.is_reloan = ${Number(sanitizedReloan)}`
+      const reloanJoinInner = sanitizedReloan !== undefined
+        ? `INNER JOIN user_collision_record ucr ON ucr.user_id = ac_inner.customer_user_id AND ucr.is_reloan = ${Number(sanitizedReloan)}`
         : '';
 
       let comboIndex = 0;
@@ -183,27 +186,39 @@ export const appsflyerDataService = {
         const escapedAd = adVal.replace(/'/g, "''");
         const whereByMedia = mediaVal !== 'ALL' ? `AND media_source = '${escapedMedia}'` : '';
         const whereByAd = adVal !== 'ALL' ? `AND af_c_id = '${escapedAd}'` : '';
+        const whereByMediaInner = mediaVal !== 'ALL' ? `AND ac_inner.media_source = '${escapedMedia}'` : '';
+        const whereByAdInner = adVal !== 'ALL' ? `AND ac_inner.af_c_id = '${escapedAd}'` : '';
         const index = comboIndex++;
-        
+
+        // 内层只算一次 resolved_event；并按日期范围过滤，避免扫全表 processed 数据
         const eventAggregations = eventNames.map((eventName) => {
           const sanitizedName = eventName.replace(/[^a-zA-Z0-9_]/g, '_');
           const escapedEventName = eventName.replace(/'/g, "''");
           const isInstallEvent = eventName.trim().toLowerCase() === 'install';
           const distinctField = isInstallEvent ? 'ac.appsflyer_id' : 'ac.customer_user_id';
           const additionalConditions = !isInstallEvent ? ' AND ac.customer_user_id IS NOT NULL' : '';
-          return `COUNT(DISTINCT CASE WHEN COALESCE(ac.event_name, JSON_UNQUOTE(JSON_EXTRACT(ac.raw_data, '$.event_name'))) = '${escapedEventName}'${additionalConditions} THEN ${distinctField} END) AS event_${sanitizedName}`;
+          return `COUNT(DISTINCT CASE WHEN ac.resolved_event = '${escapedEventName}'${additionalConditions} THEN ${distinctField} END) AS event_${sanitizedName}`;
         }).join(',\n            ');
 
         const aggregatedSubquery = `
           SELECT 
             DATE(ac.created_at) AS date_col
             ${eventAggregations ? ',\n            ' + eventAggregations : ''}
-          FROM appsflyer_callback ac
-          ${reloanJoin}
-          WHERE ac.callback_status = 'processed'
-            ${appIdWhere}
-            ${whereByMedia}
-            ${whereByAd}
+          FROM (
+            SELECT
+              ac_inner.created_at,
+              ac_inner.appsflyer_id,
+              ac_inner.customer_user_id,
+              COALESCE(ac_inner.event_name, JSON_UNQUOTE(JSON_EXTRACT(ac_inner.raw_data, '$.event_name'))) AS resolved_event
+            FROM appsflyer_callback ac_inner
+            ${reloanJoinInner}
+            WHERE ac_inner.callback_status = 'processed'
+              AND ac_inner.created_at >= ${defaultStartDate}
+              AND ac_inner.created_at < DATE_ADD(${defaultEndDate}, INTERVAL 1 DAY)
+              ${appIdWhereAcInner}
+              ${whereByMediaInner}
+              ${whereByAdInner}
+          ) ac
           GROUP BY DATE(ac.created_at)
         `;
 
@@ -343,6 +358,10 @@ export const appsflyerDataService = {
 
       const sanitizedReloan = typeof reloanStatus === 'string' && reloanStatus.trim() !== '' ? reloanStatus.trim() : undefined;
 
+      const chartDateRange = `
+              AND ac.created_at >= ${defaultStartDate}
+              AND ac.created_at < DATE_ADD(${defaultEndDate}, INTERVAL 1 DAY)`;
+
       let comboIndex = 0;
       // 组合：精确配对 + 仅媒体（ad=ALL）
       const combos = [
@@ -368,6 +387,7 @@ export const appsflyerDataService = {
           const escapedEventName = eventName.replace(/'/g, "''");
           const isInstallEvent = eventName.trim().toLowerCase() === 'install';
           const distinctField = isInstallEvent ? 'ac.appsflyer_id' : 'ac.customer_user_id';
+          const customerIdGuard = isInstallEvent ? '' : ' AND ac.customer_user_id IS NOT NULL';
           
           return `
           LEFT JOIN (
@@ -378,7 +398,8 @@ export const appsflyerDataService = {
               ${sanitizedReloan !== undefined ? `INNER JOIN user_collision_record ucr_${index}_${sanitizedName} ON ucr_${index}_${sanitizedName}.user_id = ac.customer_user_id AND ucr_${index}_${sanitizedName}.is_reloan = ${Number(sanitizedReloan)}` : ''}
               WHERE COALESCE(ac.event_name, JSON_UNQUOTE(JSON_EXTRACT(ac.raw_data, '$.event_name'))) = '${escapedEventName}' 
                 AND ac.callback_status = 'processed'
-                AND ac.customer_user_id IS NOT NULL
+                ${customerIdGuard}
+                ${chartDateRange}
                 ${appIdWhere}
                 ${whereByMedia}
                 ${whereByAd}

@@ -19,6 +19,9 @@ import type {
   PushTaskPayload,
 } from '../types';
 
+/** 归因等大 SQL 常超过 60s，需长于默认 axios timeout */
+const ATTRIBUTION_QUERY_TIMEOUT_MS = 180000;
+
 class ApiService {
   private api: AxiosInstance;
 
@@ -198,17 +201,26 @@ class ApiService {
   }
 
   async getAttributionData(params?: any): Promise<ApiResponse<any[]>> {
-    const response = await this.api.get('/attribution-data', { params });
+    const response = await this.api.get('/attribution-data', {
+      params,
+      timeout: ATTRIBUTION_QUERY_TIMEOUT_MS,
+    });
     return response.data;
   }
 
   async getAttributionChartData(params?: any): Promise<ApiResponse<any[]>> {
-    const response = await this.api.get('/attribution-chart', { params });
+    const response = await this.api.get('/attribution-chart', {
+      params,
+      timeout: ATTRIBUTION_QUERY_TIMEOUT_MS,
+    });
     return response.data;
   }
 
   async getAttributionDetails(params?: any): Promise<ApiResponse<any[]>> {
-    const response = await this.api.get('/attribution-details', { params });
+    const response = await this.api.get('/attribution-details', {
+      params,
+      timeout: ATTRIBUTION_QUERY_TIMEOUT_MS,
+    });
     return response.data;
   }
 
@@ -231,7 +243,10 @@ class ApiService {
   }
 
   async getAttributionComparison(params?: any): Promise<ApiResponse<any>> {
-    const response = await this.api.get('/attribution-comparison', { params });
+    const response = await this.api.get('/attribution-comparison', {
+      params,
+      timeout: ATTRIBUTION_QUERY_TIMEOUT_MS,
+    });
     return response.data;
   }
 

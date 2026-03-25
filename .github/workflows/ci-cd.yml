@@ -9,6 +9,7 @@ on:
 env:
   NODE_VERSION: '18'
   DOCKER_REGISTRY: ghcr.io
+  GHCR_USERNAME: zhangpu030424
   BACKEND_IMAGE_NAME: kanlina/admin-backend-system-backend
   FRONTEND_IMAGE_NAME: kanlina/admin-backend-system-frontend
 
@@ -197,7 +198,7 @@ jobs:
               exit 1
             fi
 
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u kanlina --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ env.GHCR_USERNAME }} --password-stdin
 
             docker pull ghcr.io/kanlina/admin-backend-system-backend:develop
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:develop
@@ -283,7 +284,7 @@ jobs:
               exit 1
             fi
 
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u kanlina --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u ${{ env.GHCR_USERNAME }} --password-stdin
 
             docker pull ghcr.io/kanlina/admin-backend-system-backend:main
             docker pull ghcr.io/kanlina/admin-backend-system-frontend:main
